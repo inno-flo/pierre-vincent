@@ -54,7 +54,9 @@ struct ContentView: View {
     @Query private var toutes: [Oeuvre]
 
     @State private var categorie: Categorie? = .oeuvres
-    @State private var messageImport: String?
+    // Nombre d'entrées sélectionnées dans la vue courante (remonté par VueFeuille),
+    // pour l'afficher dans le bandeau bas de la sidebar.
+    @State private var nbSelection: Int = 0
 
     var body: some View {
         NavigationSplitView {
@@ -78,7 +80,8 @@ struct ContentView: View {
             if let cat = categorie {
                 VueFeuille(feuille: cat.feuille,
                            lectureSeule: cat.lectureSeule,
-                           titre: cat.titre)
+                           titre: cat.titre,
+                           nbSelection: $nbSelection)
                 // Un identifiant par catégorie pour repartir « propre » à chaque
                 // changement de sélection (tri, sélection, etc. réinitialisés).
                 .id(cat)
@@ -87,23 +90,6 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .toolbar {
-            // Set de controls groupés : Importer + Ouvrir le dossier des données.
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    importerDonnees()
-                } label: { Label("Importer…", systemImage: "square.and.arrow.down") }
-
-                Button {
-                    ouvrirDossierDonnees()
-                } label: { Label("Ouvrir le dossier des données", systemImage: "folder") }
-            }
-        }
-        .alert("Import", isPresented: Binding(
-            get: { messageImport != nil },
-            set: { if !$0 { messageImport = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: { Text(messageImport ?? "") }
     }
 
     // MARK: Total en bas de la sidebar
@@ -123,6 +109,10 @@ struct ContentView: View {
         return VStack(alignment: .leading, spacing: 4) {
             Text("\(liste.count) \(cat.titre.lowercased())")
                 .font(.caption).foregroundStyle(.secondary)
+            if nbSelection > 0 {
+                Text("\(nbSelection) sélectionné\(nbSelection > 1 ? "s" : "")")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if !estDon {
                 Text("Total : \(formaterEuros(total))")
                     .font(.callout.weight(.semibold))
@@ -130,27 +120,5 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12).padding(.vertical, 10)
-    }
-
-    // MARK: Actions barre d'outils
-
-    private func ouvrirDossierDonnees() {
-        let dossier = PhotoStore.dossierRacine
-        NSWorkspace.shared.activateFileViewerSelecting([dossier])
-    }
-
-    private func importerDonnees() {
-        let p = NSOpenPanel()
-        p.canChooseDirectories = true
-        p.canChooseFiles = false
-        p.prompt = "Importer ce dossier"
-        p.message = "Choisissez le dossier de migration (contenant import.csv et Photos)"
-        guard p.runModal() == .OK, let dossier = p.url else { return }
-        let r = Import.importer(depuis: dossier, context: context)
-        if let err = r.erreur {
-            messageImport = "Échec : \(err)"
-        } else {
-            messageImport = "\(r.importees) entrée(s) importée(s)."
-        }
     }
 }
