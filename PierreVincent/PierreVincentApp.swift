@@ -15,8 +15,9 @@ struct PierreVincentApp: App {
         )
         do {
             let c = try ModelContainer(for: schema, configurations: [config])
-            // Active l'annulation/rétablissement (Cmd Z / Cmd Maj Z).
-            c.mainContext.undoManager = UndoManager()
+            // On attache NOTRE gestionnaire d'annulation partagé au contexte,
+            // pour pouvoir y câbler Cmd Z / Cmd Maj Z depuis le menu.
+            c.mainContext.undoManager = GestionAnnulation.shared.undoManager
             return c
         } catch {
             fatalError("Impossible de créer la base de données : \(error)")
@@ -30,9 +31,21 @@ struct PierreVincentApp: App {
         .modelContainer(conteneur)
         .windowStyle(.titleBar)
         .commands {
-            // Retire le menu « Nouveau » inutile pour un utilitaire mono-fenêtre.
             CommandGroup(replacing: .newItem) {}
-            // On garde le menu Édition standard, qui fournit Annuler/Rétablir.
+            // On remplace Annuler/Rétablir pour viser le gestionnaire SwiftData.
+            CommandGroup(replacing: .undoRedo) {
+                Button("Annuler") {
+                    let u = GestionAnnulation.shared.undoManager
+                    if u.canUndo { u.undo() }
+                }
+                .keyboardShortcut("z", modifiers: .command)
+
+                Button("Rétablir") {
+                    let u = GestionAnnulation.shared.undoManager
+                    if u.canRedo { u.redo() }
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+            }
         }
     }
 }
