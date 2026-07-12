@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import UniformTypeIdentifiers
 
 /// Une vue de feuille = un onglet, construite autour du composant natif `Table`
 /// de macOS : colonnes redimensionnables, tri par en-tête, sélection multiple
@@ -390,6 +391,39 @@ struct VueFeuille: View {
                     .frame(width: cote, height: cote)
             }
         }
+        // Glisser-déposer d'une image sur la cellule Photo (sauf en lecture seule).
+        .onDrop(of: lectureSeule ? [] : [UTType.fileURL], isTargeted: nil) { fournisseurs in
+            deposerPhoto(fournisseurs, sur: o)
+        }
+    }
+
+    /// Reçoit un fichier image déposé sur la cellule Photo d'une entrée
+    /// existante et l'associe à cette entrée (remplace l'éventuelle photo).
+    private func deposerPhoto(_ fournisseurs: [NSItemProvider], sur o: Oeuvre) -> Bool {
+        guard !lectureSeule, let fournisseur = fournisseurs.first else { return false }
+
+        fournisseur.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
+            var url: URL?
+            if let data = item as? Data {
+                url = URL(dataRepresentation: data, relativeTo: nil)
+            } else if let u = item as? URL {
+                url = u
+            }
+            guard let fichier = url else { return }
+
+            let ext = fichier.pathExtension.lowercased()
+            guard ["jpg", "jpeg", "png", "heic"].contains(ext) else { return }
+
+            DispatchQueue.main.async {
+                // Retire l'ancienne photo si présente, puis importe la nouvelle.
+                if !o.photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: o.photoNom) }
+                if let nom = PhotoStore.importerImage(depuis: fichier) {
+                    o.photoNom = nom
+                    try? context.save()
+                }
+            }
+        }
+        return true
     }
 
     // MARK: Barre de totaux

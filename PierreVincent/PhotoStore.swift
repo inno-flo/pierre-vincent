@@ -84,4 +84,25 @@ enum PhotoStore {
 
     /// Types de fichiers acceptés au glisser-déposer.
     static let typesAcceptes: [UTType] = [.jpeg, .png, .heic]
+
+    /// Supprime du dossier Photos tous les fichiers qui ne sont plus référencés
+    /// par une entrée. À appeler AU DÉMARRAGE de l'app : à ce moment l'historique
+    /// d'annulation est vide, donc supprimer ces fichiers est sans risque pour
+    /// le Cmd Z (contrairement à une suppression au moment du delete).
+    ///
+    /// `nomsUtilises` = l'ensemble des `photoNom` de toutes les entrées existantes.
+    static func nettoyerPhotosOrphelines(nomsUtilises: Set<String>) {
+        let fm = FileManager.default
+        guard let fichiers = try? fm.contentsOfDirectory(
+            at: dossierPhotos,
+            includingPropertiesForKeys: nil) else { return }
+
+        for fichier in fichiers {
+            let nom = fichier.lastPathComponent
+            // On ne touche qu'aux fichiers non référencés par une entrée.
+            if !nomsUtilises.contains(nom) {
+                try? fm.removeItem(at: fichier)
+            }
+        }
+    }
 }
