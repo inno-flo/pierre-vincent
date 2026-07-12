@@ -194,6 +194,16 @@ struct VueFeuille: View {
                     Button("Tout sélectionner") { selectionnerTout() }
                         .keyboardShortcut("a", modifiers: .command)
                         .hidden()
+
+                    // Touche Delete (retour arrière) : lance la suppression
+                    // (avec confirmation) si des entrées sont sélectionnées.
+                    Button("Supprimer") {
+                        if !selection.isEmpty && !lectureSeule {
+                            confirmerSuppression = true
+                        }
+                    }
+                    .keyboardShortcut(.delete, modifiers: [])
+                    .hidden()
                 }
             }
         )
