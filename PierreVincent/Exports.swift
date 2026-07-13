@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 import AppKit
 import PDFKit
@@ -239,3 +240,5 @@ enum Exports {
         try (pdfData as Data).write(to: url)
     }
 }
+
+#endif

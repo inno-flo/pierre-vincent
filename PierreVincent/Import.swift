@@ -1,84 +1,85 @@
+#if os(macOS)
 import Foundation
 import SwiftData
 import AppKit
 
 /// Importe des données depuis un dossier de migration.
 /// Le dossier doit contenir un fichier « import.csv » et un sous-dossier « Photos ».
-///
-/// VERSION 4 — corrige la gestion des fins de ligne.
-/// En Swift, la séquence \r\n compte comme UN SEUL Character. On utilise donc
-/// la propriété `isNewline`, qui reconnaît toutes les formes de saut de ligne.
+/// Le CSV a une première colonne « Feuille » qui indique l'onglet de destination,
+/// puis les colonnes de données. La colonne Photo contient un nom de fichier
+/// présent dans le sous-dossier Photos.
 enum Import {
 
-    struct Resultat { let importees: Int; let erreur: String? }
-
-    /// Analyse le texte CSV et renvoie les lignes, chacune sous forme de champs.
-    /// Gère les guillemets, les virgules et les retours à la ligne à l'intérieur
-    /// des champs cités, ainsi que toutes les fins de ligne (\n, \r, \r\n).
-    private static func analyser(_ texte: String) -> [[String]] {
-        var lignes: [[String]] = []
+    /// Sépare une ligne CSV en champs en respectant les guillemets.
+    private static func decouper(_ ligne: String) -> [String] {
         var champs: [String] = []
         var courant = ""
         var dansGuillemets = false
-
-        for c in texte {
-            if dansGuillemets {
-                if c == "\"" {
-                    dansGuillemets = false
+        var i = ligne.startIndex
+        while i < ligne.endIndex {
+            let c = ligne[i]
+            if c == "\"" {
+                let suivant = ligne.index(after: i)
+                if dansGuillemets && suivant < ligne.endIndex && ligne[suivant] == "\"" {
+                    courant.append("\"")
+                    i = suivant
                 } else {
-                    courant.append(c)
+                    dansGuillemets.toggle()
                 }
+            } else if c == "," && !dansGuillemets {
+                champs.append(courant)
+                courant = ""
             } else {
-                if c == "\"" {
-                    dansGuillemets = true
-                } else if c == "," {
-                    champs.append(courant); courant = ""
-                } else if c.isNewline {
-                    // Reconnaît \n, \r ET la séquence combinée \r\n.
-                    champs.append(courant); courant = ""
-                    lignes.append(champs); champs = []
-                } else {
-                    courant.append(c)
-                }
+                courant.append(c)
             }
+            i = ligne.index(after: i)
         }
-        // Dernière ligne s'il reste du contenu non terminé par un saut de ligne.
-        if !courant.isEmpty || !champs.isEmpty {
-            champs.append(courant)
-            lignes.append(champs)
+        champs.append(courant)
+        return champs
+    }
+
+    /// Découpe le texte CSV complet en lignes en respectant les guillemets.
+    private static func lignesCSV(_ texte: String) -> [String] {
+        var lignes: [String] = []
+        var courant = ""
+        var dansGuillemets = false
+        for c in texte {
+            if c == "\"" { dansGuillemets.toggle(); courant.append(c) }
+            else if c == "\n" && !dansGuillemets { lignes.append(courant); courant = "" }
+            else if c == "\r" { continue }
+            else { courant.append(c) }
         }
+        if !courant.isEmpty { lignes.append(courant) }
         return lignes
     }
 
+    /// Résultat lisible de l'import.
+    struct Resultat { let importees: Int; let erreur: String? }
+
     @MainActor
     static func importer(depuis dossier: URL, context: ModelContext) -> Resultat {
-        let accesOk = dossier.startAccessingSecurityScopedResource()
-        defer { if accesOk { dossier.stopAccessingSecurityScopedResource() } }
-
-        let fm = FileManager.default
         let csvURL = dossier.appendingPathComponent("import.csv")
+        let dossierPhotos = dossier.appendingPathComponent("Photos", isDirectory: true)
 
-        guard fm.fileExists(atPath: csvURL.path) else {
-            return Resultat(importees: 0, erreur: "import.csv introuvable dans le dossier choisi.")
-        }
         guard var contenu = try? String(contentsOf: csvURL, encoding: .utf8) else {
-            return Resultat(importees: 0, erreur: "Impossible de lire import.csv.")
+            return Resultat(importees: 0, erreur: "Fichier import.csv introuvable ou illisible.")
         }
+        // Retire un éventuel BOM.
         if contenu.hasPrefix("\u{FEFF}") { contenu.removeFirst() }
 
-        let lignes = analyser(contenu)
+        let lignes = lignesCSV(contenu)
         guard lignes.count > 1 else {
-            return Resultat(importees: 0,
-                erreur: "VERSION 4 — Le fichier n'a produit que \(lignes.count) ligne(s).")
+            return Resultat(importees: 0, erreur: "Le fichier ne contient aucune donnée.")
         }
 
-        let dossierPhotos = dossier.appendingPathComponent("Photos", isDirectory: true)
-        let entetes = lignes[0].map { $0.trimmingCharacters(in: .whitespaces) }
+        let entetes = decouper(lignes[0]).map { $0.trimmingCharacters(in: .whitespaces) }
         func idx(_ nom: String) -> Int? { entetes.firstIndex(of: nom) }
+
         let iFeuille = idx("Feuille")
         var compte = 0
 
-        for champs in lignes.dropFirst() {
+        for ligne in lignes.dropFirst() {
+            let champs = decouper(ligne)
             if champs.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty }) { continue }
             func val(_ nom: String) -> String {
                 guard let k = idx(nom), k < champs.count else { return "" }
@@ -101,6 +102,7 @@ enum Import {
             let prixTxt = val("Prix").replacingOccurrences(of: ",", with: ".")
             o.prix = Double(prixTxt) ?? 0
 
+            // Photo : copie le fichier depuis le dossier Photos vers le stockage app.
             let nomPhoto = val("Photo")
             if !nomPhoto.isEmpty {
                 let src = dossierPhotos.appendingPathComponent(nomPhoto)
@@ -109,6 +111,7 @@ enum Import {
                     o.photoNom = stocke
                 }
             }
+
             context.insert(o)
             compte += 1
         }
@@ -117,3 +120,5 @@ enum Import {
         return Resultat(importees: compte, erreur: nil)
     }
 }
+
+#endif

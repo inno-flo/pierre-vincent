@@ -1,11 +1,22 @@
 import Foundation
-import AppKit
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+/// Type d'image de la plateforme : NSImage sur Mac.
+typealias ImagePlateforme = NSImage
+#else
+import UIKit
+/// Type d'image de la plateforme : UIImage sur iPhone/iPad.
+typealias ImagePlateforme = UIImage
+#endif
 
 /// Gère le stockage des photos sur le disque, à côté de la base de données.
 /// Les images sont enregistrées dans un dossier « Photos » à l'intérieur du
 /// conteneur Application Support de l'app. On garde ainsi la base légère et
-/// on peut recopier tout le dossier vers un autre Mac.
+/// on peut recopier tout le dossier vers un autre appareil.
+///
+/// Ce fichier fonctionne sur Mac ET iPhone : le type d'image (NSImage/UIImage)
+/// et les conversions sont adaptés à chaque plateforme via `#if os(macOS)`.
 enum PhotoStore {
 
     /// Dossier racine des données de l'app dans Application Support.
@@ -26,16 +37,21 @@ enum PhotoStore {
         return dossier
     }
 
-    /// Importe un fichier image (jpeg/png/heic) glissé-déposé.
+    /// Importe un fichier image (jpeg/png/heic).
     /// Convertit tout en PNG pour une compatibilité maximale, et renvoie
     /// le nom de fichier stocké (à sauvegarder dans l'entrée Oeuvre).
     static func importerImage(depuis url: URL) -> String? {
+        #if os(macOS)
         guard let image = NSImage(contentsOf: url) else { return nil }
+        #else
+        guard let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data) else { return nil }
+        #endif
         return enregistrer(image: image)
     }
 
-    /// Enregistre une NSImage en PNG dans le dossier Photos.
-    static func enregistrer(image: NSImage) -> String? {
+    /// Enregistre une image en PNG dans le dossier Photos.
+    static func enregistrer(image: ImagePlateforme) -> String? {
         guard let png = pngData(de: image) else { return nil }
         let nom = UUID().uuidString + ".png"
         let dest = dossierPhotos.appendingPathComponent(nom)
@@ -48,10 +64,15 @@ enum PhotoStore {
     }
 
     /// Charge une image à partir de son nom de fichier stocké.
-    static func chargerImage(nom: String) -> NSImage? {
+    static func chargerImage(nom: String) -> ImagePlateforme? {
         guard !nom.isEmpty else { return nil }
         let url = dossierPhotos.appendingPathComponent(nom)
+        #if os(macOS)
         return NSImage(contentsOf: url)
+        #else
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return UIImage(data: data)
+        #endif
     }
 
     /// URL complète d'une photo (utile pour l'export).
@@ -67,19 +88,27 @@ enum PhotoStore {
         try? FileManager.default.removeItem(at: url)
     }
 
-    /// Convertit une NSImage en données PNG.
-    static func pngData(de image: NSImage) -> Data? {
+    /// Convertit une image en données PNG.
+    static func pngData(de image: ImagePlateforme) -> Data? {
+        #if os(macOS)
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff) else { return nil }
         return rep.representation(using: .png, properties: [:])
+        #else
+        return image.pngData()
+        #endif
     }
 
-    /// Convertit une NSImage en données JPEG (pour l'export « standard »).
-    static func jpegData(de image: NSImage, qualite: CGFloat = 0.9) -> Data? {
+    /// Convertit une image en données JPEG (pour l'export « standard »).
+    static func jpegData(de image: ImagePlateforme, qualite: CGFloat = 0.9) -> Data? {
+        #if os(macOS)
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff) else { return nil }
         return rep.representation(using: .jpeg,
                                   properties: [.compressionFactor: qualite])
+        #else
+        return image.jpegData(compressionQuality: qualite)
+        #endif
     }
 
     /// Types de fichiers acceptés au glisser-déposer.
@@ -104,5 +133,22 @@ enum PhotoStore {
                 try? fm.removeItem(at: fichier)
             }
         }
+    }
+}
+
+// MARK: - Pont SwiftUI pour afficher une image de la plateforme
+
+import SwiftUI
+
+extension Image {
+    /// Crée une Image SwiftUI à partir d'une image de la plateforme
+    /// (NSImage sur Mac, UIImage sur iPhone). Évite d'écrire des `#if` partout
+    /// dans les vues.
+    init(imagePlateforme: ImagePlateforme) {
+        #if os(macOS)
+        self.init(nsImage: imagePlateforme)
+        #else
+        self.init(uiImage: imagePlateforme)
+        #endif
     }
 }

@@ -1,10 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// Tableau de bord « Synthèse » : agrège les données des autres catégories.
-/// Deux blocs : Ventes (tableaux, dessins, tapis) et Dons (tableaux, dessins).
+/// Tableau de bord « Synthèse » : blocs de statistiques inspirés du prototype.
+/// Chaque bloc a un petit titre en haut, un grand chiffre, et une info secondaire.
 struct VueSynthese: View {
-    // Toutes les entrées ; on filtre par feuille dans les calculs.
     let toutes: [Oeuvre]
 
     // MARK: Sous-ensembles par feuille
@@ -14,8 +13,6 @@ struct VueSynthese: View {
     private var tapisVendus:    [Oeuvre] { toutes.filter { $0.feuille == .tapisVendus } }
     private var oeuvresDonnees: [Oeuvre] { toutes.filter { $0.feuille == .oeuvresDonnees } }
 
-    // Dons séparés par type (le type est saisi dans le champ « Type »).
-    // On considère comme « tableau » ou « dessin » selon le texte du type.
     private var tableauxDonnes: [Oeuvre] {
         oeuvresDonnees.filter { $0.type.localizedCaseInsensitiveContains("tableau") }
     }
@@ -23,9 +20,8 @@ struct VueSynthese: View {
         oeuvresDonnees.filter { $0.type.localizedCaseInsensitiveContains("dessin") }
     }
 
-    // MARK: Statistiques de prix
+    // MARK: Statistiques
 
-    /// Prix min, max et moyen d'une liste (en ignorant les prix nuls/0).
     private func stats(_ liste: [Oeuvre]) -> (min: Double, max: Double, moyenne: Double) {
         let prix = liste.map { $0.prix }.filter { $0 > 0 }
         guard !prix.isEmpty else { return (0, 0, 0) }
@@ -37,7 +33,6 @@ struct VueSynthese: View {
         liste.reduce(0) { $0 + $1.prix }
     }
 
-    // Somme des ventes par maison d'enchères (champ Vendeur).
     private func sommeVendeur(_ nom: String) -> Double {
         let cible = nom.trimmingCharacters(in: .whitespaces).lowercased()
         let ventes = tableauxVendus + dessinsVendus + tapisVendus
@@ -46,115 +41,145 @@ struct VueSynthese: View {
             .reduce(0) { $0 + $1.prix }
     }
 
-    // MARK: Corps
+    // Grille adaptative de blocs.
+    private let colonnes = [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                blocVentes
-                blocDons
+
+                // --- Rangée 1 : nombres d'œuvres ---
+                section("Œuvres") {
+                    bloc(titre: "Tableaux vendus",
+                         valeur: "\(tableauxVendus.count)",
+                         detail: formaterEuros(somme(tableauxVendus)),
+                         icone: "paintpalette")
+                    bloc(titre: "Dessins vendus",
+                         valeur: "\(dessinsVendus.count)",
+                         detail: formaterEuros(somme(dessinsVendus)),
+                         icone: "pencil.and.outline")
+                    bloc(titre: "Tapis vendus",
+                         valeur: "\(tapisVendus.count)",
+                         detail: formaterEuros(somme(tapisVendus)),
+                         icone: "square.grid.3x3.square")
+                    bloc(titre: "Tableaux donnés",
+                         valeur: "\(tableauxDonnes.count)",
+                         detail: "—",
+                         icone: "gift")
+                    bloc(titre: "Dessins donnés",
+                         valeur: "\(dessinsDonnes.count)",
+                         detail: "—",
+                         icone: "gift")
+                }
+
+                // --- Rangée 2 : prix et sommes ---
+                section("Montants") {
+                    let sT = stats(tableauxVendus)
+                    let sD = stats(dessinsVendus)
+                    blocMulti(titre: "Prix des tableaux", lignes: [
+                        ("Le plus bas", formaterEuros(sT.min)),
+                        ("Le plus haut", formaterEuros(sT.max)),
+                        ("Prix moyen", formaterEuros(sT.moyenne))
+                    ])
+                    blocMulti(titre: "Prix des dessins", lignes: [
+                        ("Le plus bas", formaterEuros(sD.min)),
+                        ("Le plus haut", formaterEuros(sD.max)),
+                        ("Prix moyen", formaterEuros(sD.moyenne))
+                    ])
+                    blocMulti(titre: "Somme des ventes", lignes: [
+                        ("Tableaux", formaterEuros(somme(tableauxVendus))),
+                        ("Dessins", formaterEuros(somme(dessinsVendus))),
+                        ("Tapis", formaterEuros(somme(tapisVendus))),
+                        ("Total", formaterEuros(somme(tableauxVendus) + somme(dessinsVendus) + somme(tapisVendus)))
+                    ])
+                }
+
+                // --- Rangée 3 : enchères et expositions ---
+                section("Enchères et expositions") {
+                    bloc(titre: "Artenchères",
+                         valeur: formaterEuros(sommeVendeur("Artenchères")),
+                         detail: "")
+                    bloc(titre: "Drôme Enchères",
+                         valeur: formaterEuros(sommeVendeur("Drôme Enchères")),
+                         detail: "")
+                    bloc(titre: "RempART",
+                         valeur: formaterEuros(sommeVendeur("RempART")),
+                         detail: "")
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 20)
-            .frame(maxWidth: 640, alignment: .leading)
+            .padding(20)
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
         .navigationTitle("Synthèse")
     }
 
-    // MARK: Bloc Ventes
+    // MARK: Composants
 
-    private var blocVentes: some View {
-        let statT = stats(tableauxVendus)
-        let statD = stats(dessinsVendus)
-        let sommeTableaux = somme(tableauxVendus)
-        let sommeDessins  = somme(dessinsVendus)
-        let sommeTapis    = somme(tapisVendus)
-        let sommeTotale   = sommeTableaux + sommeDessins + sommeTapis
-
-        return carte(titre: "Ventes", systemImage: "eurosign.circle") {
-            groupe("Œuvres") {
-                ligne("Tableaux vendus", "\(tableauxVendus.count)")
-                ligne("Dessins vendus", "\(dessinsVendus.count)")
-                ligne("Tapis vendus", "\(tapisVendus.count)")
-            }
-
-            groupe("Prix des tableaux") {
-                ligne("Le plus bas", formaterEuros(statT.min))
-                ligne("Le plus haut", formaterEuros(statT.max))
-                ligne("Prix moyen", formaterEuros(statT.moyenne))
-            }
-
-            groupe("Prix des dessins") {
-                ligne("Le plus bas", formaterEuros(statD.min))
-                ligne("Le plus haut", formaterEuros(statD.max))
-                ligne("Prix moyen", formaterEuros(statD.moyenne))
-            }
-
-            groupe("Sommes des ventes") {
-                ligne("Tableaux", formaterEuros(sommeTableaux))
-                ligne("Dessins", formaterEuros(sommeDessins))
-                ligne("Tapis", formaterEuros(sommeTapis))
-                ligne("Total (tableaux + dessins + tapis)", formaterEuros(sommeTotale),
-                      gras: true)
-            }
-
-            groupe("Ventes par maison d'enchères") {
-                ligne("Artenchères", formaterEuros(sommeVendeur("Artenchères")))
-                ligne("Drôme Enchères", formaterEuros(sommeVendeur("Drôme Enchères")))
-            }
-        }
-    }
-
-    // MARK: Bloc Dons
-
-    private var blocDons: some View {
-        carte(titre: "Dons", systemImage: "gift") {
-            groupe("Œuvres") {
-                ligne("Tableaux donnés", "\(tableauxDonnes.count)")
-                ligne("Dessins donnés", "\(dessinsDonnes.count)")
-            }
-        }
-    }
-
-    // MARK: Briques d'affichage réutilisables
-
-    /// Une carte titrée (bloc principal).
-    /// Le titre est aligné à gauche (comme la sidebar) et souligné d'un filet
-    /// qui court jusqu'au bord droit de la colonne des chiffres.
-    private func carte<Contenu: View>(titre: String, systemImage: String,
-                                      @ViewBuilder _ contenu: () -> Contenu) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Label(titre, systemImage: systemImage)
-                    .font(.title2.weight(.semibold))
-                // Filet sous le titre, sur toute la largeur du contenu.
-                Divider()
-            }
-            contenu()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Un sous-groupe titré à l'intérieur d'une carte.
-    private func groupe<Contenu: View>(_ titre: String,
-                                       @ViewBuilder _ contenu: () -> Contenu) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    /// Une section titrée contenant une grille de blocs.
+    @ViewBuilder
+    private func section<Contenu: View>(_ titre: String,
+                                        @ViewBuilder _ contenu: () -> Contenu) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text(titre)
-                .font(.headline)
-                .foregroundStyle(.primary)
-            contenu()
+                .font(.title3.weight(.semibold))
+            LazyVGrid(columns: colonnes, alignment: .leading, spacing: 16) {
+                contenu()
+            }
         }
     }
 
-    /// Une ligne « libellé …… valeur ».
-    private func ligne(_ libelle: String, _ valeur: String, gras: Bool = false) -> some View {
-        HStack {
-            Text(libelle)
-            Spacer()
+    /// Bloc simple : petit titre (avec icône), grand chiffre, détail secondaire.
+    private func bloc(titre: String, valeur: String, detail: String,
+                      icone: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                if let icone {
+                    Image(systemName: icone)
+                        .foregroundStyle(.black)
+                }
+                Text(titre)
+                    .font(.subheadline)
+                    .foregroundStyle(.black)
+            }
             Text(valeur)
-                .font(gras ? .body.weight(.semibold) : .body)
-                .monospacedDigit()
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(.white)
+            if !detail.isEmpty {
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.white)
+            }
         }
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
+        .padding(16)
+        .background(fondBloc)
+    }
+
+    /// Bloc multi-lignes : un titre et plusieurs paires libellé/valeur.
+    private func blocMulti(titre: String, lignes: [(String, String)]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(titre)
+                .font(.subheadline)
+                .foregroundStyle(.black)
+            ForEach(lignes, id: \.0) { libelle, valeur in
+                HStack {
+                    Text(libelle).foregroundStyle(.black)
+                    Spacer()
+                    Text(valeur).font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                }
+                .font(.callout)
+            }
+            Spacer(minLength: 0)   // pousse le contenu vers le haut
+        }
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+        .padding(16)
+        .background(fondBloc)
+    }
+
+    /// Fond arrondi commun aux blocs : orange international.
+    private var fondBloc: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color(red: 1.0, green: 0.31, blue: 0.0))
     }
 }

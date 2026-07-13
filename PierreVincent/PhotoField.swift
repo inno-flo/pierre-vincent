@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
@@ -36,9 +37,7 @@ struct PhotoField: View {
                 }
             }
             .frame(width: 180, height: 180)
-            // On accepte le type générique « fichier » : plus robuste que de
-            // lister les types image, car le Finder fournit une URL de fichier.
-            .onDrop(of: [UTType.fileURL], isTargeted: $survol) { fournisseurs in
+            .onDrop(of: PhotoStore.typesAcceptes, isTargeted: $survol) { fournisseurs in
                 traiterDrop(fournisseurs)
             }
 
@@ -56,28 +55,13 @@ struct PhotoField: View {
         }
     }
 
-    /// Reçoit le fichier glissé. On lit l'URL du fichier via son identifiant de
-    /// type (fileURL), puis on vérifie que c'est bien une image acceptée.
     private func traiterDrop(_ fournisseurs: [NSItemProvider]) -> Bool {
-        guard let fournisseur = fournisseurs.first else { return false }
-
-        fournisseur.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
-            var url: URL?
-            if let data = item as? Data {
-                url = URL(dataRepresentation: data, relativeTo: nil)
-            } else if let u = item as? URL {
-                url = u
-            }
-            guard let fichier = url else { return }
-
-            // Vérifie l'extension (jpeg/jpg/png/heic).
-            let ext = fichier.pathExtension.lowercased()
-            let extsOK = ["jpg", "jpeg", "png", "heic"]
-            guard extsOK.contains(ext) else { return }
-
+        guard let f = fournisseurs.first else { return false }
+        f.loadObject(ofClass: URL.self) { url, _ in
+            guard let url = url else { return }
             DispatchQueue.main.async {
                 if !photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: photoNom) }
-                if let nom = PhotoStore.importerImage(depuis: fichier) {
+                if let nom = PhotoStore.importerImage(depuis: url) {
                     photoNom = nom
                 }
             }
@@ -97,3 +81,5 @@ struct PhotoField: View {
         }
     }
 }
+
+#endif

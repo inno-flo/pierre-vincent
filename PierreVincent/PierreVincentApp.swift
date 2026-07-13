@@ -29,6 +29,8 @@ struct PierreVincentApp: App {
             ContentView()
         }
         .modelContainer(conteneur)
+        // Les réglages de fenêtre et les menus ci-dessous n'existent que sur Mac.
+        #if os(macOS)
         .windowStyle(.titleBar)
         .commands {
             CommandGroup(replacing: .newItem) {}
@@ -47,5 +49,6 @@ struct PierreVincentApp: App {
                 .keyboardShortcut("z", modifiers: [.command, .shift])
             }
         }
+        #endif
     }
 }

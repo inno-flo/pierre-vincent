@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import Quartz   // fournit QLPreviewPanel (Quick Look natif de macOS)
 
@@ -59,3 +60,5 @@ extension View {
         }
     }
 }
+
+#endif
