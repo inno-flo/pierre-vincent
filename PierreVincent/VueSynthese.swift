@@ -49,7 +49,13 @@ struct VueSynthese: View {
             VStack(alignment: .leading, spacing: 28) {
 
                 // --- Rangée 1 : nombres d'œuvres ---
+                // Titre « Œuvres » sur Mac ; masqué sur iPhone (le titre de la
+                // vue affiche déjà « Synthèse » en haut).
+                #if os(macOS)
                 section("Œuvres") {
+                #else
+                section("") {
+                #endif
                     bloc(titre: "Tableaux vendus",
                          valeur: "\(tableauxVendus.count)",
                          detail: formaterEuros(somme(tableauxVendus)),
@@ -64,11 +70,11 @@ struct VueSynthese: View {
                          icone: "square.grid.3x3.square")
                     bloc(titre: "Tableaux donnés",
                          valeur: "\(tableauxDonnes.count)",
-                         detail: "—",
+                         detail: "",
                          icone: "gift")
                     bloc(titre: "Dessins donnés",
                          valeur: "\(dessinsDonnes.count)",
-                         detail: "—",
+                         detail: "",
                          icone: "gift")
                 }
 
@@ -86,7 +92,7 @@ struct VueSynthese: View {
                         ("Le plus haut", formaterEuros(sD.max)),
                         ("Prix moyen", formaterEuros(sD.moyenne))
                     ])
-                    blocMulti(titre: "Somme des ventes", lignes: [
+                    blocMulti(titre: "Catégories", lignes: [
                         ("Tableaux", formaterEuros(somme(tableauxVendus))),
                         ("Dessins", formaterEuros(somme(dessinsVendus))),
                         ("Tapis", formaterEuros(somme(tapisVendus))),
@@ -112,7 +118,11 @@ struct VueSynthese: View {
             .padding(.bottom, 20)
         }
         .background(Color.cremeFond)
+        #if os(macOS)
         .navigationTitle("")
+        #else
+        .navigationTitle("Synthèse")
+        #endif
     }
 
     // MARK: Composants
@@ -122,8 +132,10 @@ struct VueSynthese: View {
     private func section<Contenu: View>(_ titre: String,
                                         @ViewBuilder _ contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(titre)
-                .font(.system(size: 24, weight: .semibold))
+            if !titre.isEmpty {
+                Text(titre)
+                    .font(.system(size: 24, weight: .semibold))
+            }
             LazyVGrid(columns: colonnes, alignment: .leading, spacing: 16) {
                 contenu()
             }
@@ -140,19 +152,48 @@ struct VueSynthese: View {
                         .foregroundStyle(.primary)
                 }
                 Text(titre)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.primary)
             }
+            #if os(macOS)
+            // Sur Mac : la valeur, puis le détail en dessous (même grand style orange).
             Text(valeur)
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-            if !detail.isEmpty {
+            if !detail.isEmpty, detail != "—" {
                 Text(detail)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
+            } else {
+                // Ligne vide réservée : garde la même hauteur que les blocs
+                // qui affichent un montant, sans rien montrer.
+                Text(" ")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.clear)
             }
+            #else
+            // Sur iPhone : valeur et détail sur la même ligne, séparés par un tiret.
+            HStack(spacing: 8) {
+                Text(valeur)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
+                if !detail.isEmpty, detail != "—" {
+                    Text("-")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
+                    Text(detail)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
+                }
+            }
+            #endif
+            Spacer(minLength: 0)   // pousse le contenu vers le haut
         }
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
+        #if os(macOS)
+        .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
+        #else
+        .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
+        #endif
         .padding(16)
         .background(fondBloc)
     }
@@ -161,17 +202,18 @@ struct VueSynthese: View {
     private func blocMulti(titre: String, lignes: [(String, String)]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(titre)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.primary)
             ForEach(lignes, id: \.0) { libelle, valeur in
                 HStack {
-                    Text(libelle).foregroundStyle(.primary)
+                    Text(libelle)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.primary)
                     Spacer()
                     Text(valeur).font(.body.weight(.semibold))
                         .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
                         .monospacedDigit()
                 }
-                .font(.callout)
             }
             Spacer(minLength: 0)   // pousse le contenu vers le haut
         }
@@ -187,7 +229,7 @@ struct VueSynthese: View {
             .fill(Color.fondLegende)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color(red: 1.0, green: 0.31, blue: 0.0), lineWidth: 2)
+                    .strokeBorder(Color(red: 1.0, green: 0.31, blue: 0.0), lineWidth: 1)
             )
     }
 }

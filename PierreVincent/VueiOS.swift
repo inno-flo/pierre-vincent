@@ -15,6 +15,8 @@ struct VueiOS: View {
     ]
     // Mode d'affichage, conservé entre les sessions (comme sur Mac).
     @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    // Critère de tri de la galerie (partagé avec le Mac via le même réglage).
+    @AppStorage("triGalerie") private var triGalerie: String = "prix"
     @State private var selection: Set<UUID> = []
     @State private var detail: Oeuvre?
 
@@ -31,11 +33,27 @@ struct VueiOS: View {
 
     private var estFeuilleDon: Bool { feuille == .oeuvresDonnees }
 
+    /// Œuvres triées pour la galerie, selon le critère choisi (prix ou acheteur).
+    private var oeuvresGalerie: [Oeuvre] {
+        let base: [Oeuvre]
+        if let f = feuille {
+            base = toutes.filter { $0.feuille == f }
+        } else {
+            base = toutes
+        }
+        switch triGalerie {
+        case "acheteur":
+            return base.sorted { $0.acheteur.localizedCaseInsensitiveCompare($1.acheteur) == .orderedAscending }
+        default: // "prix"
+            return base.sorted { $0.prix > $1.prix }
+        }
+    }
+
     var body: some View {
         Group {
             if modeAffichage == "icone" {
                 VueGalerie(
-                    oeuvres: oeuvres,
+                    oeuvres: oeuvresGalerie,
                     estFeuilleDon: estFeuilleDon,
                     selection: $selection,
                     onOuvrir: { o in detail = o }
@@ -53,6 +71,27 @@ struct VueiOS: View {
                     Image(systemName: "square.grid.2x2").tag("icone")
                 }
                 .pickerStyle(.segmented)
+            }
+            // Menu de tri, visible seulement en mode galerie.
+            if modeAffichage == "icone" {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            triGalerie = "prix"
+                        } label: {
+                            Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
+                                  systemImage: "eurosign")
+                        }
+                        Button {
+                            triGalerie = "acheteur"
+                        } label: {
+                            Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
+                                  systemImage: "person")
+                        }
+                    } label: {
+                        Label("Trier", systemImage: "arrow.up.arrow.down")
+                    }
+                }
             }
         }
         // Fiche de détail au toucher d'une entrée.
