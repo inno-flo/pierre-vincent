@@ -44,6 +44,16 @@ struct VueSynthese: View {
     // Grille adaptative de blocs.
     private let colonnes = [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)]
 
+    /// Titre de la section Œuvres : « Œuvres » sur Mac, vide sur iPhone
+    /// (où le titre « Synthèse » figure déjà en haut de la vue).
+    private var titreOeuvres: String {
+        #if os(macOS)
+        return "Œuvres"
+        #else
+        return ""
+        #endif
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -51,11 +61,7 @@ struct VueSynthese: View {
                 // --- Rangée 1 : nombres d'œuvres ---
                 // Titre « Œuvres » sur Mac ; masqué sur iPhone (le titre de la
                 // vue affiche déjà « Synthèse » en haut).
-                #if os(macOS)
-                section("Œuvres") {
-                #else
-                section("") {
-                #endif
+                section(titreOeuvres) {
                     bloc(titre: "Tableaux vendus",
                          valeur: "\(tableauxVendus.count)",
                          detail: formaterEuros(somme(tableauxVendus)),

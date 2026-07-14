@@ -117,6 +117,12 @@ struct ContentView: View {
                 bandeauTotal
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
+            #if os(iOS)
+            // Titre de la vue principale (liste des catégories) sur iPhone,
+            // en grand format pour laisser le même espace que les autres vues.
+            .navigationTitle("Inventaire")
+            .navigationBarTitleDisplayMode(.large)
+            #endif
         } detail: {
             // --- Zone de contenu (canvas) ---
             if let cat = categorie {
