@@ -17,6 +17,8 @@ struct VueiOS: View {
     @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
     // Critère de tri de la galerie (partagé avec le Mac via le même réglage).
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
+    // Sens du tri : true = croissant (du plus petit au plus grand).
+    @AppStorage("triCroissant") private var triCroissant: Bool = false
     @State private var selection: Set<UUID> = []
     @State private var detail: Oeuvre?
 
@@ -41,12 +43,32 @@ struct VueiOS: View {
         } else {
             base = toutes
         }
-        switch triGalerie {
+        // Critère effectif : on retombe sur un tri pertinent si le critère
+        // mémorisé ne s'applique pas à cette feuille (ex. prix dans les dons,
+        // dimensions dans les tapis).
+        var critere = triGalerie
+        if estFeuilleDon, critere == "prix" { critere = "dimensions" }
+        if feuille == .tapisVendus, critere == "dimensions" { critere = "prix" }
+
+        // Tri de base, toujours calculé en ordre CROISSANT
+        // (du plus petit / début d'alphabet au plus grand).
+        let triees: [Oeuvre]
+        switch critere {
         case "acheteur":
-            return base.sorted { $0.acheteur.localizedCaseInsensitiveCompare($1.acheteur) == .orderedAscending }
+            // Pour les dons, l'acheteur est vide : on trie alors sur le
+            // destinataire, qui joue le même rôle dans l'affichage.
+            func nom(_ o: Oeuvre) -> String {
+                !o.acheteur.isEmpty ? o.acheteur : o.destinataire
+            }
+            triees = base.sorted { nom($0).localizedCaseInsensitiveCompare(nom($1)) == .orderedAscending }
+        case "dimensions":
+            // Tri par SURFACE (largeur × hauteur) plutôt que par texte.
+            triees = base.sorted { surfaceDimensions($0.dimensions) < surfaceDimensions($1.dimensions) }
         default: // "prix"
-            return base.sorted { $0.prix > $1.prix }
+            triees = base.sorted { $0.prix < $1.prix }
         }
+        // Le bouton d'ordre inverse la liste si l'on veut du plus grand au plus petit.
+        return triCroissant ? triees : triees.reversed()
     }
 
     var body: some View {
@@ -64,33 +86,69 @@ struct VueiOS: View {
         }
         .navigationTitle(titre)
         .toolbar {
+            // Un seul set de contrôles, compact : Liste, Galerie, tri, sens.
+            // Regroupés dans un HStack pour maîtriser l'espacement (plus serré
+            // que l'espacement par défaut d'un ToolbarItemGroup).
             ToolbarItem(placement: .primaryAction) {
-                // Bascule Liste / Galerie.
-                Picker("Affichage", selection: $modeAffichage) {
-                    Image(systemName: "list.bullet").tag("liste")
-                    Image(systemName: "square.grid.2x2").tag("icone")
+                HStack(spacing: 8) {
+
+                // 1. Vue Liste.
+                Button {
+                    modeAffichage = "liste"
+                } label: {
+                    Image(systemName: "list.bullet")
                 }
-                .pickerStyle(.segmented)
-            }
-            // Menu de tri, visible seulement en mode galerie.
-            if modeAffichage == "icone" {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
+                .disabled(modeAffichage == "liste")
+
+                // 2. Vue Galerie.
+                Button {
+                    modeAffichage = "icone"
+                } label: {
+                    Image(systemName: "square.grid.2x2")
+                }
+                .disabled(modeAffichage == "icone")
+
+                // 3. Critère de tri (selon la feuille affichée).
+                Menu {
+                    // Prix : sans objet pour les dons (pas de prix).
+                    if !estFeuilleDon {
                         Button {
                             triGalerie = "prix"
                         } label: {
                             Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
                                   systemImage: "eurosign")
                         }
-                        Button {
-                            triGalerie = "acheteur"
-                        } label: {
-                            Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
-                                  systemImage: "person")
-                        }
-                    } label: {
-                        Label("Trier", systemImage: "arrow.up.arrow.down")
                     }
+                    Button {
+                        triGalerie = "acheteur"
+                    } label: {
+                        Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
+                              systemImage: "person")
+                    }
+                    // Dimensions : proposé partout sauf pour les tapis.
+                    if feuille != .tapisVendus {
+                        Button {
+                            triGalerie = "dimensions"
+                        } label: {
+                            Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions",
+                                  systemImage: "ruler")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+
+                // 4. Sens du tri : on utilise UNE seule icône (dont l'existence
+                // est certaine) que l'on retourne verticalement pour figurer le
+                // sens inverse. Les longueurs des traits s'inversent ainsi :
+                // décroissant = grand/moyen/petit, croissant = petit/moyen/grand.
+                Button {
+                    triCroissant.toggle()
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                }
+                .id("bouton-sens-tri")
                 }
             }
         }
@@ -102,7 +160,7 @@ struct VueiOS: View {
 
     /// Liste simple : vignette + informations principales, adaptée au tactile.
     private var liste: some View {
-        List(oeuvres) { o in
+        List(oeuvresGalerie) { o in
             Button {
                 detail = o
             } label: {
@@ -184,7 +242,7 @@ struct DetailiOS: View {
             .navigationTitle("Détail")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermé") { dismiss() }
+                    Button("Fermer") { dismiss() }
                 }
             }
         }

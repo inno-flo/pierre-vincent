@@ -46,17 +46,37 @@ struct VueSynthese: View {
 
     /// Titre de la section Œuvres : « Œuvres » sur Mac, vide sur iPhone
     /// (où le titre « Synthèse » figure déjà en haut de la vue).
+    /// Titre de la section Œuvres : masqué sur les deux plateformes
+    /// (le contexte de la vue suffit à l'identifier).
     private var titreOeuvres: String {
-        #if os(macOS)
-        return "Œuvres"
-        #else
         return ""
-        #endif
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
+
+                #if os(iOS)
+                // Récapitulatif en haut sur iPhone : mêmes informations que le
+                // bandeau du bas de la vue « Inventaire ».
+                HStack(alignment: .top, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Œuvres vendues")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Color.orangeInternational)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Œuvres données")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("\(oeuvresDonnees.count)")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Color.orangeInternational)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                #endif
 
                 // --- Rangée 1 : nombres d'œuvres ---
                 // Titre « Œuvres » sur Mac ; masqué sur iPhone (le titre de la

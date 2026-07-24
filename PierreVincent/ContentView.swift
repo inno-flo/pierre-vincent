@@ -64,7 +64,14 @@ struct ContentView: View {
     @Environment(\.modelContext) private var context
     @Query private var toutes: [Oeuvre]
 
+    // Catégorie sélectionnée au lancement :
+    // - iPhone : aucune (nil) pour afficher d'abord la barre latérale ;
+    // - Mac : « Œuvres » pré-sélectionnée (les deux colonnes sont visibles).
+    #if os(macOS)
     @State private var categorie: Categorie? = .oeuvres
+    #else
+    @State private var categorie: Categorie? = nil
+    #endif
     // Nombre d'entrées sélectionnées dans la vue courante (remonté par VueFeuille),
     // pour l'afficher dans le bandeau bas de la sidebar.
     @State private var nbSelection: Int = 0
@@ -138,8 +145,15 @@ struct ContentView: View {
                     .id(cat)
                     #else
                     // Interface iPhone/iPad de consultation (lecture seule).
-                    VueiOS(feuille: cat.feuille, titre: cat.titre)
-                        .id(cat)
+                    // La vue « Œuvres » a une présentation structurée
+                    // (récapitulatif + sections Ventes et Dons).
+                    if cat == .oeuvres {
+                        VueOeuvresStructuree()
+                            .id(cat)
+                    } else {
+                        VueiOS(feuille: cat.feuille, titre: cat.titre)
+                            .id(cat)
+                    }
                     #endif
                 }
             } else {

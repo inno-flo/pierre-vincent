@@ -35,3 +35,39 @@ func formaterEuros(_ montant: Double) -> String {
 func totalPrix(_ oeuvres: [Oeuvre]) -> Double {
     oeuvres.reduce(0) { $0 + $1.prix }
 }
+
+/// Calcule la SURFACE d'une œuvre à partir de son champ « Dimensions ».
+///
+/// Le champ est du texte libre, écrit de façons variées : « 73 × 92 cm »,
+/// « 73x92 », « 73 x 92 cm », « 50 X 61 »… On extrait donc tous les nombres
+/// présents et on multiplie les deux premiers.
+///
+/// Renvoie 0 si aucune dimension exploitable n'est trouvée (les entrées sans
+/// dimensions se retrouvent ainsi regroupées en début de tri).
+func surfaceDimensions(_ texte: String) -> Double {
+    var nombres: [Double] = []
+    var courant = ""
+
+    // On parcourt le texte et on isole les suites de chiffres
+    // (en acceptant la virgule ou le point comme séparateur décimal).
+    for c in texte {
+        if c.isNumber {
+            courant.append(c)
+        } else if c == "," || c == "." {
+            // Séparateur décimal : on le normalise en point.
+            courant.append(".")
+        } else {
+            if !courant.isEmpty {
+                if let v = Double(courant) { nombres.append(v) }
+                courant = ""
+            }
+        }
+    }
+    if !courant.isEmpty, let v = Double(courant) { nombres.append(v) }
+
+    // Deux nombres ou plus : largeur × hauteur.
+    if nombres.count >= 2 { return nombres[0] * nombres[1] }
+    // Un seul nombre : on le prend tel quel (mieux que rien pour ordonner).
+    if nombres.count == 1 { return nombres[0] }
+    return 0
+}
