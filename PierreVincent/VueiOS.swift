@@ -170,7 +170,9 @@ struct VueiOS: View {
                             VignetteCachee(nom: o.photoNom, cote: 64)
                             VStack(alignment: .leading, spacing: 3) {
                                 if !estFeuilleDon {
-                                    Text(formaterEuros(o.prix)).font(.headline)
+                                    Text(formaterEuros(o.prix))
+                                        .font(.headline)
+                                        .foregroundStyle(Color.orangeInternational)
                                     if !o.acheteur.isEmpty {
                                         Text(o.acheteur)
                                             .font(.subheadline).lineLimit(1)
@@ -225,7 +227,8 @@ struct DetailiOS: View {
 
                     // Informations.
                     if !estFeuilleDon {
-                        champ("Prix", formaterEuros(oeuvre.prix))
+                        champ("Prix", formaterEuros(oeuvre.prix),
+                              couleur: Color.orangeInternational)
                     }
                     champ("Type", oeuvre.type)
                     champ("Dimensions", oeuvre.dimensions)
@@ -251,11 +254,12 @@ struct DetailiOS: View {
     }
 
     @ViewBuilder
-    private func champ(_ titre: String, _ valeur: String) -> some View {
+    private func champ(_ titre: String, _ valeur: String,
+                       couleur: Color = .primary) -> some View {
         if !valeur.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
                 Text(titre).font(.caption).foregroundStyle(.secondary)
-                Text(valeur).font(.body)
+                Text(valeur).font(.body).foregroundStyle(couleur)
             }
         }
     }
