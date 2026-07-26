@@ -150,6 +150,9 @@ struct ContentView: View {
                     if cat == .oeuvres {
                         VueOeuvresStructuree()
                             .id(cat)
+                    } else if cat == .oeuvresDonnees {
+                        VueDonsStructuree()
+                            .id(cat)
                     } else {
                         VueiOS(feuille: cat.feuille, titre: cat.titre)
                             .id(cat)

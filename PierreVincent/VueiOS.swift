@@ -158,49 +158,51 @@ struct VueiOS: View {
         }
     }
 
-    /// Liste simple : vignette + informations principales, adaptée au tactile.
+    /// Liste en blocs séparés sur fond beige (même style que la vue « Œuvres »).
     private var liste: some View {
-        List(oeuvresGalerie) { o in
-            Button {
-                detail = o
-            } label: {
-                HStack(spacing: 12) {
-                    vignette(o)
-                    VStack(alignment: .leading, spacing: 3) {
-                        if !estFeuilleDon {
-                            Text(formaterEuros(o.prix))
-                                .font(.headline)
+        ScrollView {
+            VStack(spacing: 8) {
+                ForEach(oeuvresGalerie) { o in
+                    Button {
+                        detail = o
+                    } label: {
+                        HStack(spacing: 12) {
+                            VignetteCachee(nom: o.photoNom, cote: 64)
+                            VStack(alignment: .leading, spacing: 3) {
+                                if !estFeuilleDon {
+                                    Text(formaterEuros(o.prix)).font(.headline)
+                                    if !o.acheteur.isEmpty {
+                                        Text(o.acheteur)
+                                            .font(.subheadline).lineLimit(1)
+                                    }
+                                } else if !o.destinataire.isEmpty {
+                                    Text(o.destinataire)
+                                        .font(.headline).lineLimit(1)
+                                }
+                                // Le type n'est PAS affiché ici : ces vues ne
+                                // contiennent qu'un seul type d'œuvre.
+                                if !o.dimensions.isEmpty {
+                                    Text(o.dimensions)
+                                        .font(.caption).foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer()
                         }
-                        Text(o.type.isEmpty ? "—" : o.type)
-                            .font(estFeuilleDon ? .headline : .subheadline)
-                            .lineLimit(1)
-                        if !o.dimensions.isEmpty {
-                            Text(o.dimensions)
-                                .font(.caption).foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        if estFeuilleDon, !o.destinataire.isEmpty {
-                            Text(o.destinataire)
-                                .font(.caption).foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
+                        .frame(height: 72)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.fondLegende)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    Spacer()
+                    .buttonStyle(.plain)
                 }
-                // Hauteur de ligne FIXE : évite que List recalcule la mise en
-                // page quand une vignette arrive (source des saccades).
-                .frame(height: 60)
             }
-            .buttonStyle(.plain)
-            .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 30)
         }
-        .listStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func vignette(_ o: Oeuvre) -> some View {
-        // Vignette mise en cache pour un défilement fluide.
-        VignetteCachee(nom: o.photoNom, cote: 56)
+        .background(Color.cremeFond)
     }
 }
 
@@ -239,7 +241,7 @@ struct DetailiOS: View {
                 }
                 .padding()
             }
-            .navigationTitle("Détail")
+            .navigationTitle("Détails")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fermer") { dismiss() }
