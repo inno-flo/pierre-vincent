@@ -1,8 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// Tableau de bord « Synthèse » : blocs de statistiques inspirés du prototype.
-/// Chaque bloc a un petit titre en haut, un grand chiffre, et une info secondaire.
+/// Tableau de bord « Synthèse », thème « Graphite » (sombre fixe).
+///
+/// Structure à deux niveaux (d'après la maquette Claude Design) :
+///  - de grandes CARTES par section (Œuvres, Montants, Enchères) ;
+///  - à l'intérieur, des TUILES (un ton plus clair) pour chaque élément.
+/// L'orange de marque n'est utilisé que sur les valeurs chiffrées.
 struct VueSynthese: View {
     let toutes: [Oeuvre]
 
@@ -41,221 +45,201 @@ struct VueSynthese: View {
             .reduce(0) { $0 + $1.prix }
     }
 
-    // Grille adaptative de blocs.
-    private let colonnes = [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)]
+    // Grille des tuiles « Œuvres » : 2 colonnes façon maquette iPhone,
+    // adaptative pour rester correcte sur les fenêtres larges du Mac.
+    private let colonnesTuiles = [GridItem(.adaptive(minimum: 150, maximum: 320), spacing: 10)]
 
-    /// Titre de la section Œuvres : « Œuvres » sur Mac, vide sur iPhone
-    /// (où le titre « Synthèse » figure déjà en haut de la vue).
-    /// Titre de la section Œuvres : masqué sur les deux plateformes
-    /// (le contexte de la vue suffit à l'identifier).
-    private var titreOeuvres: String {
-        return ""
-    }
+    // MARK: Corps
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 16) {
 
                 #if os(iOS)
-                // Récapitulatif en haut sur iPhone : mêmes informations que le
-                // bandeau du bas de la vue « Inventaire ».
-                HStack(alignment: .top, spacing: 28) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Œuvres vendues")
-                            .font(.system(size: 14, weight: .bold))
-                        Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Color.orangeInternational)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Œuvres données")
-                            .font(.system(size: 14, weight: .bold))
-                        Text("\(oeuvresDonnees.count)")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Color.orangeInternational)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                recapMobile
                 #endif
 
-                // --- Rangée 1 : nombres d'œuvres ---
-                // Titre « Œuvres » sur Mac ; masqué sur iPhone (le titre de la
-                // vue affiche déjà « Synthèse » en haut).
-                section(titreOeuvres) {
-                    bloc(titre: "Tableaux vendus",
-                         valeur: "\(tableauxVendus.count)",
-                         detail: formaterEuros(somme(tableauxVendus)),
-                         icone: "paintpalette")
-                    bloc(titre: "Dessins vendus",
-                         valeur: "\(dessinsVendus.count)",
-                         detail: formaterEuros(somme(dessinsVendus)),
-                         icone: "pencil.and.outline")
-                    bloc(titre: "Tapis vendus",
-                         valeur: "\(tapisVendus.count)",
-                         detail: formaterEuros(somme(tapisVendus)),
-                         icone: "square.grid.3x3.square")
-                    bloc(titre: "Tableaux donnés",
-                         valeur: "\(tableauxDonnes.count)",
-                         detail: "",
-                         icone: "gift")
-                    bloc(titre: "Dessins donnés",
-                         valeur: "\(dessinsDonnes.count)",
-                         detail: "",
-                         icone: "gift")
+                // --- Carte ŒUVRES ---
+                carte(titre: "Œuvres") {
+                    LazyVGrid(columns: colonnesTuiles, spacing: 10) {
+                        tuileNombre(icone: "paintpalette", label: "Tableaux vendus",
+                                    valeur: "\(tableauxVendus.count)",
+                                    detail: formaterEuros(somme(tableauxVendus)))
+                        tuileNombre(icone: "pencil.and.outline", label: "Dessins vendus",
+                                    valeur: "\(dessinsVendus.count)",
+                                    detail: formaterEuros(somme(dessinsVendus)))
+                        tuileNombre(icone: "square.grid.3x3.square", label: "Tapis vendus",
+                                    valeur: "\(tapisVendus.count)",
+                                    detail: formaterEuros(somme(tapisVendus)))
+                        tuileNombre(icone: "gift", label: "Tableaux donnés",
+                                    valeur: "\(tableauxDonnes.count)", detail: nil)
+                        tuileNombre(icone: "gift", label: "Dessins donnés",
+                                    valeur: "\(dessinsDonnes.count)", detail: nil)
+                    }
                 }
 
-                // --- Rangée 2 : prix et sommes ---
-                section("Montants") {
+                // --- Carte MONTANTS ---
+                carte(titre: "Montants") {
                     let sT = stats(tableauxVendus)
                     let sD = stats(dessinsVendus)
-                    blocMulti(titre: "Prix des tableaux", lignes: [
-                        ("Le plus bas", formaterEuros(sT.min)),
-                        ("Le plus haut", formaterEuros(sT.max)),
-                        ("Prix moyen", formaterEuros(sT.moyenne))
-                    ])
-                    blocMulti(titre: "Prix des dessins", lignes: [
-                        ("Le plus bas", formaterEuros(sD.min)),
-                        ("Le plus haut", formaterEuros(sD.max)),
-                        ("Prix moyen", formaterEuros(sD.moyenne))
-                    ])
-                    blocMulti(titre: "Catégories", lignes: [
-                        ("Tableaux", formaterEuros(somme(tableauxVendus))),
-                        ("Dessins", formaterEuros(somme(dessinsVendus))),
-                        ("Tapis", formaterEuros(somme(tapisVendus))),
-                        ("Total", formaterEuros(somme(tableauxVendus) + somme(dessinsVendus) + somme(tapisVendus)))
-                    ])
+                    VStack(spacing: 10) {
+                        tuileLignes(titre: "Prix des tableaux", lignes: [
+                            ("Le plus bas", formaterEuros(sT.min)),
+                            ("Le plus haut", formaterEuros(sT.max)),
+                            ("Prix moyen", formaterEuros(sT.moyenne))
+                        ])
+                        tuileLignes(titre: "Prix des dessins", lignes: [
+                            ("Le plus bas", formaterEuros(sD.min)),
+                            ("Le plus haut", formaterEuros(sD.max)),
+                            ("Prix moyen", formaterEuros(sD.moyenne))
+                        ])
+                        tuileLignes(titre: "Catégories", lignes: [
+                            ("Tableaux", formaterEuros(somme(tableauxVendus))),
+                            ("Dessins", formaterEuros(somme(dessinsVendus))),
+                            ("Tapis", formaterEuros(somme(tapisVendus)))
+                        ])
+                    }
                 }
 
-                // --- Rangée 3 : enchères et expositions ---
-                section("Enchères et expositions") {
-                    bloc(titre: "Artenchères",
-                         valeur: formaterEuros(sommeVendeur("Artenchères")),
-                         detail: "")
-                    bloc(titre: "Drôme Enchères",
-                         valeur: formaterEuros(sommeVendeur("Drôme Enchères")),
-                         detail: "")
-                    bloc(titre: "RempART",
-                         valeur: formaterEuros(sommeVendeur("RempART")),
-                         detail: "")
+                // --- Carte ENCHÈRES ET EXPOSITIONS ---
+                carte(titre: "Enchères et expositions") {
+                    VStack(spacing: 10) {
+                        tuileVendeur("Artenchères", sommeVendeur("Artenchères"))
+                        tuileVendeur("Drôme Enchères", sommeVendeur("Drôme Enchères"))
+                        tuileVendeur("RempART", sommeVendeur("RempART"))
+                    }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 20)
+            .padding(16)
         }
         .background(Color.cremeFond)
-        #if os(macOS)
-        .navigationTitle("")
-        #else
+        #if os(iOS)
         .navigationTitle("Synthèse")
-        #endif
-    }
-
-    // MARK: Composants
-
-    /// Une section titrée contenant une grille de blocs.
-    @ViewBuilder
-    private func section<Contenu: View>(_ titre: String,
-                                        @ViewBuilder _ contenu: () -> Contenu) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if !titre.isEmpty {
-                Text(titre)
-                    .font(.system(size: 24, weight: .semibold))
-            }
-            LazyVGrid(columns: colonnes, alignment: .leading, spacing: 16) {
-                contenu()
-            }
-        }
-    }
-
-    /// Bloc simple : petit titre (avec icône), grand chiffre, détail secondaire.
-    private func bloc(titre: String, valeur: String, detail: String,
-                      icone: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                if let icone {
-                    Image(systemName: icone)
-                        .foregroundStyle(.primary)
-                }
-                Text(titre)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.primary)
-            }
-            #if os(macOS)
-            // Sur Mac : la valeur, puis le détail en dessous (même grand style orange).
-            Text(valeur)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-            if !detail.isEmpty, detail != "—" {
-                Text(detail)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-            } else {
-                // Ligne vide réservée : garde la même hauteur que les blocs
-                // qui affichent un montant, sans rien montrer.
-                Text(" ")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.clear)
-            }
-            #else
-            // Sur iPhone : valeur et détail sur la même ligne, séparés par un tiret.
-            HStack(spacing: 8) {
-                Text(valeur)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-                if !detail.isEmpty, detail != "—" {
-                    Text("-")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-                    Text(detail)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-                }
-            }
-            #endif
-            Spacer(minLength: 0)   // pousse le contenu vers le haut
-        }
-        #if os(macOS)
-        .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
         #else
-        .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
+        .navigationTitle("")
         #endif
-        .padding(16)
-        .background(fondBloc)
     }
 
-    /// Bloc multi-lignes : un titre et plusieurs paires libellé/valeur.
-    private func blocMulti(titre: String, lignes: [(String, String)]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    // MARK: Récapitulatif mobile
+
+    #if os(iOS)
+    private var recapMobile: some View {
+        HStack(alignment: .top, spacing: 28) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Œuvres vendues")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.primary)
+                Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color.orangeInternational)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Œuvres données")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.primary)
+                Text("\(oeuvresDonnees.count)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color.orangeInternational)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    #endif
+
+    // MARK: Composants du thème
+
+    /// Grande carte de section : titre + contenu, fond sombre à fine bordure.
+    @ViewBuilder
+    private func carte<Contenu: View>(titre: String,
+                                      @ViewBuilder _ contenu: () -> Contenu) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text(titre)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.primary)
-            ForEach(lignes, id: \.0) { libelle, valeur in
-                HStack {
-                    Text(libelle)
-                        .font(.system(size: 15))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Text(valeur).font(.body.weight(.semibold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-                        .monospacedDigit()
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color.primary)
+            contenu()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.fondLegende)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.orangeInternational.opacity(0.5), lineWidth: 1)
+                )
+        )
+    }
+
+    /// Tuile « nombre » : icône + label, grand chiffre orange, détail orange.
+    private func tuileNombre(icone: String, label: String,
+                             valeur: String, detail: String?) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Image(systemName: icone)
+                    .font(.system(size: 12.5, weight: .bold))
+                    .foregroundStyle(Color.primary)
+                Text(label)
+                    .font(.system(size: 12.5, weight: .heavy))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Text(valeur)
+                .font(.system(size: 22, weight: .heavy))
+                .foregroundStyle(Color.orangeInternational)
+            if let detail {
+                Text(detail)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.orangeInternational)
+            } else {
+                // Ligne réservée : garde une hauteur homogène entre tuiles.
+                Text(" ")
+                    .font(.system(size: 13, weight: .bold))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+    }
+
+    /// Tuile « lignes » : un titre et des paires libellé / valeur.
+    private func tuileLignes(titre: String, lignes: [(String, String)]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(titre)
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundStyle(Color.primary)
+            VStack(spacing: 5) {
+                ForEach(lignes, id: \.0) { lib, val in
+                    HStack {
+                        Text(lib)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.primary)
+                        Spacer()
+                        Text(val)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.orangeInternational)
+                            .monospacedDigit()
+                    }
                 }
             }
-            Spacer(minLength: 0)   // pousse le contenu vers le haut
         }
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-        .padding(16)
-        .background(fondBloc)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
     }
 
-    /// Fond arrondi commun aux blocs : blanc (clair) / noir (sombre),
-    /// entouré d'un filet orange de 2 px.
-    private var fondBloc: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(Color.fondLegende)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color(red: 1.0, green: 0.31, blue: 0.0), lineWidth: 1)
-            )
+    /// Tuile « vendeur » : libellé à gauche, montant orange à droite.
+    private func tuileVendeur(_ nom: String, _ montant: Double) -> some View {
+        HStack {
+            Text(nom)
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundStyle(Color.primary)
+            Spacer()
+            Text(formaterEuros(montant))
+                .font(.system(size: 18, weight: .heavy))
+                .foregroundStyle(Color.orangeInternational)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
     }
 }

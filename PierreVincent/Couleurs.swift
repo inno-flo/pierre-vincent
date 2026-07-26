@@ -64,4 +64,37 @@ extension Color {
         })
         #endif
     }()
+
+    // MARK: Thème « Graphite » de la vue Synthèse (sombre fixe)
+    // Valeurs hex reprises telles quelles de la maquette Claude Design.
+
+    /// Fond général de la Synthèse.
+    static let graphitePageBg   = Color(red: 0x1A/255, green: 0x1A/255, blue: 0x1C/255)
+    /// Fond des grandes cartes (Œuvres, Montants, Enchères).
+    static let graphiteCardBg   = Color(red: 0x24/255, green: 0x24/255, blue: 0x26/255)
+    /// Fond des tuiles internes (une nuance plus claire que la carte).
+    static let graphiteTileBg   = Color(red: 0x2E/255, green: 0x2E/255, blue: 0x31/255)
+    /// Texte principal (titres, libellés) sur fond sombre.
+    static let graphiteTexte    = Color(red: 0xF2/255, green: 0xF2/255, blue: 0xF2/255)
+    /// Bordure des cartes.
+    static let graphiteBordure  = Color.white.opacity(0.08)
+
+    /// Filet autour des vignettes de galerie :
+    /// blanc cassé en mode clair, gris sombre en mode sombre.
+    static let filetVignette: Color = {
+        #if os(macOS)
+        return Color(nsColor: NSColor(name: nil) { apparence in
+            let sombre = apparence.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return sombre
+                ? NSColor(red: 0.20, green: 0.20, blue: 0.22, alpha: 1)
+                : NSColor(red: 0.93, green: 0.92, blue: 0.89, alpha: 1)   // blanc cassé
+        })
+        #else
+        return Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.20, green: 0.20, blue: 0.22, alpha: 1)
+                : UIColor(red: 0.93, green: 0.92, blue: 0.89, alpha: 1)   // blanc cassé
+        })
+        #endif
+    }()
 }

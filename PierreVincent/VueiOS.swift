@@ -225,22 +225,33 @@ struct DetailiOS: View {
                             .cornerRadius(12)
                     }
 
-                    // Informations.
-                    if !estFeuilleDon {
-                        champ("Prix", formaterEuros(oeuvre.prix),
-                              couleur: Color.orangeInternational)
+                    // Informations sur deux colonnes.
+                    HStack(alignment: .top, spacing: 24) {
+                        // Colonne de gauche : prix, type, dimensions, format.
+                        VStack(alignment: .leading, spacing: 16) {
+                            if !estFeuilleDon {
+                                champ("Prix", formaterEuros(oeuvre.prix),
+                                      couleur: Color.orangeInternational)
+                            }
+                            champ("Type", oeuvre.type)
+                            champ("Dimensions", oeuvre.dimensions)
+                            champ("Format", oeuvre.format)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // Colonne de droite : les autres informations.
+                        VStack(alignment: .leading, spacing: 16) {
+                            if estFeuilleDon {
+                                champ("Destinataire", oeuvre.destinataire)
+                            } else {
+                                champ("Vendeur", oeuvre.vendeur)
+                                champ("Acheteur", oeuvre.acheteur)
+                                champ("Date", oeuvre.date)
+                            }
+                            champ("Remarques", oeuvre.remarques)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    champ("Type", oeuvre.type)
-                    champ("Dimensions", oeuvre.dimensions)
-                    champ("Format", oeuvre.format)
-                    if estFeuilleDon {
-                        champ("Destinataire", oeuvre.destinataire)
-                    } else {
-                        champ("Vendeur", oeuvre.vendeur)
-                        champ("Acheteur", oeuvre.acheteur)
-                        champ("Date", oeuvre.date)
-                    }
-                    champ("Remarques", oeuvre.remarques)
                 }
                 .padding()
             }
