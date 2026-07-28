@@ -17,6 +17,7 @@ enum CleColonne {
     case dimensions
     case format
     case vendeur
+    case modeVente
     case acheteur
     case date
     case destinataire
@@ -32,6 +33,7 @@ enum CleColonne {
         case .dimensions:   return o.dimensions
         case .format:       return o.format
         case .vendeur:      return o.vendeur
+        case .modeVente:    return o.modeVente
         case .acheteur:     return o.acheteur
         case .date:         return o.date
         case .destinataire: return o.destinataire
@@ -54,6 +56,7 @@ enum CleColonne {
         case .dimensions:   o.dimensions = valeur
         case .format:       o.format = valeur
         case .vendeur:      o.vendeur = valeur
+        case .modeVente:    o.modeVente = valeur
         case .acheteur:     o.acheteur = valeur
         case .date:         o.date = valeur
         case .destinataire: o.destinataire = valeur
@@ -98,6 +101,7 @@ enum SchemaFeuille {
         Colonne(titre: "Format",     cle: .format),
         Colonne(titre: "Vendeur",    cle: .vendeur),
         Colonne(titre: "Acheteur",   cle: .acheteur),
+        Colonne(titre: "Mode de vente", cle: .modeVente),
         Colonne(titre: "Date",       cle: .date),
         Colonne(titre: "Remarques",  cle: .remarques),
     ]

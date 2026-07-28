@@ -75,6 +75,11 @@ struct ContentView: View {
     // Nombre d'entrées sélectionnées dans la vue courante (remonté par VueFeuille),
     // pour l'afficher dans le bandeau bas de la sidebar.
     @State private var nbSelection: Int = 0
+    #if os(iOS)
+    // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
+    @State private var importerBaseOuvert = false
+    @State private var messageImportBase: String?
+    #endif
 
     var body: some View {
         NavigationSplitView {
@@ -100,20 +105,15 @@ struct ContentView: View {
                     #else
                     // Sur Mac : liste continue avec un filet avant Synthèse.
                     ForEach(Categorie.categoriesData) { cat in
-                        NavigationLink(value: cat) {
-                            Label(cat.titre, systemImage: cat.symbole)
-                        }
-                        .listRowSeparator(.hidden)
+                        lien(cat)
+                            .listRowSeparator(.hidden)
                     }
 
                     Divider()
                         .listRowInsets(EdgeInsets())
                         .listRowSeparator(.hidden)
 
-                    NavigationLink(value: Categorie.synthese) {
-                        Label(Categorie.synthese.titre,
-                              systemImage: Categorie.synthese.symbole)
-                    }
+                    lien(.synthese)
                     #endif
                 }
                 .listStyle(.sidebar)
@@ -134,6 +134,29 @@ struct ContentView: View {
             // en grand format pour laisser le même espace que les autres vues.
             .navigationTitle("Inventaire")
             .navigationBarTitleDisplayMode(.large)
+            // Bouton d'import de la base (fichier .pvbase reçu du Mac).
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        importerBaseOuvert = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                }
+            }
+            // Sélecteur de fichier via l'app Fichiers (iCloud Drive inclus).
+            .fileImporter(
+                isPresented: $importerBaseOuvert,
+                allowedContentTypes: [.data],
+                allowsMultipleSelection: false
+            ) { resultat in
+                gererImportBase(resultat)
+            }
+            .alert("Import de la base", isPresented: Binding(
+                get: { messageImportBase != nil },
+                set: { if !$0 { messageImportBase = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(messageImportBase ?? "") }
             #endif
         } detail: {
             // --- Zone de contenu (canvas) ---
@@ -186,14 +209,47 @@ struct ContentView: View {
 
     // MARK: Lien de catégorie (barre latérale)
 
+    #if os(iOS)
+    /// Lit le fichier .pvbase sélectionné et remplace la base locale.
+    private func gererImportBase(_ resultat: Result<[URL], Error>) {
+        switch resultat {
+        case .failure(let e):
+            messageImportBase = "Échec : \(e.localizedDescription)"
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            // Accès sécurisé au fichier (hors du bac à sable de l'app).
+            let acces = url.startAccessingSecurityScopedResource()
+            defer { if acces { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let donnees = try Data(contentsOf: url)
+                let r = EchangeBase.importerEnRemplacant(donnees: donnees, context: context)
+                if let err = r.erreur {
+                    messageImportBase = "Échec : \(err)"
+                } else {
+                    messageImportBase = "\(r.importees) œuvre(s) importée(s)."
+                }
+            } catch {
+                messageImportBase = "Impossible de lire le fichier : \(error.localizedDescription)"
+            }
+        }
+    }
+    #endif
+
     /// Un lien de navigation vers une catégorie, avec son icône.
+    /// Sur Mac, l'icône passe en blanc quand la catégorie est sélectionnée ;
+    /// ailleurs (et sur iPhone), elle reste orange.
     private func lien(_ cat: Categorie) -> some View {
         NavigationLink(value: cat) {
             Label {
                 Text(cat.titre)
             } icon: {
+                #if os(macOS)
+                Image(systemName: cat.symbole)
+                    .foregroundStyle(categorie == cat ? Color.white : Color.orangeInternational)
+                #else
                 Image(systemName: cat.symbole)
                     .foregroundStyle(Color.orangeInternational)
+                #endif
             }
         }
     }

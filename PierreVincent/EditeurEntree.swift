@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import SwiftData
 
@@ -22,7 +23,7 @@ struct EditeurEntree: View {
 
     // Champs pour la navigation au clavier (Tab).
     private enum Champ: Hashable {
-        case type, prix, dimensions, format, vendeur, acheteur, date, destinataire, remarques
+        case type, prix, dimensions, format, vendeur, modeVente, acheteur, date, destinataire, remarques
     }
     @FocusState private var focus: Champ?
 
@@ -32,6 +33,7 @@ struct EditeurEntree: View {
     @State private var dimensions = ""
     @State private var format = ""
     @State private var vendeur = ""
+    @State private var modeVente = ""
     @State private var acheteur = ""
     @State private var date = ""
     @State private var destinataire = ""
@@ -61,6 +63,7 @@ struct EditeurEntree: View {
                             champTexte("Dimensions", $dimensions, champ: .dimensions)
                             champTexte("Format", $format, champ: .format)
                             champTexte("Vendeur", $vendeur, champ: .vendeur)
+                            champTexte("Mode de vente", $modeVente, champ: .modeVente)
                             champTexte("Acheteur", $acheteur, champ: .acheteur)
                             champTexte("Date", $date, champ: .date)
                         } else {
@@ -116,6 +119,7 @@ struct EditeurEntree: View {
         dimensions   = o.dimensions
         format       = o.format
         vendeur      = o.vendeur
+        modeVente    = o.modeVente
         acheteur     = o.acheteur
         date         = o.date
         destinataire = o.destinataire
@@ -125,7 +129,7 @@ struct EditeurEntree: View {
 
     private func viderChamps() {
         photoNom = ""; type = ""; dimensions = ""; format = ""
-        vendeur = ""; acheteur = ""; date = ""; destinataire = ""
+        vendeur = ""; modeVente = ""; acheteur = ""; date = ""; destinataire = ""
         remarques = ""; prixTexte = ""
     }
 
@@ -136,6 +140,7 @@ struct EditeurEntree: View {
         o.dimensions   = dimensions
         o.format       = format
         o.vendeur      = vendeur
+        o.modeVente    = modeVente
         o.acheteur     = acheteur
         o.date         = date
         o.destinataire = destinataire
@@ -204,3 +209,5 @@ struct EditeurEntree: View {
         }
     }
 }
+
+#endif
