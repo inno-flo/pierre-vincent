@@ -63,22 +63,39 @@ final class CacheVignettes {
 
         #if os(macOS)
         guard let source = NSImage(data: data) else { return nil }
+        // Recadrage CARRÉ au centre de l'image source (évite la déformation).
+        let s = source.size
+        let cote = min(s.width, s.height)
+        let origine = NSRect(x: (s.width - cote) / 2, y: (s.height - cote) / 2,
+                             width: cote, height: cote)
         let cible = NSSize(width: cotePixels, height: cotePixels)
         let vignette = NSImage(size: cible)
         vignette.lockFocus()
         source.draw(in: NSRect(origin: .zero, size: cible),
-                    from: NSRect(origin: .zero, size: source.size),
+                    from: origine,   // on ne prend que le carré central
                     operation: .copy, fraction: 1.0)
         vignette.unlockFocus()
         return vignette
         #else
         guard let source = UIImage(data: data) else { return nil }
+        let s = source.size
+        let cote = min(s.width, s.height)
+        // Rectangle carré centré, en points de l'image source.
+        let origineX = (s.width - cote) / 2
+        let origineY = (s.height - cote) / 2
         let cible = CGSize(width: cotePixels, height: cotePixels)
         let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1   // on gère nous-mêmes la densité via cotePixels
+        format.scale = 1
         let renderer = UIGraphicsImageRenderer(size: cible, format: format)
         return renderer.image { _ in
-            source.draw(in: CGRect(origin: .zero, size: cible))
+            // On dessine l'image entière mais décalée/agrandie de sorte que seul
+            // le carré central tombe dans la zone visible (recadrage centré).
+            let echelle = cotePixels / cote
+            let dessinRect = CGRect(x: -origineX * echelle,
+                                    y: -origineY * echelle,
+                                    width: s.width * echelle,
+                                    height: s.height * echelle)
+            source.draw(in: dessinRect)
         }
         #endif
     }
