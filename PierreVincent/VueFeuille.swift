@@ -25,6 +25,10 @@ struct VueFeuille: View {
     @State private var editionEntree: Oeuvre?
     @State private var editionNouvelle = false
     @State private var messageExport: String?
+    // Vrai pendant la préparation d'un export long (base .pvbase avec images) :
+    // affiche un indicateur de progression sans bouton.
+    @State private var exportEnCours = false
+    @State private var texteProgression = ""
     // Pilote l'affichage de la fenêtre de confirmation de suppression.
     @State private var confirmerSuppression = false
     // URL de l'image à prévisualiser via Quick Look (barre d'espace).
@@ -39,6 +43,18 @@ struct VueFeuille: View {
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).
     @AppStorage("triCroissant") private var triCroissant: Bool = false
+    // Masquage des prix : observé ici pour que l'inspecteur se rafraîchisse.
+    @AppStorage("prixMasques") private var prixMasques = false
+    // Signaux venus du menu « Édition » pour ouvrir / fermer l'éditeur.
+    @AppStorage("signalOuvrirEditeur") private var signalOuvrirEditeur = 0
+    @AppStorage("signalFermerEditeur") private var signalFermerEditeur = 0
+    // Action déclenchée depuis le menu « Fichier » (import/export). On stocke le
+    // nom de l'action + un compteur pour redéclencher même deux fois de suite.
+    @AppStorage("actionFichier") private var actionFichier = ""
+    @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
+    // États remontés vers le menu « Édition » pour griser « Ouvrir l'éditeur ».
+    @AppStorage("uneSelectionExiste") private var uneSelectionExiste = false
+    @AppStorage("editeurOuvert") private var editeurOuvert = false
     // Message affiché après un import (déplacé ici pour grouper le set Import).
     @State private var messageImport: String?
 
@@ -51,6 +67,12 @@ struct VueFeuille: View {
             base = toutes
         }
         return base.sorted(using: tri)
+    }
+
+    /// Liste dans l'ordre actuellement affiché (galerie ou liste) : sert de base
+    /// à la navigation Précédent / Suivant de l'éditeur.
+    private var listeAffichee: [Oeuvre] {
+        modeAffichage == "icone" ? oeuvresGalerie : oeuvres
     }
 
     /// Œuvres triées pour la galerie, selon le critère et le sens choisis.
@@ -118,7 +140,7 @@ struct VueFeuille: View {
                     if !estFeuilleDon {
                         celluleInspecteur {
                             ligneInspecteur("Prix", formaterEuros(o.prix),
-                                            couleur: Color.orangeInternational)
+                                            couleur: Color.orangeInternational, estPrix: true)
                         }
                     }
 
@@ -171,7 +193,7 @@ struct VueFeuille: View {
                     }
                     celluleInspecteur {
                         ligneInspecteur("Total des prix", formaterEuros(total),
-                                        couleur: Color.orangeInternational)
+                                        couleur: Color.orangeInternational, estPrix: true)
                     }
                 }
                 .padding()
@@ -213,11 +235,16 @@ struct VueFeuille: View {
     /// Une ligne libellé + valeur à l'intérieur d'une cellule (masquée si vide).
     @ViewBuilder
     private func ligneInspecteur(_ titre: String, _ valeur: String,
-                                 couleur: Color = .primary) -> some View {
+                                 couleur: Color = .primary,
+                                 estPrix: Bool = false) -> some View {
         if !valeur.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
-                Text(titre).font(.body).foregroundStyle(.secondary)
+                Text(titre).font(.body).fontWeight(.bold).foregroundStyle(.secondary)
                 Text(valeur).font(.body).foregroundStyle(couleur)
+                    // Floutage piloté directement par l'état de la vue (fiable
+                    // dans l'inspecteur, contrairement au modificateur AppStorage).
+                    .blur(radius: (estPrix && prixMasques) ? 6 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: prixMasques)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -244,142 +271,34 @@ struct VueFeuille: View {
         .onChange(of: modeAffichage) { _, nouveau in
             if nouveau != "icone" { inspecteurVisible = false }
         }
-        .toolbar {
-            // === Set 1 : création/suppression/modification + affichage ===
-            if !lectureSeule, let f = feuille {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        let o = Oeuvre(feuille: f)
-                        context.insert(o)
-                        editionNouvelle = true
-                        editionEntree = o
-                    } label: { Label("Ajouter", systemImage: "plus") }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(role: .destructive) {
-                        confirmerSuppression = true
-                    } label: { Label(labelSupprimer, systemImage: "trash") }
-                    .disabled(selection.isEmpty)
-                }
-                if selection.count == 1 {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            if let id = selection.first, let o = oeuvres.first(where: { $0.id == id }) {
-                                editionNouvelle = false
-                                editionEntree = o
-                            }
-                        } label: { Label("Modifier", systemImage: "pencil") }
-                    }
-                }
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    modeAffichage = "liste"
-                } label: { Label("Liste", systemImage: "list.bullet") }
-                .disabled(modeAffichage == "liste")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    modeAffichage = "icone"
-                } label: { Label("Galerie", systemImage: "square.grid.2x2") }
-                .disabled(modeAffichage == "icone")
-            }
-
-            // Espacement entre le set 1 et le set de tri.
-            ToolbarItem(placement: .primaryAction) { Spacer() }
-
-            // === Set : tri + sens réunis (visible seulement en galerie) ===
-            if modeAffichage == "icone" {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Menu {
-                        // Prix : sans objet pour les dons (pas de prix).
-                        if !estFeuilleDon {
-                            Button {
-                                triGalerie = "prix"
-                            } label: {
-                                Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
-                                      systemImage: "eurosign")
-                                    .labelStyle(.titleAndIcon)
-                            }
-                        }
-                        Button {
-                            triGalerie = "acheteur"
-                        } label: {
-                            Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
-                                  systemImage: "person")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        // Dimensions : proposé partout sauf pour les tapis.
-                        if feuille != .tapisVendus {
-                            Button {
-                                triGalerie = "dimensions"
-                            } label: {
-                                Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions",
-                                      systemImage: "ruler")
-                                    .labelStyle(.titleAndIcon)
-                            }
-                        }
-                    } label: {
-                        Label("Trier", systemImage: "arrow.up.arrow.down")
-                    }
-
-                    // Sens du tri, dans le même set.
-                    Button {
-                        triCroissant.toggle()
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
-                            .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
-                    }
-                    .help(triCroissant ? "Tri croissant" : "Tri décroissant")
-                }
-
-                // Espacement avant le bouton Inspecteur.
-                ToolbarItem(placement: .primaryAction) { Spacer() }
-
-                // Bouton Inspecteur (set à lui seul).
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        inspecteurVisible.toggle()
-                    } label: {
-                        Label("Inspecteur", systemImage: "sidebar.right")
-                    }
-                    .help(inspecteurVisible ? "Masquer l'inspecteur" : "Afficher l'inspecteur")
-                }
-
-                // Espacement entre l'inspecteur et le set migration.
-                ToolbarItem(placement: .primaryAction) { Spacer() }
-            }
-
-            // === Set : migration (Importer) ===
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    importerDonnees()
-                } label: { Label("Importer…", systemImage: "square.and.arrow.down") }
-            }
-
-            // Espacement entre Import et Export.
-            ToolbarItem(placement: .primaryAction) { Spacer() }
-
-            // === Set : export ===
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("Exporter en CSV…") { exporterCSV() }
-                    Button("Exporter en Excel (.xls)…") { exporterXLS() }
-                    Button("Exporter dossier avec images…") { exporterDossier() }
-                    Button("Exporter Excel avec images (.xlsx)…") { exporterXLSXImages() }
-                    Divider()
-                    Button("Exporter pour iPhone (page web)…") { exporterWeb() }
-                    Button("Exporter la base pour iPhone (.pvbase)…") { exporterBase() }
-                    if lectureSeule {
-                        Divider()
-                        Button("Générer un PDF…") { exporterPDF() }
-                    }
-                } label: {
-                    Label("Exporter", systemImage: "square.and.arrow.up")
-                }
-            }
+        // Ouvrir l'éditeur depuis le menu « Édition » : sur la sélection courante.
+        .onChange(of: signalOuvrirEditeur) { _, _ in
+            ouvrirModification()
         }
-        .sheet(item: $editionEntree) { o in
+        // Fermer l'éditeur depuis le menu « Édition ».
+        .onChange(of: signalFermerEditeur) { _, _ in
+            editionEntree = nil
+        }
+        // Tient à jour les états lus par le menu « Édition ».
+        .onChange(of: editionEntree) { _, nouveau in
+            editeurOuvert = (nouveau != nil)
+        }
+        .onChange(of: selection) { _, nouvelle in
+            uneSelectionExiste = !nouvelle.isEmpty
+            nbSelection = nouvelle.count
+        }
+        // Action import/export déclenchée depuis le menu « Fichier ».
+        .onChange(of: actionFichierSignal) { _, _ in
+            executerActionFichier(actionFichier)
+        }
+        .toolbar {
+            contenuBarreOutils
+        }
+        .sheet(item: $editionEntree, onDismiss: {
+            // Réinitialisation explicite : évite que l'état reste « occupé »
+            // et empêche la réouverture de l'éditeur (bug intermittent).
+            editionEntree = nil
+        }) { o in
             EditeurEntree(
                 feuille: o.feuille,
                 oeuvre: o,
@@ -391,74 +310,204 @@ struct VueFeuille: View {
                         context.delete(o)
                     }
                 },
+                onFermer: {
+                    editionEntree = nil
+                },
                 onEnregistrerEtNouveau: {
                     guard let f = feuille else { return nil }
                     let nouvelle = Oeuvre(feuille: f)
                     context.insert(nouvelle)
                     return nouvelle
-                }
+                },
+                // En modification, on passe la liste ordonnée pour naviguer ;
+                // en création, liste vide (pas de navigation).
+                listeNavigation: editionNouvelle ? [] : listeAffichee
             )
         }
-        .alert("Export", isPresented: Binding(
-            get: { messageExport != nil },
-            set: { if !$0 { messageExport = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: { Text(messageExport ?? "") }
-        // Fenêtre de confirmation avant suppression (standard macOS).
-        .alert(titreConfirmation, isPresented: $confirmerSuppression) {
-            Button("Supprimer", role: .destructive) { supprimerSelection() }
-            Button("Annuler", role: .cancel) {}
-        } message: {
-            Text("Cette action peut être annulée avec Cmd + Z tant que l'application reste ouverte.")
-        }
-        .alert("Import", isPresented: Binding(
-            get: { messageImport != nil },
-            set: { if !$0 { messageImport = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: { Text(messageImport ?? "") }
+        .modifier(AlertesFeuille(
+            confirmerSuppression: $confirmerSuppression,
+            titreConfirmation: titreConfirmation,
+            messageImport: $messageImport,
+            onSupprimer: { supprimerSelection() }))
         // Quick Look natif : affiche l'image de la ligne sélectionnée.
         .apercuQuickLook($apercuURL)
-        // Capte la barre d'espace pour le Quick Look, sauf quand la fiche
-        // d'édition est ouverte (pour laisser taper des espaces dans le texte).
-        .background(
-            Group {
-                if editionEntree == nil {
-                    CaptureEspace { declencherApercu() }
-                }
+        // Panneau centré unique : progression (indicateur) puis message final
+        // (avec OK), toujours au même endroit.
+        .overlay {
+            if exportEnCours || messageExport != nil {
+                panneauProgression
             }
-        )
-        // Remonte le nombre sélectionné vers la sidebar.
-        .onChange(of: selection) { _, nouvelle in
-            nbSelection = nouvelle.count
         }
-        .onAppear { nbSelection = selection.count }
-        // Commande « Tout sélectionner » (Cmd A) : sélectionne toutes les
-        // entrées de la catégorie affichée. Le bouton est masqué mais actif.
-        // Désactivé pendant l'édition pour laisser Cmd A agir dans les champs.
-        .background(
-            Group {
-                if editionEntree == nil {
-                    Button("Tout sélectionner") { selectionnerTout() }
-                        .keyboardShortcut("a", modifiers: .command)
-                        .hidden()
-
-                    // Touche Delete (retour arrière) : lance la suppression
-                    // (avec confirmation) si des entrées sont sélectionnées.
-                    Button("Supprimer") {
-                        if !selection.isEmpty && !lectureSeule {
-                            confirmerSuppression = true
-                        }
-                    }
-                    .keyboardShortcut(.delete, modifiers: [])
-                    .hidden()
+        .modifier(RaccourcisClavier(
+            editionActive: editionEntree != nil,
+            onApercu: { declencherApercu() },
+            onToutSelectionner: { selectionnerTout() },
+            onSupprimer: {
+                if !selection.isEmpty && !lectureSeule {
+                    confirmerSuppression = true
                 }
-            }
-        )
+            }))
+        .onAppear {
+            nbSelection = selection.count
+            uneSelectionExiste = !selection.isEmpty
+            editeurOuvert = (editionEntree != nil)
+        }
     }
 
     /// Sélectionne toutes les entrées de la catégorie affichée.
     private func selectionnerTout() {
         selection = Set(oeuvres.map { $0.id })
+    }
+
+    /// Exécute l'action import/export demandée par le menu « Fichier ».
+    private func executerActionFichier(_ action: String) {
+        switch action {
+        case "importer":     importerDonnees()
+        case "csv":          exporterCSV()
+        case "xls":          exporterXLS()
+        case "dossier":      exporterDossier()
+        case "xlsx":         exporterXLSXImages()
+        case "base":         exporterBase()
+        case "pdf":          exporterPDF()
+        default:             break
+        }
+    }
+
+    /// Contenu de la barre d'outils, extrait dans une propriété pour éviter que
+    /// le compilateur peine à vérifier le type d'une expression trop grosse.
+    @ToolbarContentBuilder
+    private var contenuBarreOutils: some ToolbarContent {
+        // === Set 1 : création / suppression / modification ===
+        if !lectureSeule, let f = feuille {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    let o = Oeuvre(feuille: f)
+                    context.insert(o)
+                    editionNouvelle = true
+                    editionEntree = o
+                } label: { Label("Ajouter", systemImage: "plus") }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button(role: .destructive) {
+                    confirmerSuppression = true
+                } label: { Label(labelSupprimer, systemImage: "trash") }
+                .disabled(selection.isEmpty)
+            }
+            if selection.count == 1 {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        if let id = selection.first, let o = oeuvres.first(where: { $0.id == id }) {
+                            editionNouvelle = false
+                            editionEntree = o
+                        }
+                    } label: { Label("Modifier", systemImage: "pencil") }
+                }
+            }
+        }
+        // Bascule Liste / Galerie.
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                modeAffichage = "liste"
+            } label: { Label("Liste", systemImage: "list.bullet") }
+            .disabled(modeAffichage == "liste")
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                modeAffichage = "icone"
+            } label: { Label("Galerie", systemImage: "square.grid.2x2") }
+            .disabled(modeAffichage == "icone")
+        }
+
+        ToolbarItem(placement: .primaryAction) { Spacer() }
+
+        // === Set : tri + sens (galerie seulement) ===
+        if modeAffichage == "icone" {
+            ToolbarItemGroup(placement: .primaryAction) {
+                menuTri
+                Button {
+                    triCroissant.toggle()
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                }
+                .help(triCroissant ? "Tri croissant" : "Tri décroissant")
+            }
+
+            ToolbarItem(placement: .primaryAction) { Spacer() }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    inspecteurVisible.toggle()
+                } label: {
+                    Label("Inspecteur", systemImage: "sidebar.right")
+                }
+                .help(inspecteurVisible ? "Masquer l'inspecteur" : "Afficher l'inspecteur")
+            }
+        }
+    }
+
+    /// Menu de choix du critère de tri (galerie).
+    private var menuTri: some View {
+        Menu {
+            if !estFeuilleDon {
+                Button {
+                    triGalerie = "prix"
+                } label: {
+                    Label(triGalerie == "prix" ? "✓ Prix" : "Prix", systemImage: "eurosign")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+            Button {
+                triGalerie = "acheteur"
+            } label: {
+                Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur", systemImage: "person")
+                    .labelStyle(.titleAndIcon)
+            }
+            if feuille != .tapisVendus {
+                Button {
+                    triGalerie = "dimensions"
+                } label: {
+                    Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions", systemImage: "ruler")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+        } label: {
+            Label("Trier", systemImage: "arrow.up.arrow.down")
+        }
+    }
+
+    /// Panneau modal centré, commun à la progression et au message final d'un
+    /// export. Toujours affiché au même endroit (au centre de la fenêtre).
+    private var panneauProgression: some View {
+        ZStack {
+            Color.black.opacity(0.25).ignoresSafeArea()
+            VStack(spacing: 16) {
+                if exportEnCours {
+                    // Étape en cours : indicateur d'activité + texte.
+                    ProgressView()
+                        .controlSize(.large)
+                    Text(texteProgression)
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                } else {
+                    // Étape terminée : titre, message et bouton de fermeture.
+                    Text("Export terminé")
+                        .font(.headline)
+                    Text(messageExport ?? "")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                    Button("OK") { messageExport = nil }
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(28)
+            .frame(maxWidth: 340)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .shadow(radius: 20)
+            )
+        }
     }
 
     /// Ouvre Quick Look sur la photo de la ligne sélectionnée (barre d'espace).
@@ -530,6 +579,8 @@ struct VueFeuille: View {
             .width(96)
             TableColumn("Prix", value: \Oeuvre.prix) { o in
                 Text(formaterEuros(o.prix))
+                    .foregroundStyle(Color.orangeInternational)
+                    .blur(radius: prixMasques ? 5 : 0)
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Type", value: \Oeuvre.type) { o in
@@ -782,23 +833,6 @@ struct VueFeuille: View {
         catch { messageExport = "Erreur : \(error.localizedDescription)" }
     }
 
-    private func exporterWeb() {
-        guard let url = panneauEnregistrer(nom: "Inventaire Pierre-Vincent.html") else { return }
-        // La version web contient TOUTES les œuvres (elle a sa propre navigation
-        // par catégories), pas seulement la feuille affichée.
-        let listeToutes = toutes
-        messageExport = "Génération de la page web en cours…"
-        Task { @MainActor in
-            do {
-                try ExportWeb.exporter(oeuvres: listeToutes, vers: url)
-                messageExport = "Page web enregistrée. Déposez-la sur iCloud Drive, "
-                    + "puis ouvrez-la dans Safari sur votre iPhone."
-            } catch {
-                messageExport = "Erreur : \(error.localizedDescription)"
-            }
-        }
-    }
-
     /// Exporte TOUTE la base (données + images) dans un fichier .pvbase unique,
     /// destiné à être transféré sur l'iPhone (via iCloud Drive / Fichiers).
     private func exporterBase() {
@@ -811,14 +845,19 @@ struct VueFeuille: View {
             messageExport = "La base est vide : rien à exporter."
             return
         }
-        messageExport = "Préparation du fichier (images incluses)…"
+        // Indicateur de progression pendant la préparation (peut être long car
+        // toutes les images sont encodées dans le fichier).
+        texteProgression = "Préparation du fichier (images incluses)…"
+        exportEnCours = true
         Task { @MainActor in
             do {
                 let donnees = try EchangeBase.exporter(oeuvres: listeToutes)
                 try donnees.write(to: url)
+                exportEnCours = false
                 messageExport = "Base exportée (\(listeToutes.count) œuvres). "
                     + "Déposez ce fichier sur iCloud Drive pour le récupérer sur l'iPhone."
             } catch {
+                exportEnCours = false
                 messageExport = "Erreur : \(error.localizedDescription)"
             }
         }
@@ -862,6 +901,67 @@ struct VueFeuille: View {
                                      titre: titre, vers: url)
              messageExport = "PDF généré." }
         catch { messageExport = "Erreur : \(error.localizedDescription)" }
+    }
+}
+
+/// Regroupe les trois alertes de la feuille (export, suppression, import) dans
+/// un seul modificateur, pour raccourcir la chaîne de modificateurs du body
+/// (le compilateur peinait à vérifier le type d'une expression trop grosse).
+private struct AlertesFeuille: ViewModifier {
+    @Binding var confirmerSuppression: Bool
+    let titreConfirmation: String
+    @Binding var messageImport: String?
+    let onSupprimer: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert(titreConfirmation, isPresented: $confirmerSuppression) {
+                Button("Supprimer", role: .destructive) { onSupprimer() }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("Cette action peut être annulée avec Cmd + Z tant que l'application reste ouverte.")
+            }
+            .alert("Import", isPresented: Binding(
+                get: { messageImport != nil },
+                set: { if !$0 { messageImport = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(messageImport ?? "") }
+    }
+}
+
+/// Regroupe les raccourcis clavier (barre d'espace pour Quick Look, Cmd A pour
+/// tout sélectionner, Delete pour supprimer) en un seul modificateur — pour
+/// raccourcir la chaîne de modificateurs du body.
+private struct RaccourcisClavier: ViewModifier {
+    let editionActive: Bool
+    let onApercu: () -> Void
+    let onToutSelectionner: () -> Void
+    let onSupprimer: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            // Barre d'espace : Quick Look (désactivé pendant l'édition pour
+            // laisser taper des espaces dans les champs).
+            .background(
+                Group {
+                    if !editionActive {
+                        CaptureEspace { onApercu() }
+                    }
+                }
+            )
+            // Cmd A (tout sélectionner) et Delete (supprimer), boutons masqués.
+            .background(
+                Group {
+                    if !editionActive {
+                        Button("Tout sélectionner") { onToutSelectionner() }
+                            .keyboardShortcut("a", modifiers: .command)
+                            .hidden()
+                        Button("Supprimer") { onSupprimer() }
+                            .keyboardShortcut(.delete, modifiers: [])
+                            .hidden()
+                    }
+                }
+            )
     }
 }
 

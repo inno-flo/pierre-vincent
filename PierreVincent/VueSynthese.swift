@@ -55,12 +55,36 @@ struct VueSynthese: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
-                #if os(iOS)
-                recapMobile
-                #endif
-
                 // --- Carte ŒUVRES ---
                 carte(titre: "Œuvres") {
+                    #if os(iOS)
+                    // Récapitulatif Vendues / Données, sous le titre Œuvres.
+                    // Même grille que les tuiles en dessous, pour que « Vendues »
+                    // tombe sous « Tableaux vendus » et « Données » sous
+                    // « Dessins vendus ».
+                    LazyVGrid(columns: colonnesTuiles, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Vendues")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundStyle(Color.primary)
+                            Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
+                                .font(.system(size: 22, weight: .regular))
+                                .foregroundStyle(Color.orangeInternational)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Données")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundStyle(Color.primary)
+                            Text("\(oeuvresDonnees.count)")
+                                .font(.system(size: 22, weight: .regular))
+                                .foregroundStyle(Color.orangeInternational)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.leading, 12)
+                    #endif
+
                     LazyVGrid(columns: colonnesTuiles, spacing: 10) {
                         tuileNombre(icone: "paintpalette", label: "Tableaux vendus",
                                     valeur: "\(tableauxVendus.count)",
@@ -72,9 +96,11 @@ struct VueSynthese: View {
                                     valeur: "\(tapisVendus.count)",
                                     detail: formaterEuros(somme(tapisVendus)))
                         tuileNombre(icone: "gift", label: "Tableaux donnés",
-                                    valeur: "\(tableauxDonnes.count)", detail: nil)
+                                    valeur: "\(tableauxDonnes.count)", detail: nil,
+                                    reserverEspace: true)
                         tuileNombre(icone: "gift", label: "Dessins donnés",
-                                    valeur: "\(dessinsDonnes.count)", detail: nil)
+                                    valeur: "\(dessinsDonnes.count)", detail: nil,
+                                    reserverEspace: true)
                     }
                 }
 
@@ -122,30 +148,6 @@ struct VueSynthese: View {
 
     // MARK: Récapitulatif mobile
 
-    #if os(iOS)
-    private var recapMobile: some View {
-        HStack(alignment: .top, spacing: 28) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Œuvres vendues")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.primary)
-                Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color.orangeInternational)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Œuvres données")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.primary)
-                Text("\(oeuvresDonnees.count)")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color.orangeInternational)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    #endif
-
     // MARK: Composants du thème
 
     /// Grande carte de section : titre + contenu, fond sombre à fine bordure.
@@ -154,8 +156,11 @@ struct VueSynthese: View {
                                       @ViewBuilder _ contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(titre)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(Color.primary)
+                // Décalage pour aligner le titre du bloc avec le texte des
+                // tuiles en dessous (qui ont un padding interne de 12).
+                .padding(.leading, 12)
             contenu()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,29 +177,45 @@ struct VueSynthese: View {
 
     /// Tuile « nombre » : icône + label, grand chiffre orange, détail orange.
     private func tuileNombre(icone: String, label: String,
-                             valeur: String, detail: String?) -> some View {
+                             valeur: String, detail: String?,
+                             reserverEspace: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
+            // Titre du sous-bloc, seul.
+            Text(label)
+                .font(.system(size: 18, weight: .regular))
+                .foregroundStyle(Color.primary)
+                .lineLimit(1)
+            // Nombre d'œuvres, précédé de l'icône du type.
             HStack(spacing: 5) {
                 Image(systemName: icone)
-                    .font(.system(size: 12.5, weight: .bold))
-                    .foregroundStyle(Color.primary)
-                Text(label)
-                    .font(.system(size: 12.5, weight: .heavy))
-                    .foregroundStyle(Color.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            Text(valeur)
-                .font(.system(size: 22, weight: .heavy))
-                .foregroundStyle(Color.orangeInternational)
-            if let detail {
-                Text(detail)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(Color.orangeInternational)
-            } else {
-                // Ligne réservée : garde une hauteur homogène entre tuiles.
-                Text(" ")
-                    .font(.system(size: 13, weight: .bold))
+                Text(valeur)
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(Color.orangeInternational)
+            }
+            // Prix, précédé d'une icône euro (seulement s'il y a un prix).
+            if let detail {
+                HStack(spacing: 5) {
+                    Image(systemName: "eurosign.circle")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(Color.orangeInternational)
+                    Text(detail)
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(Color.orangeInternational)
+                        .flouteSiPrixMasques()
+                }
+            } else if reserverEspace {
+                // Pas de prix mais on réserve la hauteur d'une ligne « euro +
+                // prix », uniquement quand la tuile partage une rangée avec une
+                // tuile qui a un prix (pour aligner les titres).
+                HStack(spacing: 5) {
+                    Image(systemName: "eurosign.circle")
+                        .font(.system(size: 18, weight: .regular))
+                    Text(" ")
+                        .font(.system(size: 22, weight: .regular))
+                }
+                .hidden()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -206,19 +227,20 @@ struct VueSynthese: View {
     private func tuileLignes(titre: String, lignes: [(String, String)]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(titre)
-                .font(.system(size: 14, weight: .heavy))
+                .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(Color.primary)
             VStack(spacing: 5) {
                 ForEach(lignes, id: \.0) { lib, val in
                     HStack {
                         Text(lib)
-                            .font(.system(size: 14))
+                            .font(.system(size: 18))
                             .foregroundStyle(Color.primary)
                         Spacer()
                         Text(val)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 22, weight: .regular))
                             .foregroundStyle(Color.orangeInternational)
                             .monospacedDigit()
+                            .flouteSiPrixMasques()
                     }
                 }
             }
@@ -232,11 +254,11 @@ struct VueSynthese: View {
     private func tuileVendeur(_ nom: String, _ montant: Double) -> some View {
         HStack {
             Text(nom)
-                .font(.system(size: 14, weight: .heavy))
+                .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(Color.primary)
             Spacer()
-            Text(formaterEuros(montant))
-                .font(.system(size: 18, weight: .heavy))
+            PrixText(montant)
+                .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(Color.orangeInternational)
         }
         .padding(12)

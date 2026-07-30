@@ -23,8 +23,9 @@ struct PhotoField: View {
                 if let img = PhotoStore.chargerImage(nom: photoNom) {
                     Image(nsImage: img)
                         .resizable()
-                        .scaledToFit()
-                        .padding(6)
+                        .scaledToFill()
+                        .frame(width: 320, height: 400)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     VStack(spacing: 6) {
                         Image(systemName: "photo.badge.plus")
@@ -36,20 +37,18 @@ struct PhotoField: View {
                     }
                 }
             }
-            .frame(width: 180, height: 180)
+            .frame(width: 320, height: 400)
             .onDrop(of: PhotoStore.typesAcceptes, isTargeted: $survol) { fournisseurs in
                 traiterDrop(fournisseurs)
             }
 
             HStack {
                 Button("Choisir…") { choisirFichier() }
-                    .controlSize(.small)
                 if !photoNom.isEmpty {
                     Button(role: .destructive) {
                         PhotoStore.supprimerPhoto(nom: photoNom)
                         photoNom = ""
                     } label: { Text("Retirer") }
-                    .controlSize(.small)
                 }
             }
         }
@@ -57,7 +56,7 @@ struct PhotoField: View {
 
     private func traiterDrop(_ fournisseurs: [NSItemProvider]) -> Bool {
         guard let f = fournisseurs.first else { return false }
-        f.loadObject(ofClass: URL.self) { url, _ in
+        _ = f.loadObject(ofClass: URL.self) { url, _ in
             guard let url = url else { return }
             DispatchQueue.main.async {
                 if !photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: photoNom) }

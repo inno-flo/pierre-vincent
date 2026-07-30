@@ -1,0 +1,174 @@
+import SwiftUI
+import SwiftData
+#if os(macOS)
+import AppKit
+#endif
+
+/// Point d'entrée de l'application « Pierre-Vincent ».
+@main
+struct PierreVincentApp: App {
+    #if os(macOS)
+    // États partagés avec la toolbar (pilotés aussi par le menu « Présentation »).
+    @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    @AppStorage("inspecteurVisible") private var inspecteurVisible = false
+    @AppStorage("prixMasques") private var prixMasques = false
+    // Signaux pour piloter l'éditeur depuis le menu « Édition » (on incrémente
+    // pour déclencher l'action côté vue, qui observe le changement).
+    @AppStorage("signalOuvrirEditeur") private var signalOuvrirEditeur = 0
+    @AppStorage("signalFermerEditeur") private var signalFermerEditeur = 0
+    // État remonté par la vue : y a-t-il une œuvre sélectionnée, et l'éditeur
+    // est-il ouvert ? Sert à griser « Ouvrir l'éditeur » au bon moment.
+    @AppStorage("uneSelectionExiste") private var uneSelectionExiste = false
+    @AppStorage("editeurOuvert") private var editeurOuvert = false
+    // Pilotage des actions import/export depuis le menu « Fichier ».
+    @AppStorage("actionFichier") private var actionFichier = ""
+    @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
+
+    init() {
+        // Désactive les onglets de fenêtre : retire du menu « Présentation »
+        // les commandes « Afficher la barre d'onglets / tous les onglets ».
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
+    #endif
+
+    /// Conteneur SwiftData : la base de données locale des œuvres.
+    /// Le fichier est stocké dans Application Support/Pierre-Vincent.
+    var conteneur: ModelContainer = {
+        let schema = Schema([Oeuvre.self])
+        let dossier = PhotoStore.dossierRacine
+        let config = ModelConfiguration(
+            schema: schema,
+            url: dossier.appendingPathComponent("PierreVincent.store")
+        )
+        do {
+            let c = try ModelContainer(for: schema, configurations: [config])
+            // On attache NOTRE gestionnaire d'annulation partagé au contexte,
+            // pour pouvoir y câbler Cmd Z / Cmd Maj Z depuis le menu.
+            c.mainContext.undoManager = GestionAnnulation.shared.undoManager
+            return c
+        } catch {
+            fatalError("Impossible de créer la base de données : \(error)")
+        }
+    }()
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+        .modelContainer(conteneur)
+        // Les réglages de fenêtre et les menus ci-dessous n'existent que sur Mac.
+        #if os(macOS)
+        .windowStyle(.titleBar)
+        .commands {
+            CommandGroup(replacing: .newItem) {}
+            // On retire le « Fermer » système par défaut (il se place en tête du
+            // menu Fichier) pour le recréer nous-mêmes à la fin.
+            CommandGroup(replacing: .saveItem) {}
+
+            // Import / export dans le menu système « Fichier ».
+            CommandGroup(replacing: .importExport) {
+                Button("Importer…") { declencherFichier("importer") }
+                Divider()
+                // Tous les exports regroupés dans un sous-menu « Exporter ».
+                Menu("Exporter") {
+                    Button("CSV…") { declencherFichier("csv") }
+                    Button("Excel (.xls)…") { declencherFichier("xls") }
+                    Button("Excel avec images (.xlsx)…") { declencherFichier("xlsx") }
+                    Button("Dossier avec images…") { declencherFichier("dossier") }
+                    Divider()
+                    Button("Base pour iPhone (.pvbase)") { declencherFichier("base") }
+                    Button("PDF…") { declencherFichier("pdf") }
+                }
+                Divider()
+                Button("Ouvrir le dossier des données") {
+                    NSWorkspace.shared.activateFileViewerSelecting([PhotoStore.dossierRacine])
+                }
+                Divider()
+                // Fermer la fenêtre, placé en dernier (le « Fermer » système
+                // par défaut se met en tête, ce qu'on ne veut pas).
+                Button("Fermer") {
+                    NSApp.keyWindow?.performClose(nil)
+                }
+                .keyboardShortcut("w", modifiers: .command)
+            }
+            // On remplace Annuler/Rétablir pour viser le gestionnaire SwiftData.
+            CommandGroup(replacing: .undoRedo) {
+                Button("Annuler") {
+                    let u = GestionAnnulation.shared.undoManager
+                    if u.canUndo { u.undo() }
+                }
+                .keyboardShortcut("z", modifiers: .command)
+
+                Button("Rétablir") {
+                    let u = GestionAnnulation.shared.undoManager
+                    if u.canRedo { u.redo() }
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+            }
+
+            // Retire les commandes de barre latérale ET de barre d'onglets du
+            // menu « Présentation » standard (inutiles pour cette app).
+            CommandGroup(replacing: .sidebar) {}
+
+            // Commandes d'ouverture / fermeture de l'éditeur, dans le menu « Édition ».
+            CommandGroup(after: .pasteboard) {
+                Divider()
+                if editeurOuvert {
+                    // L'éditeur est ouvert : la commande le ferme.
+                    Button("Fermer l'éditeur") { signalFermerEditeur += 1 }
+                        .keyboardShortcut("e", modifiers: .command)
+                } else {
+                    // L'éditeur est fermé : la commande l'ouvre sur la sélection
+                    // (grisée si rien n'est sélectionné).
+                    Button("Ouvrir l'éditeur") { signalOuvrirEditeur += 1 }
+                        .keyboardShortcut("e", modifiers: .command)
+                        .disabled(!uneSelectionExiste)
+                }
+            }
+            CommandGroup(replacing: .toolbar) {
+                // On reconstruit ici le contenu utile du menu « Présentation ».
+                Toggle("Liste", isOn: Binding(
+                    get: { modeAffichage == "liste" },
+                    set: { if $0 { modeAffichage = "liste" } }))
+                    .keyboardShortcut("1", modifiers: .command)
+
+                Toggle("Galerie", isOn: Binding(
+                    get: { modeAffichage == "icone" },
+                    set: { if $0 { modeAffichage = "icone" } }))
+                    .keyboardShortcut("2", modifiers: .command)
+
+                Divider()
+
+                // Afficher / Masquer l'inspecteur, seulement en mode galerie.
+                if modeAffichage == "icone" {
+                    Button(inspecteurVisible ? "Masquer l'inspecteur"
+                                             : "Afficher l'inspecteur") {
+                        inspecteurVisible.toggle()
+                    }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
+
+                    Divider()
+                }
+
+                // Masquer / afficher les prix partout dans l'application.
+                if prixMasques {
+                    Button("Afficher les prix") { prixMasques = false }
+                        .keyboardShortcut("p", modifiers: [.command, .shift])
+                } else {
+                    Button("Masquer les prix") { prixMasques = true }
+                        .keyboardShortcut("p", modifiers: [.command, .shift])
+                }
+            }
+        }
+        #endif
+    }
+
+    #if os(macOS)
+    /// Pose l'action demandée et incrémente le signal pour la déclencher dans
+    /// la vue de feuille active.
+    private func declencherFichier(_ action: String) {
+        actionFichier = action
+        actionFichierSignal += 1
+    }
+    #endif
+}

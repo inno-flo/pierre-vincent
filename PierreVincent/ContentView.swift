@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Catégories affichées dans la barre latérale (sidebar).
 /// L'ordre est volontaire : Œuvres en premier, Œuvres données en dernier.
@@ -123,10 +124,12 @@ struct ContentView: View {
                 .background(Color.cremeFond)
                 #endif
 
+                #if os(macOS)
                 Divider()
-
-                // Total en euros en bas de la sidebar.
+                // Total en euros en bas de la sidebar (Mac uniquement ;
+                // retiré sur iPhone à la demande).
                 bandeauTotal
+                #endif
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
@@ -147,7 +150,7 @@ struct ContentView: View {
             // Sélecteur de fichier via l'app Fichiers (iCloud Drive inclus).
             .fileImporter(
                 isPresented: $importerBaseOuvert,
-                allowedContentTypes: [.data],
+                allowedContentTypes: [UTType.data],
                 allowsMultipleSelection: false
             ) { resultat in
                 gererImportBase(resultat)
@@ -205,6 +208,10 @@ struct ContentView: View {
             // données existent déjà, donc sans risque pour de vraies données.
             DonneesTest.genererSiVide(context: context)
         }
+        #if os(iOS)
+        // Secouer l'iPhone masque / réaffiche tous les prix.
+        .detecteSecoussePourPrix()
+        #endif
     }
 
     // MARK: Lien de catégorie (barre latérale)

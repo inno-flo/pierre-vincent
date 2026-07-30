@@ -24,35 +24,42 @@ final class CacheVignettes {
 
     private init() {}
 
-    /// Renvoie la vignette déjà en cache, ou nil si pas encore prête.
-    func vignettePrete(nom: String) -> ImagePlateforme? {
-        cache[nom]
-    }
-
     /// Demande la préparation d'une vignette (en arrière-plan si nécessaire).
     /// `cote` = taille cible en points (ex. 120 pour une liste, 240 pour galerie).
+    /// `preserverRatio` = true : garde le ratio d'origine (pas de crop carré) ;
+    /// false : recadre en carré centré (pour les listes).
     /// Quand la vignette est prête, `quandPrete` est appelé sur le fil principal.
     func demanderVignette(nom: String, cote: CGFloat,
+                          preserverRatio: Bool = false,
                           quandPrete: @escaping (ImagePlateforme) -> Void) {
         guard !nom.isEmpty else { return }
-        if let dejaLa = cache[nom] { quandPrete(dejaLa); return }
-        if enCours.contains(nom) { return }   // déjà en préparation
-        enCours.insert(nom)
+        // Clé distincte selon le mode : un même fichier peut avoir une version
+        // carrée (liste) ET une version au ratio d'origine (galerie).
+        let cle = preserverRatio ? nom + "|ratio" : nom
+        if let dejaLa = cache[cle] { quandPrete(dejaLa); return }
+        if enCours.contains(cle) { return }
+        enCours.insert(cle)
 
         let url = PhotoStore.dossierPhotos.appendingPathComponent(nom)
         let cotePixels = cote * 2   // un peu plus fin que l'affichage (écrans Retina)
 
-        // Chargement + redimensionnement hors du fil principal.
         Task.detached(priority: .userInitiated) {
-            let vignette = Self.fabriquerVignette(url: url, cotePixels: cotePixels)
+            let vignette = preserverRatio
+                ? Self.fabriquerVignetteRatio(url: url, coteMaxPixels: cotePixels)
+                : Self.fabriquerVignette(url: url, cotePixels: cotePixels)
             await MainActor.run {
-                self.enCours.remove(nom)
+                self.enCours.remove(cle)
                 if let v = vignette {
-                    self.cache[nom] = v
+                    self.cache[cle] = v
                     quandPrete(v)
                 }
             }
         }
+    }
+
+    /// Renvoie une vignette déjà en cache si présente (sans en déclencher).
+    func vignettePrete(nom: String, preserverRatio: Bool = false) -> ImagePlateforme? {
+        cache[preserverRatio ? nom + "|ratio" : nom]
     }
 
     /// Fabrique une petite image à partir du fichier d'origine.
@@ -99,6 +106,42 @@ final class CacheVignettes {
         }
         #endif
     }
+
+    /// Fabrique une vignette qui PRÉSERVE le ratio d'origine (pas de crop).
+    /// L'image entière est réduite pour tenir dans une boîte de `coteMaxPixels`
+    /// (sur son plus grand côté). Utilisée par la galerie.
+    nonisolated private static func fabriquerVignetteRatio(url: URL, coteMaxPixels: CGFloat)
+        -> ImagePlateforme? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+
+        #if os(macOS)
+        guard let source = NSImage(data: data) else { return nil }
+        let s = source.size
+        guard s.width > 0, s.height > 0 else { return nil }
+        // Facteur pour que le plus grand côté atteigne coteMaxPixels.
+        let facteur = coteMaxPixels / max(s.width, s.height)
+        let cible = NSSize(width: s.width * facteur, height: s.height * facteur)
+        let vignette = NSImage(size: cible)
+        vignette.lockFocus()
+        source.draw(in: NSRect(origin: .zero, size: cible),
+                    from: NSRect(origin: .zero, size: s),
+                    operation: .copy, fraction: 1.0)
+        vignette.unlockFocus()
+        return vignette
+        #else
+        guard let source = UIImage(data: data) else { return nil }
+        let s = source.size
+        guard s.width > 0, s.height > 0 else { return nil }
+        let facteur = coteMaxPixels / max(s.width, s.height)
+        let cible = CGSize(width: s.width * facteur, height: s.height * facteur)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: cible, format: format)
+        return renderer.image { _ in
+            source.draw(in: CGRect(origin: .zero, size: cible))
+        }
+        #endif
+    }
 }
 
 /// Variante de vignette cachée qui REMPLIT l'espace disponible (pour la galerie,
@@ -107,21 +150,33 @@ final class CacheVignettes {
 struct VignetteCacheeFlexible: View {
     let nom: String
     let coteSource: CGFloat        // taille de la vignette préparée (qualité)
+    var preserverRatio: Bool = false   // true : garde le ratio (galerie)
 
     @State private var image: ImagePlateforme?
 
     var body: some View {
-        Group {
-            if let img = image ?? CacheVignettes.shared.vignettePrete(nom: nom) {
-                Image(imagePlateforme: img).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo")
-                    .font(.system(size: 40)).foregroundStyle(.tertiary)
+        GeometryReader { geo in
+            Group {
+                if let img = image ?? CacheVignettes.shared.vignettePrete(nom: nom, preserverRatio: preserverRatio) {
+                    Image(imagePlateforme: img)
+                        .resizable()
+                        .scaledToFill()
+                        // Contrainte EXACTE à la taille du cadre : sans ça, une
+                        // image paysage déborde en largeur et chevauche les cartes
+                        // voisines.
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                } else {
+                    Image(systemName: "photo")
+                        .font(.system(size: 40)).foregroundStyle(.tertiary)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
             }
         }
         .onAppear {
             guard image == nil, !nom.isEmpty else { return }
-            CacheVignettes.shared.demanderVignette(nom: nom, cote: coteSource) { v in
+            CacheVignettes.shared.demanderVignette(nom: nom, cote: coteSource,
+                                                   preserverRatio: preserverRatio) { v in
                 image = v
             }
         }
