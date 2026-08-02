@@ -129,11 +129,7 @@ struct ContentView: View {
                 .listStyle(.sidebar)
                 #endif
 
-                #if os(macOS)
-                Divider()
-                bandeauTotal
-                #endif
-
+                // Un simple filet, puis les pastilles de choix de thème.
                 Divider()
                 barreThemes
             }
@@ -230,19 +226,12 @@ struct ContentView: View {
         #if os(iOS)
         .detecteSecoussePourPrix()
         #endif
-        // Couleur de texte par défaut suivant le thème (crème pour marron).
+        // Couleur de texte par défaut suivant le thème.
         .foregroundStyle(Color.textePrincipal)
-        // On NE force plus le mode sombre en thème marron : ainsi ses deux
-        // teintes (marronClair / marronSombre définies dans Couleurs.swift)
-        // s'appliquent réellement selon le mode Clair/Sombre de l'appareil.
-        // Les titres et textes restent lisibles grâce à Color.textePrincipal
-        // et Color.texteLegende, qui renvoient déjà du crème en thème marron.
         #if os(iOS)
-        // Les titres de navigationTitle sont rendus par UIKit et ignorent le
-        // .foregroundStyle de SwiftUI. On règle donc leur couleur globalement,
-        // via l'apparence de la barre de navigation, avec une teinte crème en
-        // thème marron (dynamique : elle suit aussi le mode Clair/Sombre).
-        .apparenceTitresNavigation(themeMarron: themeApp == "marron")
+        // Garde la barre de navigation transparente pour laisser voir le fond
+        // coloré du thème derrière ; les titres suivent la couleur système.
+        .apparenceTitresNavigation()
         #endif
         // Recrée la hiérarchie au changement de thème (relit les couleurs).
         .id(themeApp)
@@ -250,14 +239,13 @@ struct ContentView: View {
 
     // MARK: Barre de sélection du thème (bas de la sidebar)
 
-    /// Quatre pastilles pour tester les thèmes de couleurs.
+    /// Pastilles de choix de thème. Seuls Crème et Gris sont proposés ;
+    /// les thèmes vert et bleu existent encore dans le code (Couleurs.swift)
+    /// mais ne sont volontairement plus exposés dans l'interface.
     private var barreThemes: some View {
         HStack(spacing: 10) {
             pastilleTheme("creme", couleur: Color(red: 0.98, green: 0.96, blue: 0.92))
             pastilleTheme("gris",  couleur: Color(red: 0.90, green: 0.93, blue: 0.94))
-            pastilleTheme("vert",  couleur: Color(red: 0.90, green: 0.93, blue: 0.90))
-            pastilleTheme("bleu",  couleur: Color(red: 0.89, green: 0.92, blue: 0.95))
-            pastilleTheme("marron", couleur: Color(red: 74/255, green: 61/255, blue: 50/255))
             Spacer()
         }
         .padding(.horizontal, 20)
@@ -314,7 +302,14 @@ struct ContentView: View {
     private func lien(_ cat: Categorie) -> some View {
         NavigationLink(value: cat) {
             Label {
+                #if os(macOS)
+                // Titre en blanc quand la ligne est sélectionnée (surlignée),
+                // y compris en mode Clair où il resterait noir sinon.
                 Text(cat.titre)
+                    .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
+                #else
+                Text(cat.titre)
+                #endif
             } icon: {
                 #if os(macOS)
                 Image(systemName: cat.symbole)
@@ -326,13 +321,8 @@ struct ContentView: View {
             }
         }
         #if os(iOS)
-        // Fond de cellule suivant le thème (blanc/gris, ou marron clair).
+        // Fond de cellule suivant le thème (blanc en clair, gris en sombre).
         .listRowBackground(Color.fondCelluleSidebar)
-        // Teinte des séparateurs : en thème marron, on reprend un marron sombre
-        // (comme en mode sombre) au lieu du séparateur clair par défaut.
-        .listRowSeparatorTint(themeApp == "marron"
-                              ? Color(red: 86/255, green: 71/255, blue: 58/255)
-                              : nil)
         #endif
     }
 
@@ -390,28 +380,21 @@ struct ContentView: View {
 #if os(iOS)
 import UIKit
 
-/// Modificateur qui règle la couleur des titres de barre de navigation iOS.
-/// Les titres de `navigationTitle` sont dessinés par UIKit et n'obéissent pas
-/// au `.foregroundStyle` de SwiftUI ; il faut donc passer par l'apparence.
+/// Modificateur qui garde la barre de navigation iOS transparente (pour laisser
+/// voir le fond coloré du thème) tout en laissant les titres suivre la couleur
+/// système (noir en mode Clair, blanc en mode Sombre — automatique).
 private struct ApparenceTitresNavigation: ViewModifier {
-    let themeMarron: Bool
-
     func body(content: Content) -> some View {
         content.onAppear { appliquer() }
     }
 
     private func appliquer() {
-        // Couleur du titre : crème en thème marron, sinon le libellé système
-        // (label = noir en mode Clair, blanc en mode Sombre — automatique).
-        let couleurTitre: UIColor = themeMarron
-            ? UIColor(red: 248/255, green: 230/255, blue: 205/255, alpha: 1)
-            : UIColor.label
-
         let apparence = UINavigationBarAppearance()
         // Fond transparent : on laisse voir le fond coloré de l'app derrière.
         apparence.configureWithTransparentBackground()
-        apparence.titleTextAttributes = [.foregroundColor: couleurTitre]
-        apparence.largeTitleTextAttributes = [.foregroundColor: couleurTitre]
+        // Titres en couleur système (label = noir en Clair, blanc en Sombre).
+        apparence.titleTextAttributes = [.foregroundColor: UIColor.label]
+        apparence.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
 
         // On applique aux trois états de la barre pour couvrir tous les cas.
         UINavigationBar.appearance().standardAppearance = apparence
@@ -421,9 +404,9 @@ private struct ApparenceTitresNavigation: ViewModifier {
 }
 
 extension View {
-    /// Applique la couleur de titre de navigation adaptée au thème.
-    func apparenceTitresNavigation(themeMarron: Bool) -> some View {
-        modifier(ApparenceTitresNavigation(themeMarron: themeMarron))
+    /// Garde la barre de navigation transparente, titres en couleur système.
+    func apparenceTitresNavigation() -> some View {
+        modifier(ApparenceTitresNavigation())
     }
 }
 #endif
