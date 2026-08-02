@@ -76,6 +76,10 @@ struct ContentView: View {
     // Nombre d'entrées sélectionnées dans la vue courante (remonté par VueFeuille),
     // pour l'afficher dans le bandeau bas de la sidebar.
     @State private var nbSelection: Int = 0
+    // Thème de couleurs (partagé iOS + Mac).
+    @AppStorage("themeApp") private var themeApp = "creme"
+    // Masquage des prix (partagé iOS + Mac).
+    @AppStorage("prixMasques") private var prixMasques = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -117,20 +121,26 @@ struct ContentView: View {
                     lien(.synthese)
                     #endif
                 }
-                .listStyle(.sidebar)
                 #if os(iOS)
-                // Fond crème comme les autres vues (masque le fond système).
+                .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
                 .background(Color.cremeFond)
+                #else
+                .listStyle(.sidebar)
                 #endif
 
                 #if os(macOS)
                 Divider()
-                // Total en euros en bas de la sidebar (Mac uniquement ;
-                // retiré sur iPhone à la demande).
                 bandeauTotal
                 #endif
+
+                Divider()
+                barreThemes
             }
+            #if os(iOS)
+            // Fond de toute la colonne (y compris bas et barre de thèmes).
+            .background(Color.cremeFond)
+            #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
             // Titre de la vue principale (liste des catégories) sur iPhone,
@@ -139,11 +149,20 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.large)
             // Bouton d'import de la base (fichier .pvbase reçu du Mac).
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                // Import en premier, puis œil (masquage des prix).
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         importerBaseOuvert = true
                     } label: {
                         Image(systemName: "square.and.arrow.down")
+                    }
+                }
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        prixMasques.toggle()
+                    } label: {
+                        Image(systemName: prixMasques ? "eye.slash" : "eye")
                     }
                 }
             }
@@ -209,9 +228,56 @@ struct ContentView: View {
             DonneesTest.genererSiVide(context: context)
         }
         #if os(iOS)
-        // Secouer l'iPhone masque / réaffiche tous les prix.
         .detecteSecoussePourPrix()
         #endif
+        // Couleur de texte par défaut suivant le thème (crème pour marron).
+        .foregroundStyle(Color.textePrincipal)
+        // On NE force plus le mode sombre en thème marron : ainsi ses deux
+        // teintes (marronClair / marronSombre définies dans Couleurs.swift)
+        // s'appliquent réellement selon le mode Clair/Sombre de l'appareil.
+        // Les titres et textes restent lisibles grâce à Color.textePrincipal
+        // et Color.texteLegende, qui renvoient déjà du crème en thème marron.
+        #if os(iOS)
+        // Les titres de navigationTitle sont rendus par UIKit et ignorent le
+        // .foregroundStyle de SwiftUI. On règle donc leur couleur globalement,
+        // via l'apparence de la barre de navigation, avec une teinte crème en
+        // thème marron (dynamique : elle suit aussi le mode Clair/Sombre).
+        .apparenceTitresNavigation(themeMarron: themeApp == "marron")
+        #endif
+        // Recrée la hiérarchie au changement de thème (relit les couleurs).
+        .id(themeApp)
+    }
+
+    // MARK: Barre de sélection du thème (bas de la sidebar)
+
+    /// Quatre pastilles pour tester les thèmes de couleurs.
+    private var barreThemes: some View {
+        HStack(spacing: 10) {
+            pastilleTheme("creme", couleur: Color(red: 0.98, green: 0.96, blue: 0.92))
+            pastilleTheme("gris",  couleur: Color(red: 0.90, green: 0.93, blue: 0.94))
+            pastilleTheme("vert",  couleur: Color(red: 0.90, green: 0.93, blue: 0.90))
+            pastilleTheme("bleu",  couleur: Color(red: 0.89, green: 0.92, blue: 0.95))
+            pastilleTheme("marron", couleur: Color(red: 74/255, green: 61/255, blue: 50/255))
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+    }
+
+    private func pastilleTheme(_ id: String, couleur: Color) -> some View {
+        Button {
+            themeApp = id
+        } label: {
+            Circle()
+                .fill(couleur)
+                .frame(width: 26, height: 26)
+                .overlay(
+                    Circle().strokeBorder(
+                        themeApp == id ? Color.orangeInternational : Color.gray.opacity(0.4),
+                        lineWidth: themeApp == id ? 2.5 : 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Lien de catégorie (barre latérale)
@@ -259,6 +325,15 @@ struct ContentView: View {
                 #endif
             }
         }
+        #if os(iOS)
+        // Fond de cellule suivant le thème (blanc/gris, ou marron clair).
+        .listRowBackground(Color.fondCelluleSidebar)
+        // Teinte des séparateurs : en thème marron, on reprend un marron sombre
+        // (comme en mode sombre) au lieu du séparateur clair par défaut.
+        .listRowSeparatorTint(themeApp == "marron"
+                              ? Color(red: 86/255, green: 71/255, blue: 58/255)
+                              : nil)
+        #endif
     }
 
     // MARK: Total en bas de la sidebar
@@ -311,3 +386,44 @@ struct ContentView: View {
         }
     }
 }
+
+#if os(iOS)
+import UIKit
+
+/// Modificateur qui règle la couleur des titres de barre de navigation iOS.
+/// Les titres de `navigationTitle` sont dessinés par UIKit et n'obéissent pas
+/// au `.foregroundStyle` de SwiftUI ; il faut donc passer par l'apparence.
+private struct ApparenceTitresNavigation: ViewModifier {
+    let themeMarron: Bool
+
+    func body(content: Content) -> some View {
+        content.onAppear { appliquer() }
+    }
+
+    private func appliquer() {
+        // Couleur du titre : crème en thème marron, sinon le libellé système
+        // (label = noir en mode Clair, blanc en mode Sombre — automatique).
+        let couleurTitre: UIColor = themeMarron
+            ? UIColor(red: 248/255, green: 230/255, blue: 205/255, alpha: 1)
+            : UIColor.label
+
+        let apparence = UINavigationBarAppearance()
+        // Fond transparent : on laisse voir le fond coloré de l'app derrière.
+        apparence.configureWithTransparentBackground()
+        apparence.titleTextAttributes = [.foregroundColor: couleurTitre]
+        apparence.largeTitleTextAttributes = [.foregroundColor: couleurTitre]
+
+        // On applique aux trois états de la barre pour couvrir tous les cas.
+        UINavigationBar.appearance().standardAppearance = apparence
+        UINavigationBar.appearance().scrollEdgeAppearance = apparence
+        UINavigationBar.appearance().compactAppearance = apparence
+    }
+}
+
+extension View {
+    /// Applique la couleur de titre de navigation adaptée au thème.
+    func apparenceTitresNavigation(themeMarron: Bool) -> some View {
+        modifier(ApparenceTitresNavigation(themeMarron: themeMarron))
+    }
+}
+#endif

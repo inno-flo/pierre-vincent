@@ -19,8 +19,11 @@ struct VueiOS: View {
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).
     @AppStorage("triCroissant") private var triCroissant: Bool = false
+    @AppStorage("themeApp") private var themeApp = "creme"
     @State private var selection: Set<UUID> = []
     @State private var detail: Oeuvre?
+    // Œuvre vers laquelle défiler à la fermeture de la fiche Détails.
+    @State private var oeuvreADefiler: UUID?
 
     /// Œuvres de cette catégorie (ou compilation des 4).
     private var oeuvres: [Oeuvre] {
@@ -78,7 +81,7 @@ struct VueiOS: View {
                     oeuvres: oeuvresGalerie,
                     estFeuilleDon: estFeuilleDon,
                     selection: $selection,
-                    onOuvrir: { o in detail = o }
+                    onOuvrir: { o in selection = [o.id]; detail = o }
                 )
             } else {
                 liste
@@ -97,16 +100,26 @@ struct VueiOS: View {
                     modeAffichage = "liste"
                 } label: {
                     Image(systemName: "list.bullet")
+                        .padding(6)
+                        .background(
+                            Circle().fill(modeAffichage == "liste"
+                                          ? Color.primary.opacity(0.12) : Color.clear)
+                        )
                 }
-                .disabled(modeAffichage == "liste")
+                .buttonStyle(.plain)
 
                 // 2. Vue Galerie.
                 Button {
                     modeAffichage = "icone"
                 } label: {
                     Image(systemName: "square.grid.2x2")
+                        .padding(6)
+                        .background(
+                            Circle().fill(modeAffichage == "icone"
+                                          ? Color.primary.opacity(0.12) : Color.clear)
+                        )
                 }
-                .disabled(modeAffichage == "icone")
+                .buttonStyle(.plain)
 
                 // 3. Critère de tri (selon la feuille affichée).
                 Menu {
@@ -155,62 +168,93 @@ struct VueiOS: View {
         // Fiche de détail au toucher d'une entrée.
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: estFeuilleDon,
-                      listeNavigation: modeAffichage == "icone" ? oeuvresGalerie : oeuvres)
+                      listeNavigation: oeuvresGalerie,
+                      onFermeture: { derniere in
+                          oeuvreADefiler = derniere.id
+                          // Met à jour la sélection : déclenche aussi le
+                          // défilement de la galerie (mode icone).
+                          selection = [derniere.id]
+                      },
+                      onStabilise: { stable in
+                          // Positionne la liste/galerie par anticipation pendant
+                          // les pauses de navigation (avant même la fermeture).
+                          oeuvreADefiler = stable.id
+                          selection = [stable.id]
+                      })
         }
     }
 
     /// Liste en blocs séparés sur fond beige (même style que la vue « Œuvres »).
     private var liste: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                ForEach(oeuvresGalerie) { o in
-                    Button {
-                        detail = o
-                    } label: {
-                        HStack(spacing: 12) {
-                            VignetteCachee(nom: o.photoNom, cote: 64)
-                            VStack(alignment: .leading, spacing: 3) {
-                                if !estFeuilleDon {
-                                    // Acheteur en premier (mis en avant), puis prix.
-                                    Text(o.acheteur.isEmpty ? "—" : o.acheteur)
-                                        .font(.headline)
-                                        .lineLimit(1)
-                                    PrixText(o.prix)
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.orangeInternational)
-                                    if !o.modeVente.isEmpty {
-                                        Text(o.modeVente)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(oeuvresGalerie) { o in
+                        Button {
+                            selection = [o.id]
+                            detail = o
+                        } label: {
+                            HStack(spacing: 14) {
+                                VignetteCachee(nom: o.photoNom, cote: 76)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    if !estFeuilleDon {
+                                        // Acheteur en premier (mis en avant), puis prix.
+                                        Text(o.acheteur.isEmpty ? "—" : o.acheteur)
+                                            .font(.headline)
+                                            .lineLimit(1)
+                                        PrixText(o.prix)
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.orangeInternational)
+                                        if !o.modeVente.isEmpty {
+                                            Text(o.modeVente)
+                                                .font(.body).foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    } else if !o.destinataire.isEmpty {
+                                        Text(o.destinataire)
+                                            .font(.headline).lineLimit(1)
+                                    }
+                                    // Le type n'est PAS affiché ici : ces vues ne
+                                    // contiennent qu'un seul type d'œuvre.
+                                    if !o.dimensions.isEmpty {
+                                        Text(o.dimensions)
                                             .font(.body).foregroundStyle(.secondary)
                                             .lineLimit(1)
                                     }
-                                } else if !o.destinataire.isEmpty {
-                                    Text(o.destinataire)
-                                        .font(.headline).lineLimit(1)
                                 }
-                                // Le type n'est PAS affiché ici : ces vues ne
-                                // contiennent qu'un seul type d'œuvre.
-                                if !o.dimensions.isEmpty {
-                                    Text(o.dimensions)
-                                        .font(.body).foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
+                                Spacer()
                             }
-                            Spacer()
+                            .frame(height: 92)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.fondLegende)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(selection.contains(o.id)
+                                                  ? Color.orangeInternational : Color.clear,
+                                                  lineWidth: 1)
+                            )
                         }
-                        .frame(height: 88)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color.fondLegende)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .buttonStyle(.plain)
+                        .id(o.id)
                     }
-                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 30)
+            }
+            .background(Color.cremeFond)
+            // Défile vers la dernière œuvre consultée à la fermeture de la fiche.
+            .onChange(of: oeuvreADefiler) { _, cible in
+                guard let cible else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(cible, anchor: .center)
+                    }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 30)
         }
-        .background(Color.cremeFond)
     }
 }
 
@@ -220,6 +264,12 @@ struct DetailiOS: View {
     let estFeuilleDon: Bool
     /// Liste ordonnée pour naviguer Précédent / Suivant (ordre d'affichage).
     var listeNavigation: [Oeuvre] = []
+    /// Appelé à la fermeture avec la dernière œuvre affichée, pour que la liste
+    /// parente se positionne dessus.
+    var onFermeture: (Oeuvre) -> Void = { _ in }
+    /// Appelé après une courte pause sans navigation, pour positionner la liste
+    /// parente sur l'œuvre courante par anticipation (avant même la fermeture).
+    var onStabilise: (Oeuvre) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
 
     // Œuvre affichée (change avec les chevrons) et sa position dans la liste.
@@ -227,6 +277,11 @@ struct DetailiOS: View {
     @State private var indexCourant = 0
     // Sens du dernier changement, pour orienter la transition (+1 / -1).
     @State private var sensTransition = 1
+    // Verrou : empêche une nouvelle navigation pendant l'animation en cours
+    // (sinon deux transitions se chevauchent et un bouton peut se figer).
+    @State private var enTransition = false
+    // Minuteur réarmable : détecte les pauses dans la navigation.
+    @State private var tacheStabilisation: Task<Void, Never>?
 
     /// Œuvre réellement affichée (la courante, ou celle passée à l'ouverture).
     private var oeuvreAffichee: Oeuvre { courante ?? oeuvre }
@@ -291,6 +346,12 @@ struct DetailiOS: View {
                     indexCourant = i
                 }
             }
+            .onDisappear {
+                // Annule le minuteur de stabilisation en attente.
+                tacheStabilisation?.cancel()
+                // Renvoie la dernière œuvre consultée à la liste parente.
+                onFermeture(oeuvreAffichee)
+            }
         }
     }
 
@@ -298,11 +359,21 @@ struct DetailiOS: View {
     private var contenuFiche: some View {
         let oeuvre = oeuvreAffichee
         return VStack(alignment: .leading, spacing: 12) {
-            // Grande image.
+            // Grande image, ou vignette « image manquante » si absente.
             if let img = PhotoStore.chargerImage(nom: oeuvre.photoNom) {
                 Image(imagePlateforme: img).resizable().scaledToFit()
                     .frame(maxWidth: .infinity)
                     .cornerRadius(12)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.15))
+                    Image(systemName: "photo")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
             }
 
             // Cellule 1 : Prix (sauf dons).
@@ -354,13 +425,31 @@ struct DetailiOS: View {
 
     /// Passe à l'œuvre précédente (-1) ou suivante (+1).
     private func naviguer(_ sens: Int) {
+        // Ignore l'appui si une transition est déjà en cours.
+        guard !enTransition else { return }
         let nouvel = indexCourant + sens
         guard nouvel >= 0, nouvel < listeNavigation.count else { return }
         sensTransition = sens
+        enTransition = true
         // Transition rapide et fluide (fondu + glissement).
-        withAnimation(.easeInOut(duration: 0.25)) {
+        withAnimation(.easeInOut(duration: 0.15)) {
             indexCourant = nouvel
             courante = listeNavigation[nouvel]
+        }
+        // Libère le verrou une fois l'animation terminée.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            enTransition = false
+        }
+        // Réarme le minuteur de stabilisation : si aucune nouvelle navigation
+        // n'arrive dans les 0,4 s, on positionne la liste parente par
+        // anticipation (la personne s'apprête peut-être à fermer la vue).
+        tacheStabilisation?.cancel()
+        let oeuvreStable = listeNavigation[nouvel]
+        tacheStabilisation = Task {
+            try? await Task.sleep(nanoseconds: 400_000_000)   // 0,4 s
+            if !Task.isCancelled {
+                await MainActor.run { onStabilise(oeuvreStable) }
+            }
         }
     }
 

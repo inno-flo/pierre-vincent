@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "AppIcon-1024.png",
+      "filename" : "icône kaki 6.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "icône kaki 6 dark.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -24,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "icône kaki 6 dark 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -64,6 +66,7 @@
       "size" : "256x256"
     },
     {
+      "filename" : "icône kaki 6 512x512 macOS.jpeg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "256x256"
