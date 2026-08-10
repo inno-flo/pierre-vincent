@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "2A4EA9DF-BE2D-4F48-B255-85CF5C95A23D"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "PierreVincent/PhotoField.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "59"
+            endingLineNumber = "59"
+            landmarkName = "traiterDrop(_:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59 - 33b07b58390e50f1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PierreVincent.PhotoField.traiterDrop(Swift.Array&lt;__C.NSItemProvider&gt;) -&gt; Swift.Bool"
+                  moduleName = "PierreVincent.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/florianinnocente/Documents/Projets%20Xcode/Claude/PierreVincent/PierreVincent/PhotoField.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "59"
+                  endingLineNumber = "59">
+               </Location>
+               <Location
+                  uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59 - da9ad3c7093874c9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 @Sendable (Swift.Optional&lt;Foundation.URL&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; () in PierreVincent.PhotoField.traiterDrop(Swift.Array&lt;__C.NSItemProvider&gt;) -&gt; Swift.Bool"
+                  moduleName = "PierreVincent.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/florianinnocente/Documents/Projets%20Xcode/Claude/PierreVincent/PierreVincent/PhotoField.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "60"
+                  endingLineNumber = "60">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

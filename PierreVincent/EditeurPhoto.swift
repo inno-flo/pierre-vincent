@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import SwiftData
 
@@ -28,3 +29,4 @@ struct EditeurPhoto: View {
         .frame(width: 320, height: 320)
     }
 }
+#endif

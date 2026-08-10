@@ -35,6 +35,7 @@ final class Oeuvre {
     // Champs des feuilles « vendues »
     var prix: Double = 0
     var vendeur: String = ""
+    var modeVente: String = ""
     var acheteur: String = ""
     var date: String = ""
 

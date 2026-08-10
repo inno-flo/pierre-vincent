@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 import AppKit
 import XLKit
@@ -76,3 +77,4 @@ enum ExportXLSXImages {
         return resultat
     }
 }
+#endif
