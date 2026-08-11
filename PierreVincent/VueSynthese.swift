@@ -141,10 +141,6 @@ struct VueSynthese: View {
                         tuileVendeur("RempART", sommeVendeur("RempART"))
                     }
                 }
-
-                // --- Bloc de test temporaire, à supprimer ---
-                Text("Bonjour")
-                TextField("", text: .constant("Ok"))
             }
             .padding(16)
         }
