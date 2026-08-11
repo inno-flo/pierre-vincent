@@ -283,7 +283,8 @@ struct VueOeuvresStructuree: View {
 
     /// Liste de lignes compactes (vignette + informations).
     private func listeLignes(_ liste: [Oeuvre]) -> some View {
-        VStack(spacing: 8) {
+        // Lazy : ne construit que les lignes visibles à l'écran.
+        LazyVStack(spacing: 8) {
             ForEach(liste) { o in
                 Button {
                     selection = [o.id]

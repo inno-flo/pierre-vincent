@@ -188,7 +188,8 @@ struct VueiOS: View {
     private var liste: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 8) {
+                // Lazy : ne construit que les lignes visibles à l'écran.
+                LazyVStack(spacing: 8) {
                     ForEach(oeuvresGalerie) { o in
                         Button {
                             selection = [o.id]
