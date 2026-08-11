@@ -126,6 +126,10 @@ struct EditeurEntree: View {
                         Label("Précédent", systemImage: "chevron.left")
                     }
                     .disabled(indexCourant <= 0)
+                    // Flèche gauche du clavier comme alternative au bouton
+                    // (sans modificateur : les champs texte gardent la priorité
+                    // pour déplacer le curseur pendant la saisie).
+                    .keyboardShortcut(.leftArrow, modifiers: [])
 
                     Button {
                         demanderNavigation(1)
@@ -136,6 +140,8 @@ struct EditeurEntree: View {
                         }
                     }
                     .disabled(indexCourant >= listeNavigation.count - 1)
+                    // Flèche droite du clavier comme alternative au bouton.
+                    .keyboardShortcut(.rightArrow, modifiers: [])
                 }
 
                 Spacer()
