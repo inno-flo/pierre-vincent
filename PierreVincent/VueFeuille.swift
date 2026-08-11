@@ -250,9 +250,8 @@ struct VueFeuille: View {
         }
     }
 
-    /// Alignement du contenu des cellules « vente » :
-    /// à gauche dans l'onglet Œuvres (vue compilée, en lecture seule),
-    /// centré dans les autres onglets.
+    /// Alignement du contenu des cellules « vente » : centré (toutes les
+    /// catégories, y compris « Œuvres », sont désormais éditables).
     private var alignementCellules: Alignment {
         lectureSeule ? .leading : .center
     }
@@ -383,14 +382,18 @@ struct VueFeuille: View {
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
         // === Set 1 : création / suppression / modification ===
-        if !lectureSeule, let f = feuille {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    let o = Oeuvre(feuille: f)
-                    context.insert(o)
-                    editionNouvelle = true
-                    editionEntree = o
-                } label: { Label("Ajouter", systemImage: "plus") }
+        if !lectureSeule {
+            // « Ajouter » exige une feuille cible : absent dans l'onglet
+            // « Œuvres » (vue compilée des 4 feuilles, sans feuille unique).
+            if let f = feuille {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        let o = Oeuvre(feuille: f)
+                        context.insert(o)
+                        editionNouvelle = true
+                        editionEntree = o
+                    } label: { Label("Ajouter", systemImage: "plus") }
+                }
             }
             ToolbarItem(placement: .primaryAction) {
                 Button(role: .destructive) {

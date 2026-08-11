@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// Catégories affichées dans la barre latérale (sidebar).
 /// L'ordre est volontaire : Œuvres en premier, Œuvres données en dernier.
 enum Categorie: Hashable, CaseIterable, Identifiable {
-    case oeuvres          // vue compilée, lecture seule
+    case oeuvres          // vue compilée (agrège les 4 feuilles)
     case tableauxVendus
     case dessinsVendus
     case tapisVendus
@@ -48,7 +48,10 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         }
     }
 
-    var lectureSeule: Bool { self == .oeuvres }
+    // Toutes les catégories macOS sont éditables (y compris « Œuvres » :
+    // Ajouter/Modifier/Supprimer y sont possibles sur chaque entrée, seul le
+    // bouton « Ajouter » reste absent faute de feuille cible unique).
+    var lectureSeule: Bool { false }
 
     /// Vrai pour la vue tableau de bord (affichage spécifique).
     var estSynthese: Bool { self == .synthese }
