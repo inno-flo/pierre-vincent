@@ -19,8 +19,12 @@ func trier(_ oeuvres: [Oeuvre], par cle: CleColonne, sens: SensTri) -> [Oeuvre] 
     return sens == .ascendant ? triees : triees.reversed()
 }
 
-/// Formate une somme en euros selon la locale française.
-func formaterEuros(_ montant: Double) -> String {
+/// Formatter partagé pour l'affichage des euros. Construit une seule fois
+/// (un NumberFormatter est coûteux à instancier) et réutilisé à chaque appel
+/// de `formaterEuros` : cette fonction est appelée très souvent (chaque ligne
+/// de tableau, chaque tuile de la Synthèse, chaque vignette de galerie), donc
+/// en recréer un à chaque fois ralentissait inutilement l'affichage.
+private let formatteurEuros: NumberFormatter = {
     let f = NumberFormatter()
     f.numberStyle = .currency
     f.currencyCode = "EUR"
@@ -28,7 +32,12 @@ func formaterEuros(_ montant: Double) -> String {
     // Pas de centimes : on affiche des montants ronds (40 € et non 40,00 €).
     f.minimumFractionDigits = 0
     f.maximumFractionDigits = 0
-    return f.string(from: NSNumber(value: montant)) ?? "\(Int(montant)) €"
+    return f
+}()
+
+/// Formate une somme en euros selon la locale française.
+func formaterEuros(_ montant: Double) -> String {
+    formatteurEuros.string(from: NSNumber(value: montant)) ?? "\(Int(montant)) €"
 }
 
 /// Calcule la somme totale de la colonne Prix pour une liste d'œuvres.
