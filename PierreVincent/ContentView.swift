@@ -87,6 +87,9 @@ struct ContentView: View {
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
     @State private var messageImportBase: String?
+    // Section actuellement touchée du doigt (surbrillance immédiate, avant
+    // même que la navigation ne se déclenche au relâchement).
+    @State private var categorieTouchee: Categorie?
     #endif
 
     var body: some View {
@@ -324,8 +327,19 @@ struct ContentView: View {
             }
         }
         #if os(iOS)
-        // Fond de cellule suivant le thème (blanc en clair, gris en sombre).
-        .listRowBackground(Color.fondCelluleSidebar)
+        // Fond de cellule suivant le thème (blanc en clair, gris en sombre),
+        // avec une teinte plus soutenue dès que le doigt touche la ligne
+        // (pas seulement une fois la sélection retenue au relâchement).
+        .listRowBackground(
+            (categorieTouchee == cat || categorie == cat)
+                ? Color.fondCelluleSidebarSelectionnee : Color.fondCelluleSidebar)
+        // Détecte l'appui immédiatement (avant le relâchement du doigt qui
+        // déclenche la navigation), pour un retour visuel instantané.
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity) {
+            // Rien à faire ici : la navigation reste gérée par NavigationLink.
+        } onPressingChanged: { enCours in
+            categorieTouchee = enCours ? cat : nil
+        }
         #endif
     }
 
