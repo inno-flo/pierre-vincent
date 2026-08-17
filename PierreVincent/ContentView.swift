@@ -335,11 +335,16 @@ struct ContentView: View {
                 ? Color.fondCelluleSidebarSelectionnee : Color.fondCelluleSidebar)
         // Détecte l'appui immédiatement (avant le relâchement du doigt qui
         // déclenche la navigation), pour un retour visuel instantané.
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity) {
-            // Rien à faire ici : la navigation reste gérée par NavigationLink.
-        } onPressingChanged: { enCours in
-            categorieTouchee = enCours ? cat : nil
-        }
+        // simultaneousGesture (et non .gesture / .onLongPressGesture) pour ne
+        // jamais entrer en concurrence avec le geste de tap du NavigationLink
+        // — sinon les deux gestes se disputent le toucher : la navigation
+        // échoue de façon aléatoire (et le réarbitrage répété fait chauffer
+        // l'appareil).
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in categorieTouchee = cat }
+                .onEnded { _ in categorieTouchee = nil }
+        )
         #endif
     }
 
