@@ -293,16 +293,23 @@ struct DetailiOS: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                contenuFiche
-                    // Identité liée à l'œuvre : SwiftUI anime le remplacement
-                    // du contenu à chaque changement.
-                    .id(oeuvreAffichee.id)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: sensTransition > 0 ? .trailing : .leading)
-                            .combined(with: .opacity),
-                        removal: .move(edge: sensTransition > 0 ? .leading : .trailing)
-                            .combined(with: .opacity)
-                    ))
+                // Le ZStack est nécessaire pour que l'ancienne et la nouvelle
+                // fiche soient réellement superposées pendant l'animation :
+                // sans lui, à l'intérieur d'un simple ScrollView, SwiftUI ne
+                // compose pas les deux vues en même temps et le glissement
+                // latéral ne se voit pas (juste un remplacement sec).
+                ZStack {
+                    contenuFiche
+                        // Identité liée à l'œuvre : SwiftUI anime le
+                        // remplacement du contenu à chaque changement.
+                        .id(oeuvreAffichee.id)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: sensTransition > 0 ? .trailing : .leading)
+                                .combined(with: .opacity),
+                            removal: .move(edge: sensTransition > 0 ? .leading : .trailing)
+                                .combined(with: .opacity)
+                        ))
+                }
             }
             .background(Color.cremeFond)
             // Navigation par glissement latéral : vers la gauche = suivant,
@@ -444,13 +451,15 @@ struct DetailiOS: View {
         guard nouvel >= 0, nouvel < listeNavigation.count else { return }
         sensTransition = sens
         enTransition = true
-        // Transition rapide et fluide (fondu + glissement).
-        withAnimation(.easeInOut(duration: 0.15)) {
+        // Durée un peu plus longue que l'ancienne (0,15 s) : à cette
+        // vitesse-là le glissement latéral n'avait pas le temps de se voir,
+        // et ressemblait à un simple remplacement.
+        withAnimation(.easeInOut(duration: 0.25)) {
             indexCourant = nouvel
             courante = listeNavigation[nouvel]
         }
         // Libère le verrou une fois l'animation terminée.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             enTransition = false
         }
         // Réarme le minuteur de stabilisation : si aucune nouvelle navigation
