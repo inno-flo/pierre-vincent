@@ -118,6 +118,18 @@ extension Color {
             bleuClair:  (255, 255, 255), bleuSombre:  (28, 28, 32))
     }
 
+    /// Fond de la cellule sélectionnée dans la barre latérale iOS : une
+    /// teinte visiblement plus soutenue que `fondCelluleSidebar`, pour
+    /// donner un contraste net à la section active (sans utiliser l'orange
+    /// de marque, réservé aux valeurs chiffrées).
+    static var fondCelluleSidebarSelectionnee: Color {
+        couleurTheme(
+            cremeClair: (234, 224, 204), cremeSombre: (54, 54, 58),
+            grisClair:  (204, 214, 221), grisSombre:  (46, 51, 58),
+            vertClair:  (204, 219, 206), vertSombre:  (40, 51, 43),
+            bleuClair:  (200, 214, 235), bleuSombre:  (38, 48, 68))
+    }
+
     // MARK: Thème « Graphite » de la vue Synthèse (sombre fixe)
     static let graphitePageBg   = Color(red: 0x1A/255, green: 0x1A/255, blue: 0x1C/255)
     static let graphiteCardBg   = Color(red: 0x24/255, green: 0x24/255, blue: 0x26/255)
