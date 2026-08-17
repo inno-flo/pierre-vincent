@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Vue de consultation pour iPhone/iPad (lecture seule).
 /// Affiche les entrées d'une catégorie en liste ou en galerie, avec accès
@@ -283,6 +284,8 @@ struct DetailiOS: View {
     @State private var enTransition = false
     // Minuteur réarmable : détecte les pauses dans la navigation.
     @State private var tacheStabilisation: Task<Void, Never>?
+    // Affichage de la photo en plein écran (tap prolongé).
+    @State private var imagePleinEcranOuverte = false
 
     /// Œuvre réellement affichée (la courante, ou celle passée à l'ouverture).
     private var oeuvreAffichee: Oeuvre { courante ?? oeuvre }
@@ -365,6 +368,15 @@ struct DetailiOS: View {
                 Image(imagePlateforme: img).resizable().scaledToFit()
                     .frame(maxWidth: .infinity)
                     .cornerRadius(12)
+                    // Tap prolongé (comme sur une icône d'écran d'accueil) :
+                    // retour haptique puis ouverture en plein écran, zoomable.
+                    .onLongPressGesture(minimumDuration: 0.5) {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        imagePleinEcranOuverte = true
+                    }
+                    .fullScreenCover(isPresented: $imagePleinEcranOuverte) {
+                        VisionneuseImagePleinEcran(image: img)
+                    }
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
