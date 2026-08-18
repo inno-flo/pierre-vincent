@@ -3,7 +3,7 @@ import SwiftData
 import UniformTypeIdentifiers
 
 /// Catégories affichées dans la barre latérale (sidebar).
-/// L'ordre est volontaire : Œuvres en premier, Œuvres données en dernier.
+/// L'ordre est volontaire : Inventaire en premier, Œuvres données en dernier.
 enum Categorie: Hashable, CaseIterable, Identifiable {
     case oeuvres          // vue compilée (agrège les 4 feuilles)
     case tableauxVendus
@@ -16,11 +16,11 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
 
     var titre: String {
         switch self {
-        case .oeuvres:        return "Œuvres"
+        case .oeuvres:        return "Inventaire"
         case .tableauxVendus: return "Tableaux vendus"
         case .dessinsVendus:  return "Dessins vendus"
         case .tapisVendus:    return "Tapis vendus"
-        case .oeuvresDonnees: return "Dons"
+        case .oeuvresDonnees: return "Œuvres données"
         case .synthese:       return "Synthèse"
         }
     }
@@ -106,33 +106,30 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 List(selection: $categorie) {
                     #if os(iOS)
-                    // Sur iPhone : quatre blocs (sections) distincts.
+                    // Sur iPhone : trois blocs (sections) distincts.
                     Section {
                         lien(.oeuvres)
                     }
-                    Section {
+                    Section(header: Text("Ventes et dons").font(.system(size: 15))) {
                         lien(.tableauxVendus)
                         lien(.dessinsVendus)
                         lien(.tapisVendus)
-                    }
-                    Section {
                         lien(.oeuvresDonnees)
                     }
-                    Section {
+                    Section(header: Text("Expositions et enchères").font(.system(size: 15))) {
                         lien(.synthese)
                     }
                     #else
-                    // Sur Mac : liste continue avec un filet avant Synthèse.
+                    // Sur Mac : liste continue avec un en-tête de section avant Synthèse.
                     ForEach(Categorie.categoriesData) { cat in
                         lien(cat)
                             .listRowSeparator(.hidden)
                     }
 
-                    Divider()
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
-
-                    lien(.synthese)
+                    Section(header: Text("Expositions et enchères").font(.system(size: 15))) {
+                        lien(.synthese)
+                            .listRowSeparator(.hidden)
+                    }
                     #endif
                 }
                 #if os(iOS)
@@ -166,9 +163,10 @@ struct ContentView: View {
             #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
-            // Titre de la vue principale (liste des catégories) sur iPhone,
-            // en grand format pour laisser le même espace que les autres vues.
-            .navigationTitle("Inventaire")
+            // Pas d'intitulé pour la vue principale (liste des catégories) sur
+            // iPhone : le mode grand format est conservé (chaîne vide) pour
+            // garder le même espace de mise en page que les autres vues.
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.large)
             // Bouton d'import de la base (fichier .pvbase reçu du Mac).
             .toolbar {
