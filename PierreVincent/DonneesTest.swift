@@ -84,6 +84,7 @@ enum DonneesTest {
         let formats = ["Portrait", "Paysage", "Carré", "Panoramique"]
         let vendeurs = ["Artenchères", "Drôme Enchères", "RempART",
                         "Galerie du Centre", "Vente privée", "Atelier"]
+        let modesVente = ["Exposition", "Vente aux enchères", "Vente privée", "Atelier"]
         let acheteurs = ["M. Dupont", "Mme Martin", "Collection privée",
                          "M. Bernard", "Anonyme"]
         let destinataires = ["Musée local", "Association", "Ami proche",
@@ -120,6 +121,7 @@ enum DonneesTest {
                 } else {
                     o.prix = Double(Int.random(in: 1...40) * 50)   // 50 à 2000 €
                     o.vendeur = vendeurs.randomElement()!
+                    o.modeVente = modesVente.randomElement()!
                     o.acheteur = acheteurs.randomElement()!
                     o.date = "2025"
                 }

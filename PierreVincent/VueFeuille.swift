@@ -12,8 +12,18 @@ struct VueFeuille: View {
     let feuille: Feuille?          // nil = vue compilée « Œuvres »
     let lectureSeule: Bool
     let titre: String
+    let modesVente: [String]       // filtre supplémentaire sur modeVente (vide = aucun)
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
+
+    init(feuille: Feuille?, lectureSeule: Bool, titre: String,
+         modesVente: [String] = [], nbSelection: Binding<Int>) {
+        self.feuille = feuille
+        self.lectureSeule = lectureSeule
+        self.titre = titre
+        self.modesVente = modesVente
+        self._nbSelection = nbSelection
+    }
 
     @Environment(\.modelContext) private var context
     @Query private var toutes: [Oeuvre]
@@ -60,11 +70,17 @@ struct VueFeuille: View {
 
     /// Œuvres de cette feuille (ou compilation des 4), triées par le composant.
     private var oeuvres: [Oeuvre] {
-        let base: [Oeuvre]
+        var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
+        } else if !modesVente.isEmpty {
+            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
+            base = toutes.filter { $0.feuille != .oeuvresDonnees }
         } else {
             base = toutes
+        }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
         }
         return base.sorted(using: tri)
     }
@@ -77,11 +93,17 @@ struct VueFeuille: View {
 
     /// Œuvres triées pour la galerie, selon le critère et le sens choisis.
     private var oeuvresGalerie: [Oeuvre] {
-        let base: [Oeuvre]
+        var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
+        } else if !modesVente.isEmpty {
+            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
+            base = toutes.filter { $0.feuille != .oeuvresDonnees }
         } else {
             base = toutes
+        }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
         }
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.

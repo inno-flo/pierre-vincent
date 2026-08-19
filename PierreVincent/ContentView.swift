@@ -3,48 +3,68 @@ import SwiftData
 import UniformTypeIdentifiers
 
 /// Catégories affichées dans la barre latérale (sidebar).
-/// L'ordre est volontaire : Inventaire en premier, Œuvres données en dernier.
+/// L'ordre est volontaire : Inventaire en premier, Synthèse en dernier.
 enum Categorie: Hashable, CaseIterable, Identifiable {
     case oeuvres          // vue compilée (agrège les 4 feuilles)
     case tableauxVendus
     case dessinsVendus
     case tapisVendus
     case oeuvresDonnees
+    case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
     case synthese         // tableau de bord, en dernier
 
     var id: Self { self }
 
     var titre: String {
         switch self {
-        case .oeuvres:        return "Inventaire"
-        case .tableauxVendus: return "Tableaux vendus"
-        case .dessinsVendus:  return "Dessins vendus"
-        case .tapisVendus:    return "Tapis vendus"
-        case .oeuvresDonnees: return "Œuvres données"
-        case .synthese:       return "Synthèse"
+        case .oeuvres:          return "Inventaire"
+        case .tableauxVendus:   return "Tableaux"
+        case .dessinsVendus:    return "Dessins"
+        case .tapisVendus:      return "Tapis"
+        case .oeuvresDonnees:   return "Dons"
+        case .ventesRealisees:  return "Ventes"
+        case .synthese:         return "Synthèse"
         }
     }
 
     var symbole: String {
         switch self {
-        case .oeuvres:        return "square.grid.2x2"
-        case .tableauxVendus: return "paintpalette"
-        case .dessinsVendus:  return "pencil.and.outline"
-        case .tapisVendus:    return "square.grid.3x3.square"
-        case .oeuvresDonnees: return "gift"
-        case .synthese:       return "chart.bar.doc.horizontal"
+        case .oeuvres:          return "square.grid.2x2"
+        case .tableauxVendus:   return "paintpalette"
+        case .dessinsVendus:    return "pencil.and.outline"
+        case .tapisVendus:      return "square.grid.3x3.square"
+        case .oeuvresDonnees:   return "gift"
+        case .ventesRealisees:  return "person.crop.circle.fill"
+        case .synthese:         return "chart.bar.doc.horizontal"
         }
     }
 
-    /// La feuille correspondante (nil pour « Œuvres » et « Synthèse »).
+    /// La feuille correspondante (nil pour les vues agrégées).
     var feuille: Feuille? {
         switch self {
-        case .oeuvres:        return nil
-        case .tableauxVendus: return .tableauxVendus
-        case .dessinsVendus:  return .dessinsVendus
-        case .tapisVendus:    return .tapisVendus
-        case .oeuvresDonnees: return .oeuvresDonnees
-        case .synthese:       return nil
+        case .oeuvres:          return nil
+        case .tableauxVendus:   return .tableauxVendus
+        case .dessinsVendus:    return .dessinsVendus
+        case .tapisVendus:      return .tapisVendus
+        case .oeuvresDonnees:   return .oeuvresDonnees
+        case .ventesRealisees:  return nil
+        case .synthese:         return nil
+        }
+    }
+
+    /// Filtre sur le mode de vente (vide = aucun filtre supplémentaire).
+    var modesVente: [String] {
+        switch self {
+        case .ventesRealisees: return ["Exposition", "Vente aux enchères"]
+        default:               return []
+        }
+    }
+
+    /// Valeurs possibles du champ Vendeur pour le filtre rapide (vide = menu de tri standard).
+    var filtresVendeur: [String] {
+        switch self {
+        case .ventesRealisees: return ["Artenchères", "Drôme Enchères", "RempART"]
+        default:               return []
         }
     }
 
@@ -56,9 +76,10 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
     /// Vrai pour la vue tableau de bord (affichage spécifique).
     var estSynthese: Bool { self == .synthese }
 
-    /// Les catégories de données (tout sauf le tableau de bord Synthèse).
+    /// Catégories du bloc principal (tout sauf Synthèse et Ventes réalisées,
+    /// qui sont placés dans leurs propres sections sur macOS).
     static var categoriesData: [Categorie] {
-        allCases.filter { $0 != .synthese }
+        allCases.filter { $0 != .synthese && $0 != .ventesRealisees }
     }
 }
 
@@ -110,23 +131,31 @@ struct ContentView: View {
                     Section {
                         lien(.oeuvres)
                     }
-                    Section(header: Text("Ventes et dons").font(.system(size: 15))) {
+                    Section(header: Text("Ventes et dons").font(.system(size: 20, weight: .bold))) {
                         lien(.tableauxVendus)
                         lien(.dessinsVendus)
                         lien(.tapisVendus)
                         lien(.oeuvresDonnees)
                     }
-                    Section(header: Text("Expositions et enchères").font(.system(size: 15))) {
+                    Section(header: Text("Expositions et enchères").font(.system(size: 20, weight: .bold))) {
+                        lien(.ventesRealisees)
+                    }
+                    Section {
                         lien(.synthese)
                     }
                     #else
-                    // Sur Mac : liste continue avec un en-tête de section avant Synthèse.
+                    // Sur Mac : bloc principal, section "Expositions et enchères", Synthèse seule.
                     ForEach(Categorie.categoriesData) { cat in
                         lien(cat)
                             .listRowSeparator(.hidden)
                     }
 
-                    Section(header: Text("Expositions et enchères").font(.system(size: 15))) {
+                    Section(header: Text("Expositions et enchères").font(.system(size: 20, weight: .bold))) {
+                        lien(.ventesRealisees)
+                            .listRowSeparator(.hidden)
+                    }
+
+                    Section {
                         lien(.synthese)
                             .listRowSeparator(.hidden)
                     }
@@ -212,6 +241,7 @@ struct ContentView: View {
                     VueFeuille(feuille: cat.feuille,
                                lectureSeule: cat.lectureSeule,
                                titre: cat.titre,
+                               modesVente: cat.modesVente,
                                nbSelection: $nbSelection)
                     .id(cat)
                     #else
@@ -221,11 +251,17 @@ struct ContentView: View {
                     if cat == .oeuvres {
                         VueOeuvresStructuree()
                             .id(cat)
+                    } else if cat == .ventesRealisees {
+                        VueOeuvresStructuree(modesVente: cat.modesVente,
+                                             filtresVendeur: cat.filtresVendeur)
+                            .id(cat)
                     } else if cat == .oeuvresDonnees {
                         VueDonsStructuree()
                             .id(cat)
                     } else {
-                        VueiOS(feuille: cat.feuille, titre: cat.titre)
+                        VueiOS(feuille: cat.feuille, titre: cat.titre,
+                               modesVente: cat.modesVente,
+                               filtresVendeur: cat.filtresVendeur)
                             .id(cat)
                     }
                     #endif

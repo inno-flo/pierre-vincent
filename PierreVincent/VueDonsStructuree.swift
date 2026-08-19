@@ -2,9 +2,9 @@
 import SwiftUI
 import SwiftData
 
-/// Vue « Dons » structurée pour iPhone.
+/// Vue « Œuvres données » structurée pour iPhone.
 ///
-/// Sur le modèle de la vue « Œuvres » :
+/// Sur le modèle de la vue « Inventaire » :
 ///  1. un bloc récapitulatif : « Tableaux donnés » et « Dessins donnés » avec
 ///     leur quantité (en orange), tapables pour défiler jusqu'à la section ;
 ///  2. une section « Tableaux » listant les tableaux donnés ;
@@ -80,7 +80,7 @@ struct VueDonsStructuree: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle("Dons")
+        .navigationTitle("Œuvres données")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

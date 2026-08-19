@@ -153,3 +153,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   swipe gauche/droite ou chevrons) : le contenu de la fiche est enveloppé
   dans un `ZStack` (indispensable pour que `.transition(.move(edge:))` se
   voie réellement à l'intérieur d'un `ScrollView`), animation 0,25 s.
+- **iOS — sidebar Inventaire, libellés et regroupement** (`ContentView.swift`,
+  enum `Categorie`) : intitulé de page « Inventaire » supprimé (titre vide,
+  grand format conservé pour ne pas décaler la mise en page) ; rubrique
+  « Œuvres » renommée en **« Inventaire »**, rubrique « Dons » renommée en
+  **« Œuvres données »** (`.titre` de `Categorie`, qui pilote aussi le titre
+  de la fiche associée) ; les 4 rubriques Tableaux/Dessins/Tapis vendus +
+  Œuvres données sont regroupées dans un même bloc, sous un en-tête de
+  section **« Ventes et dons »** (3 `Section` au lieu de 4). Par cohérence,
+  les titres et libellés internes de `VueOeuvresStructuree` (page + section
+  « Dons » → « Œuvres données ») et `VueDonsStructuree` (titre de page
+  « Dons » → « Œuvres données ») ont été alignés sur ces nouveaux noms.
+  La carte « Œuvres » de la vue Synthèse (bloc statistique, concept
+  différent) n'a pas été touchée.
