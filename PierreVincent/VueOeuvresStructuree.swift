@@ -385,7 +385,7 @@ struct VueOeuvresStructuree: View {
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(selection.contains(o.id)
                                           ? Color.orangeInternational : Color.clear,
-                                          lineWidth: 1)
+                                          lineWidth: 3)
                     )
                 }
                 .buttonStyle(.plain)

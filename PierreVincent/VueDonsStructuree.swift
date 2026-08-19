@@ -41,6 +41,11 @@ struct VueDonsStructuree: View {
         trier(dons.filter { $0.type.localizedCaseInsensitiveContains("dessin") })
     }
 
+    /// Icône du bouton de menu selon le critère actif.
+    private var iconeMenu: String {
+        triGalerie == "acheteur" ? "person" : "ruler"
+    }
+
     /// Applique le tri choisi. Pour les dons : acheteur → destinataire,
     /// prix sans objet (retombe sur les dimensions).
     private func trier(_ liste: [Oeuvre]) -> [Oeuvre] {
@@ -116,7 +121,7 @@ struct VueDonsStructuree: View {
                                   systemImage: "ruler")
                         }
                     } label: {
-                        Image(systemName: "arrow.up.arrow.down")
+                        Image(systemName: iconeMenu)
                     }
 
                     // Sens du tri (icône retournée pour le sens inverse).
@@ -277,7 +282,7 @@ struct VueDonsStructuree: View {
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(selection.contains(o.id)
                                           ? Color.orangeInternational : Color.clear,
-                                          lineWidth: 1)
+                                          lineWidth: 3)
                     )
                 }
                 .buttonStyle(.plain)

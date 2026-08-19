@@ -16,6 +16,12 @@ struct VueGalerie: View {
     // Ancre pour la sélection par plage (Maj + clic).
     @State private var derniere: UUID?
 
+    #if os(macOS)
+    // Largeur mesurée de la grille, pour déduire le nombre de colonnes.
+    @State private var largeurGrille: CGFloat = 600
+    @FocusState private var focusGalerie: Bool
+    #endif
+
     // Colonnes de la grille :
     // - iPhone : 2 colonnes fixes (les images se réduisent pour tenir à 2 par rangée).
     // - Mac : grille adaptative selon la largeur disponible.
@@ -98,7 +104,7 @@ struct VueGalerie: View {
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(selection.contains(o.id) ? Color.orangeInternational : Color.filetVignette,
-                              lineWidth: 1)
+                              lineWidth: selection.contains(o.id) ? 3 : 1)
         )
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())

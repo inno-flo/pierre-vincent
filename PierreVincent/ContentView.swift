@@ -104,6 +104,8 @@ struct ContentView: View {
     @AppStorage("themeApp") private var themeApp = "creme"
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    // Intitulés de section en gras (partagé iOS + Mac).
+    @AppStorage("intitulesEnGras") private var intitulesEnGras = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -130,33 +132,45 @@ struct ContentView: View {
                     // Sur iPhone : trois blocs (sections) distincts.
                     Section {
                         lien(.oeuvres)
+                        lien(.synthese)
                     }
-                    Section(header: Text("Ventes et dons").font(.system(size: 20, weight: .bold))) {
+                    Section(header: Text("Ventes et dons")
+                        .font(.system(size: 18, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
                         lien(.tableauxVendus)
                         lien(.dessinsVendus)
                         lien(.tapisVendus)
                         lien(.oeuvresDonnees)
                     }
-                    Section(header: Text("Expositions et enchères").font(.system(size: 20, weight: .bold))) {
+                    Section(header: Text("Expositions et enchères")
+                        .font(.system(size: 18, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
                         lien(.ventesRealisees)
-                    }
-                    Section {
-                        lien(.synthese)
                     }
                     #else
-                    // Sur Mac : bloc principal, section "Expositions et enchères", Synthèse seule.
-                    ForEach(Categorie.categoriesData) { cat in
-                        lien(cat)
-                            .listRowSeparator(.hidden)
-                    }
-
-                    Section(header: Text("Expositions et enchères").font(.system(size: 20, weight: .bold))) {
-                        lien(.ventesRealisees)
-                            .listRowSeparator(.hidden)
-                    }
-
+                    // Sur Mac : même organisation que la sidebar iOS.
                     Section {
+                        lien(.oeuvres)
+                            .listRowSeparator(.hidden)
                         lien(.synthese)
+                            .listRowSeparator(.hidden)
+                    }
+                    Section(header: Text("Ventes et dons")
+                        .font(.system(size: 14, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
+                        lien(.tableauxVendus)
+                            .listRowSeparator(.hidden)
+                        lien(.dessinsVendus)
+                            .listRowSeparator(.hidden)
+                        lien(.tapisVendus)
+                            .listRowSeparator(.hidden)
+                        lien(.oeuvresDonnees)
+                            .listRowSeparator(.hidden)
+                    }
+                    Section(header: Text("Expositions et enchères")
+                        .font(.system(size: 14, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
+                        lien(.ventesRealisees)
                             .listRowSeparator(.hidden)
                     }
                     #endif
@@ -298,6 +312,28 @@ struct ContentView: View {
         .id(themeApp)
     }
 
+    // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
+
+    /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de pastille).
+    private func compteurPourCategorie(_ cat: Categorie) -> Int? {
+        switch cat {
+        case .tableauxVendus:
+            return toutes.filter { $0.feuille == .tableauxVendus }.count
+        case .dessinsVendus:
+            return toutes.filter { $0.feuille == .dessinsVendus }.count
+        case .tapisVendus:
+            return toutes.filter { $0.feuille == .tapisVendus }.count
+        case .oeuvresDonnees:
+            return toutes.filter { $0.feuille == .oeuvresDonnees }.count
+        case .ventesRealisees:
+            return toutes.filter {
+                Categorie.ventesRealisees.modesVente.contains($0.modeVente)
+            }.count
+        default:
+            return nil
+        }
+    }
+
     // MARK: Barre de sélection du thème (bas de la sidebar)
 
     /// Pastilles de choix de thème. Seuls Crème et Gris sont proposés ;
@@ -307,10 +343,32 @@ struct ContentView: View {
         HStack(spacing: 10) {
             pastilleTheme("creme", couleur: Color(red: 0.98, green: 0.96, blue: 0.92))
             pastilleTheme("gris",  couleur: Color(red: 0.90, green: 0.93, blue: 0.94))
+            boutonGras
             Spacer()
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+
+    private var boutonGras: some View {
+        Button {
+            intitulesEnGras.toggle()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.clear)
+                    .frame(width: 26, height: 26)
+                    .overlay(
+                        Circle().strokeBorder(
+                            intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.4),
+                            lineWidth: intitulesEnGras ? 2.5 : 1)
+                    )
+                Text("G")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.6))
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func pastilleTheme(_ id: String, couleur: Color) -> some View {
@@ -362,24 +420,31 @@ struct ContentView: View {
     /// ailleurs (et sur iPhone), elle reste orange.
     private func lien(_ cat: Categorie) -> some View {
         NavigationLink(value: cat) {
-            Label {
-                #if os(macOS)
-                // Titre en blanc quand la ligne est sélectionnée (surlignée),
-                // y compris en mode Clair où il resterait noir sinon.
-                Text(cat.titre)
-                    .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
-                #else
-                Text(cat.titre)
-                #endif
-            } icon: {
-                #if os(macOS)
+            #if os(macOS)
+            // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
+            HStack(spacing: 6) {
                 Image(systemName: cat.symbole)
                     .foregroundStyle(categorie == cat ? Color.white : Color.orangeInternational)
-                #else
+                Text(cat.titre)
+                    .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
+                if let n = compteurPourCategorie(cat) {
+                    Spacer()
+                    Text("\(n)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orangeInternational, in: Capsule())
+                }
+            }
+            #else
+            Label {
+                Text(cat.titre)
+            } icon: {
                 Image(systemName: cat.symbole)
                     .foregroundStyle(Color.orangeInternational)
-                #endif
             }
+            #endif
         }
         #if os(iOS)
         // Fond de cellule suivant le thème (blanc en clair, gris en sombre),
@@ -421,7 +486,7 @@ struct ContentView: View {
                     Text("Œuvres vendues")
                         .font(.system(size: 14, weight: .bold))
                     Text("\(nbVendues)")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 20))
                         .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
                 }
 
@@ -430,7 +495,7 @@ struct ContentView: View {
                     Text("Œuvres données")
                         .font(.system(size: 14, weight: .bold))
                     Text("\(nbDonnees)")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 20))
                         .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
                 }
             }

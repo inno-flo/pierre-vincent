@@ -104,6 +104,26 @@ struct VueiOS: View {
         return triCroissant ? triees : triees.reversed()
     }
 
+    /// Cellule récapitulative affichée en haut de la vue (nombre d'œuvres correspondant aux filtres actifs).
+    private var recapCell: some View {
+        HStack {
+            Text("Nombre de ventes")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.texteLegende)
+            Spacer()
+            Text("\(oeuvresGalerie.count)")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(Color.orangeInternational)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(Color.fondLegende)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+    }
+
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
         if !filtresVendeur.isEmpty {
@@ -117,7 +137,8 @@ struct VueiOS: View {
     }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            recapCell
             if modeAffichage == "icone" {
                 VueGalerie(
                     oeuvres: oeuvresGalerie,
@@ -129,6 +150,7 @@ struct VueiOS: View {
                 liste
             }
         }
+        .background(Color.cremeFond)
         .navigationTitle(titre)
         .toolbar {
             // Un seul set de contrôles, compact : Liste, Galerie, tri, sens.
@@ -296,7 +318,7 @@ struct VueiOS: View {
                                 RoundedRectangle(cornerRadius: 10)
                                     .strokeBorder(selection.contains(o.id)
                                                   ? Color.orangeInternational : Color.clear,
-                                                  lineWidth: 1)
+                                                  lineWidth: 3)
                             )
                         }
                         .buttonStyle(.plain)
