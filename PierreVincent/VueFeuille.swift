@@ -619,24 +619,27 @@ struct VueFeuille: View {
             // défilement automatique). On pilote nous-mêmes le focus clavier
             // (repris explicitement à chaque sélection, comme en galerie) et
             // le défilement vers la ligne sélectionnée.
-            ScrollViewReader { proxy in
-                tableau
-                    .focusable()
-                    .focused($focusListe)
-                    .focusEffectDisabled()
-                    .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
-                    .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
-                    .onKeyPress(.upArrow)    { naviguerListe(delta: -1) }
-                    .onKeyPress(.downArrow)  { naviguerListe(delta: +1) }
-                    .onChange(of: selection) { _, nouvelle in
-                        focusListe = true
-                        guard nouvelle.count == 1, let id = nouvelle.first else { return }
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            proxy.scrollTo(id, anchor: .center)
-                        }
-                    }
-            }
+            tableau
+                .focusable()
+                .focused($focusListe)
+                .focusEffectDisabled()
+                .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
+                .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
+                .onKeyPress(.upArrow)    { naviguerListe(delta: -1) }
+                .onKeyPress(.downArrow)  { naviguerListe(delta: +1) }
+                .onChange(of: selection) { _, _ in
+                    focusListe = true
+                }
+                // Défilement vers la ligne sélectionnée, en VERTICAL seulement.
+                .background(DefilementTableau(ligne: ligneSelectionnee))
         }
+    }
+
+    /// Indice de la ligne sélectionnée dans la liste triée courante
+    /// (nil si aucune ou plusieurs) : sert au défilement automatique.
+    private var ligneSelectionnee: Int? {
+        guard selection.count == 1, let id = selection.first else { return nil }
+        return oeuvres.firstIndex(where: { $0.id == id })
     }
 
     // Déplace la sélection d'une entrée dans la liste triée courante.
@@ -994,6 +997,45 @@ struct VueFeuille: View {
                                      titre: titre, vers: url)
              messageExport = "PDF généré." }
         catch { messageExport = "Erreur : \(error.localizedDescription)" }
+    }
+}
+
+/// Fait défiler le tableau natif jusqu'à la ligne sélectionnée, **verticalement
+/// seulement**, via `scrollRowToVisible` d'AppKit.
+///
+/// Pourquoi pas un `ScrollViewReader` : `proxy.scrollTo(id, anchor: .center)`
+/// recentre sur les DEUX axes. Le défilement horizontal qui en résultait
+/// décalait tout le tableau vers la gauche (colonne Photo passant sous la
+/// sidebar) dès que la fenêtre était trop étroite pour afficher toutes les
+/// colonnes — invisible en fenêtre large, puisqu'il n'y a alors rien à faire
+/// défiler horizontalement.
+private struct DefilementTableau: NSViewRepresentable {
+    /// Indice de la ligne à rendre visible (nil = ne rien faire).
+    let ligne: Int?
+
+    func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let ligne, ligne >= 0 else { return }
+        // Différé : au moment de la mise à jour SwiftUI, le NSTableView n'a pas
+        // forcément encore pris en compte le nouveau nombre de lignes.
+        DispatchQueue.main.async {
+            guard let racine = nsView.window?.contentView,
+                  let table = Self.tableau(dans: racine),
+                  ligne < table.numberOfRows else { return }
+            table.scrollRowToVisible(ligne)
+        }
+    }
+
+    /// Cherche en profondeur le NSTableView du panneau de contenu.
+    /// On exclut NSOutlineView : la sidebar en est une (et NSOutlineView hérite
+    /// de NSTableView), elle serait donc trouvée en premier.
+    private static func tableau(dans vue: NSView) -> NSTableView? {
+        if let t = vue as? NSTableView, !(vue is NSOutlineView) { return t }
+        for sous in vue.subviews {
+            if let t = tableau(dans: sous) { return t }
+        }
+        return nil
     }
 }
 

@@ -117,6 +117,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   l'autre, la règle actuelle est d'intercepter **les 4 flèches**
   nous-mêmes en mode liste (`VueFeuille.swift`, fonction
   `naviguerListe`), sans dépendre de NSTableView pour aucune d'elles.
+- **`ScrollViewReader` + `proxy.scrollTo(id, anchor: .center)` autour d'un
+  `Table`** : l'ancre est un `UnitPoint`, donc le recentrage s'applique aux
+  **deux axes**. Le défilement horizontal parasite décalait tout le tableau
+  vers la gauche à chaque changement de sélection (la colonne Photo passait
+  sous la sidebar), **uniquement en fenêtre étroite** — en fenêtre large,
+  toutes les colonnes tiennent, il n'y a rien à faire défiler
+  horizontalement et le bug est invisible. Pour ne défiler que
+  verticalement, passer par AppKit : `NSTableView.scrollRowToVisible(_:)`
+  (helper `DefilementTableau` dans `VueFeuille.swift`). Attention en
+  cherchant le `NSTableView` dans la hiérarchie : la sidebar est un
+  `NSOutlineView`, qui **hérite** de `NSTableView` et serait trouvé en
+  premier — l'exclure explicitement.
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
@@ -204,7 +216,8 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     NSTableView, qui ne se redonnait pas de façon fiable après un
     changement de rubrique dans la sidebar (navigation qui ne répondait
     plus, avec bip système). Défilement vers la ligne sélectionnée géré
-    par un `ScrollViewReader` autour du `Table` (`proxy.scrollTo`).
+    par le helper `DefilementTableau` (AppKit `scrollRowToVisible`), et
+    **surtout pas** par un `ScrollViewReader` (voir pièges).
   - *Sidebar* : ↑↓ circulent entre les rubriques (liste ordonnée codée en
     dur), → déplace le focus vers le panneau de contenu via
     `NSApp.keyWindow?.selectNextKeyView(nil)`.
