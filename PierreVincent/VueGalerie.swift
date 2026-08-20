@@ -113,6 +113,19 @@ struct VueGalerie: View {
     }
     #endif
 
+    /// Police du prix et des dimensions dans la légende d'une vignette.
+    /// 13 pt sur macOS : c'est `NSFont.systemFontSize`, la taille standard
+    /// d'un libellé (`.subheadline` n'y vaut que 11 pt).
+    /// Sur iOS on garde `.subheadline` (15 pt) : le 13 pt macOS n'y est pas
+    /// la référence et rapetisserait le texte.
+    private var policeLegende: Font {
+        #if os(macOS)
+        .system(size: 13)
+        #else
+        .subheadline
+        #endif
+    }
+
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
             // Image en haut : cadre en PORTRAIT (proche du ratio réel des
@@ -147,7 +160,7 @@ struct VueGalerie: View {
                     Text(o.dimensions)
                         .foregroundStyle(Color.texteLegende.opacity(0.6))
                 }
-                .font(.subheadline)
+                .font(policeLegende)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)

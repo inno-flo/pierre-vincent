@@ -164,6 +164,11 @@ struct ContentView: View {
                         // et donnait des intitulés bien trop gros.
                         // Seule la graisse reste pilotable par le bouton « G ».
                         .fontWeight(intitulesEnGras ? .bold : nil)
+                        // Gris, comme les en-têtes de Mail. Nécessaire car le
+                        // .foregroundStyle(Color.textePrincipal) posé sur toute
+                        // la hiérarchie de ContentView écrase sinon le gris
+                        // fourni par défaut avec listStyle(.sidebar).
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 5)) {
                         lien(.tableauxVendus)
                             .listRowSeparator(.hidden)
@@ -182,6 +187,11 @@ struct ContentView: View {
                         // et donnait des intitulés bien trop gros.
                         // Seule la graisse reste pilotable par le bouton « G ».
                         .fontWeight(intitulesEnGras ? .bold : nil)
+                        // Gris, comme les en-têtes de Mail. Nécessaire car le
+                        // .foregroundStyle(Color.textePrincipal) posé sur toute
+                        // la hiérarchie de ContentView écrase sinon le gris
+                        // fourni par défaut avec listStyle(.sidebar).
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 5)) {
                         lien(.ventesRealisees)
                             .listRowSeparator(.hidden)

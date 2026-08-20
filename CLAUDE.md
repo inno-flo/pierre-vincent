@@ -237,6 +237,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     pilotée, par le bouton « G » (`.fontWeight(intitulesEnGras ? .bold : nil)`).
   - *Libellés* : `.font(.system(size: 13))`, en noir **gras** quand la
     rubrique est sélectionnée (`.fontWeight`), sinon `Color.textePrincipal`.
+  - *Couleur des en-têtes* : `.foregroundStyle(.secondary)` (le gris de Mail,
+    et celui des titres de champs de `EditeurEntree`). À poser explicitement :
+    `listStyle(.sidebar)` fournit bien ce gris, mais le
+    `.foregroundStyle(Color.textePrincipal)` appliqué à toute la hiérarchie de
+    `ContentView` l'écrase.
+  - *Légende des vignettes de galerie* (`VueGalerie.swift`) : prix et
+    dimensions à 13 pt sur macOS via la propriété `policeLegende`. Ils
+    héritaient de `.subheadline`, qui ne vaut que 11 pt sur macOS. Le fichier
+    étant partagé, iOS conserve `.subheadline` (15 pt) : y écrire 13 pt
+    rapetisserait le texte au lieu de l'agrandir.
 - **macOS — sidebar, couleur de sélection** (`ContentView.swift`,
   `Couleurs.swift`) : marron clair `Color.fondSelectionSidebarMac`
   (209, 187, 167 en mode clair) au lieu du bleu système.
