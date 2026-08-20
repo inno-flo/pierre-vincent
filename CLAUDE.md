@@ -47,10 +47,19 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
 
 ## Thèmes de couleurs
 
-- Thèmes définis dans `Couleurs.swift`. Historiquement 5 thèmes ; **le thème marron
-  a été supprimé**. Restent : crème, gris (exposés dans l'UI) + vert, bleu
-  (code conservé mais **pastilles masquées** dans l'interface).
-- Seules les pastilles **crème** et **gris** sont sélectionnables.
+- **L'app a un seul thème : crème.** Il n'y a plus de sélecteur de thème —
+  les deux pastilles (crème, gris) en bas de la sidebar ont été supprimées,
+  sur les deux plateformes.
+- Thèmes définis dans `Couleurs.swift`. Historiquement 5 thèmes ; **marron
+  puis bleu ont été supprimés**. Restent dans le code : crème (le seul actif)
+  + gris et vert, dont les valeurs sont conservées mais que **rien n'active**.
+- Conséquence importante : le thème ne change plus à l'exécution, donc
+  `ContentView` **n'a plus de `.id(themeApp)`**. Ce modificateur recréait
+  toute la hiérarchie pour relire les couleurs, ce qui remettait à zéro
+  l'état `@FocusState` — d'où la sélection de la liste qui repassait en bleu
+  et la navigation clavier qui se « réparait » au changement de thème.
+  Ne pas le réintroduire : si un jour le thème redevient variable, faire
+  observer `themeApp` aux vues concernées plutôt que de nuker la hiérarchie.
 - Accent de marque : orange international `Color(red: 1.0, green: 0.31, blue: 0.0)`,
   réservé aux valeurs chiffrées.
 
@@ -117,6 +126,14 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   l'autre, la règle actuelle est d'intercepter **les 4 flèches**
   nous-mêmes en mode liste (`VueFeuille.swift`, fonction
   `naviguerListe`), sans dépendre de NSTableView pour aucune d'elles.
+  **En revanche, sur la sidebar (`NSOutlineView`), c'est l'inverse : le
+  natif est fiable et il faut lui laisser ↑↓.** Y poser un `onKeyPress`
+  produisait le bip système sans jamais naviguer, parce que SwiftUI captait
+  la touche avant AppKit sans la traiter (la `List` n'ayant pas le focus
+  SwiftUI) et empêchait du même coup l'outline view de devenir premier
+  répondant. Indice diagnostique général : **si la sélection AppKit
+  s'affiche en bleu, la vue native a le focus et gère les flèches
+  elle-même** ; si elle est grise, c'est SwiftUI qui a (mal) capté.
 - **`ScrollViewReader` + `proxy.scrollTo(id, anchor: .center)` autour d'un
   `Table`** : l'ancre est un `UnitPoint`, donc le recentrage s'applique aux
   **deux axes**. Le défilement horizontal parasite décalait tout le tableau
@@ -218,8 +235,15 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     plus, avec bip système). Défilement vers la ligne sélectionnée géré
     par le helper `DefilementTableau` (AppKit `scrollRowToVisible`), et
     **surtout pas** par un `ScrollViewReader` (voir pièges).
-  - *Sidebar* : ↑↓ circulent entre les rubriques (liste ordonnée codée en
-    dur), → déplace le focus vers le panneau de contenu via
+  - *Sidebar* : ↑↓ sont laissées au **NSOutlineView natif**, qui met à jour
+    `categorie` tout seul via le binding de sélection. Ne PAS y remettre
+    d'`.onKeyPress(.upArrow/.downArrow)` : SwiftUI captait alors les flèches
+    avant la vue AppKit sans jamais les traiter (la `List` n'ayant pas le
+    focus SwiftUI) → bip système, et l'outline view ne devenait jamais
+    premier répondant. Symptôme caractéristique : cliquer dans la galerie
+    déplaçait le focus SwiftUI ailleurs, ce qui levait l'interception — la
+    sidebar passait en bleu (= premier répondant) et ↑↓ se remettaient à
+    marcher. → déplace le focus vers le panneau de contenu via
     `NSApp.keyWindow?.selectNextKeyView(nil)`.
 - **Filets de sélection orange : 3 px** dans toutes les vues (galerie
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à

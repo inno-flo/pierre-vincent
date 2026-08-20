@@ -103,8 +103,6 @@ struct ContentView: View {
     // Nombre d'entrées sélectionnées dans la vue courante (remonté par VueFeuille),
     // pour l'afficher dans le bandeau bas de la sidebar.
     @State private var nbSelection: Int = 0
-    // Thème de couleurs (partagé iOS + Mac).
-    @AppStorage("themeApp") private var themeApp = "creme"
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
     // Intitulés de section en gras (partagé iOS + Mac).
@@ -197,11 +195,21 @@ struct ContentView: View {
                 }
                 #else
                 .listStyle(.sidebar)
-                // Navigation clavier dans la sidebar (macOS uniquement).
-                // onKeyPress intercepte avant NSOutlineView, ce qui garantit
-                // que categorie (SwiftUI) est toujours synchronisée.
-                .onKeyPress(.upArrow)    { naviguerSidebar(delta: -1) }
-                .onKeyPress(.downArrow)  { naviguerSidebar(delta: +1) }
+                // ↑↓ : PAS d'onKeyPress ici — la navigation est laissée au
+                // NSOutlineView natif de la sidebar, qui la gère très bien et
+                // met à jour `categorie` tout seul.
+                //
+                // Pourquoi : posés ici, .onKeyPress(.upArrow/.downArrow)
+                // faisaient capter les flèches par SwiftUI *avant* la vue
+                // AppKit, mais sans jamais les traiter (la List n'ayant pas le
+                // focus SwiftUI) → bip système, et l'outline view ne devenait
+                // jamais premier répondant. Symptôme caractéristique : cliquer
+                // dans la galerie déplaçait le focus SwiftUI ailleurs, ce qui
+                // levait l'interception — la sidebar passait alors en bleu
+                // (= premier répondant) et ↑↓ se remettaient à marcher.
+                // Même piège que sur `Table` (voir CLAUDE.md).
+                //
+                // ←→ en revanche ne sont pas consommées par NSOutlineView.
                 .onKeyPress(.rightArrow) {
                     // Déplace le focus vers la zone de contenu (colonne détail).
                     NSApp.keyWindow?.selectNextKeyView(nil)
@@ -321,33 +329,13 @@ struct ContentView: View {
         // coloré du thème derrière ; les titres suivent la couleur système.
         .apparenceTitresNavigation()
         #endif
-        // Recrée la hiérarchie au changement de thème (relit les couleurs).
-        .id(themeApp)
+        // NB : plus de `.id(themeApp)` ici. Ce modificateur ne servait qu'à
+        // recréer toute la hiérarchie au changement de thème pour relire les
+        // couleurs. Le thème ne changeant plus à l'exécution (sélecteur
+        // supprimé), il était inutile — et il remettait à zéro l'état de
+        // focus clavier au passage (@FocusState), ce qui faisait repasser la
+        // sélection de la liste en bleu et perturbait la navigation ↑↓.
     }
-
-    // MARK: Navigation clavier de la sidebar (macOS)
-
-    #if os(macOS)
-    // Ordre d'affichage des catégories dans la sidebar, pour la navigation ↑↓.
-    private let categoriesSidebar: [Categorie] = [
-        .oeuvres, .synthese,
-        .tableauxVendus, .dessinsVendus, .tapisVendus, .oeuvresDonnees,
-        .ventesRealisees
-    ]
-
-    private func naviguerSidebar(delta: Int) -> KeyPress.Result {
-        if let current = categorie,
-           let idx = categoriesSidebar.firstIndex(of: current) {
-            let nouveauIdx = idx + delta
-            guard nouveauIdx >= 0, nouveauIdx < categoriesSidebar.count else { return .handled }
-            categorie = categoriesSidebar[nouveauIdx]
-        } else {
-            // Rien sélectionné : partir du début (↓) ou de la fin (↑).
-            categorie = delta > 0 ? categoriesSidebar.first : categoriesSidebar.last
-        }
-        return .handled
-    }
-    #endif
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
 
@@ -375,13 +363,11 @@ struct ContentView: View {
 
     // MARK: Barre de sélection du thème (bas de la sidebar)
 
-    /// Pastilles de choix de thème. Seuls Crème et Gris sont proposés ;
-    /// les thèmes vert et bleu existent encore dans le code (Couleurs.swift)
-    /// mais ne sont volontairement plus exposés dans l'interface.
+    /// Bas de la barre latérale. Le sélecteur de thème (pastilles crème et
+    /// gris) a été supprimé : l'app a un seul thème, crème. Il ne reste que
+    /// le bouton « G » (intitulés de section en gras).
     private var barreThemes: some View {
         HStack(spacing: 10) {
-            pastilleTheme("creme", couleur: Color(red: 0.98, green: 0.96, blue: 0.92))
-            pastilleTheme("gris",  couleur: Color(red: 0.90, green: 0.93, blue: 0.94))
             boutonGras
             Spacer()
         }
@@ -406,22 +392,6 @@ struct ContentView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.6))
             }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func pastilleTheme(_ id: String, couleur: Color) -> some View {
-        Button {
-            themeApp = id
-        } label: {
-            Circle()
-                .fill(couleur)
-                .frame(width: 26, height: 26)
-                .overlay(
-                    Circle().strokeBorder(
-                        themeApp == id ? Color.orangeInternational : Color.gray.opacity(0.4),
-                        lineWidth: themeApp == id ? 2.5 : 1)
-                )
         }
         .buttonStyle(.plain)
     }

@@ -29,7 +29,6 @@ struct VueiOS: View {
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).
     @AppStorage("triCroissant") private var triCroissant: Bool = false
-    @AppStorage("themeApp") private var themeApp = "creme"
     @State private var selection: Set<UUID> = []
     @State private var detail: Oeuvre?
     // Œuvre vers laquelle défiler à la fermeture de la fiche Détails.

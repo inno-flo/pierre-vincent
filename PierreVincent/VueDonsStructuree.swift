@@ -18,7 +18,6 @@ struct VueDonsStructuree: View {
     @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     @AppStorage("triCroissant") private var triCroissant: Bool = false
-    @AppStorage("themeApp") private var themeApp = "creme"
 
     @State private var detail: Oeuvre?
     @State private var selection: Set<UUID> = []

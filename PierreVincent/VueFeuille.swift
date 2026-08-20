@@ -381,6 +381,14 @@ struct VueFeuille: View {
             nbSelection = selection.count
             uneSelectionExiste = !selection.isEmpty
             editeurOuvert = (editionEntree != nil)
+            // Reprise du focus clavier après une reconstruction de la vue :
+            // @FocusState repart à false, la NSTableView redeviendrait
+            // premier répondant et la sélection repasserait en bleu.
+            // Uniquement s'il y a déjà une sélection — sinon on volerait le
+            // focus à la sidebar au moment où l'on change de rubrique.
+            if modeAffichage != "icone" && !selection.isEmpty {
+                focusListe = true
+            }
         }
     }
 
@@ -620,7 +628,19 @@ struct VueFeuille: View {
             // (repris explicitement à chaque sélection, comme en galerie) et
             // le défilement vers la ligne sélectionnée.
             tableau
-                .focusable()
+                // Fond du tableau suivant le thème : contrairement à la
+                // galerie et à la Synthèse, qui peignent leur propre
+                // Color.cremeFond, le Table affichait le fond AppKit par
+                // défaut et ne suivait donc aucun thème.
+                .scrollContentBackground(.hidden)
+                .background(Color.cremeFond)
+                // Focalisable UNIQUEMENT s'il y a une sélection à déplacer.
+                // Sinon, à l'ouverture d'une rubrique (sélection vide), le
+                // tableau captait le focus automatiquement, la sidebar le
+                // perdait, et les ↑↓ arrivaient sur le onKeyPress ci-dessous
+                // qui renvoyait .ignored faute de sélection → bip système et
+                // navigation sidebar inutilisable.
+                .focusable(!selection.isEmpty)
                 .focused($focusListe)
                 .focusEffectDisabled()
                 .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }

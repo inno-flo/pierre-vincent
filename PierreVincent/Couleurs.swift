@@ -8,9 +8,11 @@ import UIKit
 /// Thèmes de couleurs de l'application. Mémorisé dans les réglages partagés.
 enum ThemeApp {
     static let cle = "themeApp"
-    /// Identifiant du thème actif : "creme", "gris", "vert" ou "bleu".
-    /// Note : seuls "creme" et "gris" sont proposés dans l'interface ;
-    /// "vert" et "bleu" restent définis mais ne sont plus exposés.
+    /// Identifiant du thème actif : "creme", "gris" ou "vert".
+    /// Note : l'interface ne propose plus de sélecteur de thème — crème est
+    /// le thème de l'application. "gris" et "vert" restent définis dans le
+    /// code, mais rien ne les active. Le thème marron, puis le bleu, ont été
+    /// supprimés.
     static var actuel: String {
         UserDefaults.standard.string(forKey: cle) ?? "creme"
     }
@@ -25,8 +27,7 @@ private typealias RVB = (CGFloat, CGFloat, CGFloat)
 private func couleurTheme(
     cremeClair: RVB, cremeSombre: RVB?,
     grisClair: RVB, grisSombre: RVB,
-    vertClair: RVB, vertSombre: RVB,
-    bleuClair: RVB, bleuSombre: RVB
+    vertClair: RVB, vertSombre: RVB
 ) -> Color {
     func n(_ c: RVB) -> RVB { (c.0/255, c.1/255, c.2/255) }
     #if os(macOS)
@@ -36,7 +37,6 @@ private func couleurTheme(
         switch ThemeApp.actuel {
         case "gris":   c = sombre ? grisSombre : grisClair
         case "vert":   c = sombre ? vertSombre : vertClair
-        case "bleu":   c = sombre ? bleuSombre : bleuClair
         default:       c = sombre ? cremeSombre : cremeClair
         }
         guard let c else { return NSColor.windowBackgroundColor }
@@ -49,7 +49,6 @@ private func couleurTheme(
         switch ThemeApp.actuel {
         case "gris":   c = sombre ? grisSombre : grisClair
         case "vert":   c = sombre ? vertSombre : vertClair
-        case "bleu":   c = sombre ? bleuSombre : bleuClair
         default:       c = sombre ? cremeSombre : cremeClair
         }
         guard let c else { return UIColor.systemBackground }
@@ -68,8 +67,7 @@ extension Color {
         couleurTheme(
             cremeClair: (250, 245, 235), cremeSombre: nil,
             grisClair:  (231, 236, 240), grisSombre:  (15, 21, 25),
-            vertClair:  (230, 237, 230), vertSombre:  (18, 24, 20),
-            bleuClair:  (228, 234, 243), bleuSombre:  (14, 20, 32))
+            vertClair:  (230, 237, 230), vertSombre:  (18, 24, 20))
     }
 
     /// Fond des cellules / tuiles / légendes.
@@ -77,8 +75,7 @@ extension Color {
         couleurTheme(
             cremeClair: (255, 255, 255), cremeSombre: (0, 0, 0),
             grisClair:  (255, 255, 255), grisSombre:  (22, 24, 28),
-            vertClair:  (251, 253, 250), vertSombre:  (22, 24, 28),
-            bleuClair:  (255, 255, 255), bleuSombre:  (22, 22, 26))
+            vertClair:  (251, 253, 250), vertSombre:  (22, 24, 28))
     }
 
     /// Texte sur la légende. Noir/blanc selon le mode clair/sombre.
@@ -114,8 +111,7 @@ extension Color {
         couleurTheme(
             cremeClair: (255, 255, 255), cremeSombre: (28, 28, 30),
             grisClair:  (255, 255, 255), grisSombre:  (28, 30, 34),
-            vertClair:  (255, 255, 255), vertSombre:  (28, 30, 34),
-            bleuClair:  (255, 255, 255), bleuSombre:  (28, 28, 32))
+            vertClair:  (255, 255, 255), vertSombre:  (28, 30, 34))
     }
 
     /// Fond de la cellule sélectionnée dans la barre latérale iOS : une
@@ -126,8 +122,7 @@ extension Color {
         couleurTheme(
             cremeClair: (234, 224, 204), cremeSombre: (54, 54, 58),
             grisClair:  (204, 214, 221), grisSombre:  (46, 51, 58),
-            vertClair:  (204, 219, 206), vertSombre:  (40, 51, 43),
-            bleuClair:  (200, 214, 235), bleuSombre:  (38, 48, 68))
+            vertClair:  (204, 219, 206), vertSombre:  (40, 51, 43))
     }
 
     // MARK: Thème « Graphite » de la vue Synthèse (sombre fixe)
@@ -142,7 +137,6 @@ extension Color {
         couleurTheme(
             cremeClair: (237, 235, 227), cremeSombre: (51, 51, 56),
             grisClair:  (234, 239, 243), grisSombre:  (26, 32, 39),
-            vertClair:  (233, 239, 234), vertSombre:  (25, 33, 27),
-            bleuClair:  (231, 236, 246), bleuSombre:  (32, 40, 57))
+            vertClair:  (233, 239, 234), vertSombre:  (25, 33, 27))
     }
 }
