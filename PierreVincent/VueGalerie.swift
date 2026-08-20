@@ -54,8 +54,60 @@ struct VueGalerie: View {
                     proxy.scrollTo(id, anchor: .center)
                 }
             }
+            #if os(macOS)
+            // Focus clavier sur le ScrollView pour recevoir les touches fléchées.
+            // focusEffectDisabled() supprime l'anneau bleu de focus.
+            .focusable()
+            .focused($focusGalerie)
+            .focusEffectDisabled()
+            .onKeyPress(.leftArrow)  { naviguerClavier(delta: -1) }
+            .onKeyPress(.rightArrow) { naviguerClavier(delta: +1) }
+            .onKeyPress(.upArrow)    { naviguerClavier(delta: -nbColonnes) }
+            .onKeyPress(.downArrow)  { naviguerClavier(delta: +nbColonnes) }
+            .onKeyPress(.return) {
+                guard selection.count == 1,
+                      let id = selection.first,
+                      let o = oeuvres.first(where: { $0.id == id }) else { return .ignored }
+                onOuvrir(o)
+                return .handled
+            }
+            // Overlay invisible pour mesurer la largeur sans perturber le layout.
+            .overlay(alignment: .topLeading) {
+                GeometryReader { geo in
+                    Color.clear
+                        .onChange(of: geo.size.width, initial: true) { _, w in
+                            largeurGrille = w
+                        }
+                }
+            }
+            #endif
         }
     }
+
+    #if os(macOS)
+    // Nombre de colonnes déduit de la largeur mesurée, pour la navigation ↑↓.
+    // La grille utilise adaptive(minimum: 200), spacing: 16 ; padding: 16 de chaque côté.
+    private var nbColonnes: Int {
+        let spacing: CGFloat = 16
+        let padding: CGFloat = 32
+        let available = max(1, largeurGrille - padding)
+        return max(1, Int((available + spacing) / (200 + spacing)))
+    }
+
+    // Déplace la sélection de `delta` positions dans la liste ordonnée des œuvres.
+    // Retourne .handled pour bloquer la propagation même si le bord est atteint.
+    private func naviguerClavier(delta: Int) -> KeyPress.Result {
+        guard selection.count == 1,
+              let id = selection.first,
+              let idx = oeuvres.firstIndex(where: { $0.id == id }) else { return .ignored }
+        let nouveauIdx = idx + delta
+        guard nouveauIdx >= 0, nouveauIdx < oeuvres.count else { return .handled }
+        let nouvelle = oeuvres[nouveauIdx]
+        selection = [nouvelle.id]
+        derniere = nouvelle.id
+        return .handled
+    }
+    #endif
 
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
@@ -134,6 +186,7 @@ struct VueGalerie: View {
     /// - sans touche : sélectionne uniquement cette entrée.
     private func cliquer(_ o: Oeuvre) {
         #if os(macOS)
+        focusGalerie = true   // active le focus clavier après un clic
         let mod = NSEvent.modifierFlags
         if mod.contains(.command) {
             if selection.contains(o.id) { selection.remove(o.id) } else { selection.insert(o.id) }

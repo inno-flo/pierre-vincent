@@ -609,8 +609,23 @@ struct VueFeuille: View {
                 }
             )
         } else {
+            // ↑↓ gérés nativement par NSTableView (ne pas intercepter).
+            // ←→ ajoutés ici pour naviguer en mode liste (NSTableView ne les utilise pas).
             tableau
+                .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
+                .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
         }
+    }
+
+    // Déplace la sélection d'une entrée dans la liste triée courante.
+    private func naviguerListe(delta: Int) -> KeyPress.Result {
+        guard selection.count == 1,
+              let id = selection.first,
+              let idx = oeuvres.firstIndex(where: { $0.id == id }) else { return .ignored }
+        let nouveauIdx = idx + delta
+        guard nouveauIdx >= 0, nouveauIdx < oeuvres.count else { return .handled }
+        selection = [oeuvres[nouveauIdx].id]
+        return .handled
     }
 
     @ViewBuilder

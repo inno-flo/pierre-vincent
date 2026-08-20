@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 /// Catégories affichées dans la barre latérale (sidebar).
 /// L'ordre est volontaire : Inventaire en premier, Synthèse en dernier.
@@ -194,6 +197,16 @@ struct ContentView: View {
                 }
                 #else
                 .listStyle(.sidebar)
+                // Navigation clavier dans la sidebar (macOS uniquement).
+                // onKeyPress intercepte avant NSOutlineView, ce qui garantit
+                // que categorie (SwiftUI) est toujours synchronisée.
+                .onKeyPress(.upArrow)    { naviguerSidebar(delta: -1) }
+                .onKeyPress(.downArrow)  { naviguerSidebar(delta: +1) }
+                .onKeyPress(.rightArrow) {
+                    // Déplace le focus vers la zone de contenu (colonne détail).
+                    NSApp.keyWindow?.selectNextKeyView(nil)
+                    return .handled
+                }
                 #endif
 
                 // Un simple filet, puis les pastilles de choix de thème.
@@ -311,6 +324,30 @@ struct ContentView: View {
         // Recrée la hiérarchie au changement de thème (relit les couleurs).
         .id(themeApp)
     }
+
+    // MARK: Navigation clavier de la sidebar (macOS)
+
+    #if os(macOS)
+    // Ordre d'affichage des catégories dans la sidebar, pour la navigation ↑↓.
+    private let categoriesSidebar: [Categorie] = [
+        .oeuvres, .synthese,
+        .tableauxVendus, .dessinsVendus, .tapisVendus, .oeuvresDonnees,
+        .ventesRealisees
+    ]
+
+    private func naviguerSidebar(delta: Int) -> KeyPress.Result {
+        if let current = categorie,
+           let idx = categoriesSidebar.firstIndex(of: current) {
+            let nouveauIdx = idx + delta
+            guard nouveauIdx >= 0, nouveauIdx < categoriesSidebar.count else { return .handled }
+            categorie = categoriesSidebar[nouveauIdx]
+        } else {
+            // Rien sélectionné : partir du début (↓) ou de la fin (↑).
+            categorie = delta > 0 ? categoriesSidebar.first : categoriesSidebar.last
+        }
+        return .handled
+    }
+    #endif
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
 
