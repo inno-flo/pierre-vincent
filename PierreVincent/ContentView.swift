@@ -105,8 +105,6 @@ struct ContentView: View {
     @State private var nbSelection: Int = 0
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
-    // Intitulés de section en gras (partagé iOS + Mac).
-    @AppStorage("intitulesEnGras") private var intitulesEnGras = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -143,7 +141,6 @@ struct ContentView: View {
                         // 17 pt) — hiérarchie inversée, comme sur macOS.
                         // Ne pas figer une taille en points ici : cela
                         // casserait aussi le Dynamic Type.
-                        .fontWeight(intitulesEnGras ? .bold : nil)
                         // Gris : le .foregroundStyle(Color.textePrincipal) posé
                         // sur toute la hiérarchie de ContentView écrase sinon
                         // la couleur secondaire fournie par défaut.
@@ -162,7 +159,6 @@ struct ContentView: View {
                         // 17 pt) — hiérarchie inversée, comme sur macOS.
                         // Ne pas figer une taille en points ici : cela
                         // casserait aussi le Dynamic Type.
-                        .fontWeight(intitulesEnGras ? .bold : nil)
                         // Gris : le .foregroundStyle(Color.textePrincipal) posé
                         // sur toute la hiérarchie de ContentView écrase sinon
                         // la couleur secondaire fournie par défaut.
@@ -184,8 +180,6 @@ struct ContentView: View {
                         // sur macOS (petit corps, gris) — c'est la convention
                         // Apple. Forcer une taille (14 pt auparavant) l'écrasait
                         // et donnait des intitulés bien trop gros.
-                        // Seule la graisse reste pilotable par le bouton « G ».
-                        .fontWeight(intitulesEnGras ? .bold : nil)
                         // Gris, comme les en-têtes de Mail. Nécessaire car le
                         // .foregroundStyle(Color.textePrincipal) posé sur toute
                         // la hiérarchie de ContentView écrase sinon le gris
@@ -207,8 +201,6 @@ struct ContentView: View {
                         // sur macOS (petit corps, gris) — c'est la convention
                         // Apple. Forcer une taille (14 pt auparavant) l'écrasait
                         // et donnait des intitulés bien trop gros.
-                        // Seule la graisse reste pilotable par le bouton « G ».
-                        .fontWeight(intitulesEnGras ? .bold : nil)
                         // Gris, comme les en-têtes de Mail. Nécessaire car le
                         // .foregroundStyle(Color.textePrincipal) posé sur toute
                         // la hiérarchie de ContentView écrase sinon le gris
@@ -266,13 +258,9 @@ struct ContentView: View {
                     return .handled
                 }
                 #endif
-
-                // Un simple filet, puis les pastilles de choix de thème.
-                Divider()
-                barreThemes
             }
             #if os(iOS)
-            // Fond de toute la colonne (y compris bas et barre de thèmes).
+            // Fond de toute la colonne.
             .background(Color.cremeFond)
             #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
@@ -435,39 +423,6 @@ struct ContentView: View {
     }
 
     // MARK: Barre de sélection du thème (bas de la sidebar)
-
-    /// Bas de la barre latérale. Le sélecteur de thème (pastilles crème et
-    /// gris) a été supprimé : l'app a un seul thème, crème. Il ne reste que
-    /// le bouton « G » (intitulés de section en gras).
-    private var barreThemes: some View {
-        HStack(spacing: 10) {
-            boutonGras
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-    }
-
-    private var boutonGras: some View {
-        Button {
-            intitulesEnGras.toggle()
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(Color.clear)
-                    .frame(width: 26, height: 26)
-                    .overlay(
-                        Circle().strokeBorder(
-                            intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.4),
-                            lineWidth: intitulesEnGras ? 2.5 : 1)
-                    )
-                Text("G")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.6))
-            }
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: Lien de catégorie (barre latérale)
 
