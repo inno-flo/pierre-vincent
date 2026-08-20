@@ -10,6 +10,42 @@ import SwiftData
 struct VueSynthese: View {
     let toutes: [Oeuvre]
 
+    // MARK: Polices
+
+    // Cette vue est PARTAGÉE entre iOS et macOS. Les styles sémantiques n'y
+    // valent pas la même chose : .callout = 16 pt sur iOS mais 12 pt sur Mac,
+    // .body = 17 / 13, .title3 = 20 / 15. Les convertir des deux côtés aurait
+    // rétréci toute la Synthèse macOS d'environ un quart.
+    // → iOS prend les styles du barème système (et donc le Dynamic Type),
+    //   macOS conserve exactement les tailles en points d'origine.
+
+    /// Libellé d'une tuile (16 pt d'origine).
+    private var policeLibelle: Font {
+        #if os(macOS)
+        .system(size: 16)
+        #else
+        .callout          // 16 pt
+        #endif
+    }
+
+    /// Valeur chiffrée d'une tuile (18 pt d'origine).
+    private var policeValeur: Font {
+        #if os(macOS)
+        .system(size: 18)
+        #else
+        .body             // 17 pt
+        #endif
+    }
+
+    /// Titre d'une carte (20 pt d'origine).
+    private var policeTitre: Font {
+        #if os(macOS)
+        .system(size: 20)
+        #else
+        .title3           // 20 pt
+        #endif
+    }
+
     // MARK: Sous-ensembles par feuille
 
     private var tableauxVendus: [Oeuvre] { toutes.filter { $0.feuille == .tableauxVendus } }
@@ -65,10 +101,10 @@ struct VueSynthese: View {
                     LazyVGrid(columns: colonnesTuiles, spacing: 10) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Vendues")
-                                .font(.system(size: 16, weight: .regular))
+                                .font(policeLibelle)
                                 .foregroundStyle(Color.textePrincipal)
                             Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
-                                .font(.system(size: 18, weight: .regular))
+                                .font(policeValeur)
                                 .foregroundStyle(Color.orangeInternational)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -76,10 +112,10 @@ struct VueSynthese: View {
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Données")
-                                .font(.system(size: 16, weight: .regular))
+                                .font(policeLibelle)
                                 .foregroundStyle(Color.textePrincipal)
                             Text("\(oeuvresDonnees.count)")
-                                .font(.system(size: 18, weight: .regular))
+                                .font(policeValeur)
                                 .foregroundStyle(Color.orangeInternational)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -162,7 +198,7 @@ struct VueSynthese: View {
                                       @ViewBuilder _ contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(titre)
-                .font(.system(size: 20, weight: .bold))
+                .font(policeTitre).fontWeight(.bold)
                 .foregroundStyle(Color.textePrincipal)
                 // Décalage pour aligner le titre du bloc avec le texte des
                 // tuiles en dessous (qui ont un padding interne de 12).
@@ -188,15 +224,15 @@ struct VueSynthese: View {
         let total = somme(tableauxVendus) + somme(dessinsVendus) + somme(tapisVendus)
         return VStack(alignment: .leading, spacing: 6) {
             Text("Total des ventes")
-                .font(.system(size: 16, weight: .regular))
+                .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
                 .lineLimit(1)
             HStack(spacing: 5) {
                 Image(systemName: "eurosign.circle")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(policeLibelle)
                     .foregroundStyle(Color.orangeInternational)
                 Text(formaterEuros(total))
-                    .font(.system(size: 18, weight: .regular))
+                    .font(policeValeur)
                     .foregroundStyle(Color.orangeInternational)
                     .flouteSiPrixMasques()
             }
@@ -204,9 +240,9 @@ struct VueSynthese: View {
             // que la tuile « Tableaux vendus » qui l'accompagne sur la rangée.
             HStack(spacing: 5) {
                 Image(systemName: "eurosign.circle")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(policeLibelle)
                 Text(" ")
-                    .font(.system(size: 18, weight: .regular))
+                    .font(policeValeur)
             }
             .hidden()
         }
@@ -222,26 +258,26 @@ struct VueSynthese: View {
         VStack(alignment: .leading, spacing: 6) {
             // Titre du sous-bloc, seul.
             Text(label)
-                .font(.system(size: 16, weight: .regular))
+                .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
                 .lineLimit(1)
             // Nombre d'œuvres, précédé de l'icône du type.
             HStack(spacing: 5) {
                 Image(systemName: icone)
-                    .font(.system(size: 16, weight: .regular))
+                    .font(policeLibelle)
                     .foregroundStyle(Color.orangeInternational)
                 Text(valeur)
-                    .font(.system(size: 18, weight: .regular))
+                    .font(policeValeur)
                     .foregroundStyle(Color.orangeInternational)
             }
             // Prix, précédé d'une icône euro (seulement s'il y a un prix).
             if let detail {
                 HStack(spacing: 5) {
                     Image(systemName: "eurosign.circle")
-                        .font(.system(size: 16, weight: .regular))
+                        .font(policeLibelle)
                         .foregroundStyle(Color.orangeInternational)
                     Text(detail)
-                        .font(.system(size: 18, weight: .regular))
+                        .font(policeValeur)
                         .foregroundStyle(Color.orangeInternational)
                         .flouteSiPrixMasques()
                 }
@@ -251,9 +287,9 @@ struct VueSynthese: View {
                 // tuile qui a un prix (pour aligner les titres).
                 HStack(spacing: 5) {
                     Image(systemName: "eurosign.circle")
-                        .font(.system(size: 16, weight: .regular))
+                        .font(policeLibelle)
                     Text(" ")
-                        .font(.system(size: 20, weight: .regular))
+                        .font(policeTitre)
                 }
                 .hidden()
             }
@@ -267,17 +303,17 @@ struct VueSynthese: View {
     private func tuileLignes(titre: String, lignes: [(String, String)]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(titre)
-                .font(.system(size: 18, weight: .bold))
+                .font(policeValeur).fontWeight(.bold)
                 .foregroundStyle(Color.textePrincipal)
             VStack(spacing: 5) {
                 ForEach(lignes, id: \.0) { lib, val in
                     HStack {
                         Text(lib)
-                            .font(.system(size: 16))
+                            .font(policeLibelle)
                             .foregroundStyle(Color.textePrincipal)
                         Spacer()
                         Text(val)
-                            .font(.system(size: 18, weight: .regular))
+                            .font(policeValeur)
                             .foregroundStyle(Color.orangeInternational)
                             .monospacedDigit()
                             .flouteSiPrixMasques()
@@ -294,11 +330,11 @@ struct VueSynthese: View {
     private func tuileVendeur(_ nom: String, _ montant: Double) -> some View {
         HStack {
             Text(nom)
-                .font(.system(size: 18, weight: .regular))
+                .font(policeValeur)
                 .foregroundStyle(Color.textePrincipal)
             Spacer()
             PrixText(montant)
-                .font(.system(size: 18, weight: .regular))
+                .font(policeValeur)
                 .foregroundStyle(Color.orangeInternational)
         }
         .padding(12)
