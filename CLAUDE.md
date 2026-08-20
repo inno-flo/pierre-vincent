@@ -187,8 +187,7 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 ## Détails d'interface déjà en place
 
 - **macOS** : menu Fichier restructuré (sous-menu Exporter, accès au dossier des
-  données), navigation Précédent/Suivant dans l'éditeur, sidebar sans bloc d'infos
-  (un filet + pastilles de thème), titre de catégorie sélectionnée forcé en blanc.
+  données), navigation Précédent/Suivant dans l'éditeur, bas de sidebar vide.
 - **iOS** : navigation liquid glass, swipe latéral fluide, barre de navigation
   transparente (titres en couleur système), défilement auto de la galerie.
 - **Vue Synthèse** : cartes (Œuvres, Montants, Enchères) contenant des tuiles.
@@ -212,6 +211,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   swipe gauche/droite ou chevrons) : le contenu de la fiche est enveloppé
   dans un `ZStack` (indispensable pour que `.transition(.move(edge:))` se
   voie réellement à l'intérieur d'un `ScrollView`), animation 0,25 s.
+- **Sidebar — zone du bas, conservée en commentaire** (`ContentView.swift`,
+  les deux plateformes) : le bas de la barre latérale est **vide**. Il a
+  successivement porté les pastilles de choix de thème, puis le bouton « G »
+  (mise en gras des en-têtes de section), tous deux supprimés — les en-têtes
+  sont désormais en graisse normale et il n'y a plus de sélecteur de thème.
+  L'emplacement est **gardé en commentaire** pour y poser au besoin des boutons
+  temporaires de test : deux blocs qui se renvoient l'un à l'autre, l'appel
+  dans la `VStack` de la sidebar (`Divider()` + `barreOutilsBas`) et la
+  propriété `barreOutilsBas` près de `lien()`. Les réactiver demande de
+  décommenter **les deux**, sinon la compilation échoue.
 - **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
   sous-rubrique (Inventaire, Tableaux, Dessins, Tapis, Œuvres données,
   Ventes) affiche une pastille arrondie (fond orange, texte blanc) avec le
@@ -232,9 +241,9 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   Règle : **l'en-tête de section doit être plus PETIT que les libellés qu'il
   regroupe** (11 < 13). Le code imposait 14 pt aux en-têtes, donc plus gros
   que les libellés — hiérarchie visuelle inversée par rapport à Mail.
-  - *En-têtes* : **ne pas imposer de police**. `listStyle(.sidebar)` fournit
-    lui-même l'apparence standard (petit corps, gris). Seule la graisse est
-    pilotée, par le bouton « G » (`.fontWeight(intitulesEnGras ? .bold : nil)`).
+  - *En-têtes* : **ne pas imposer de police NI de graisse**.
+    `listStyle(.sidebar)` fournit lui-même l'apparence standard (petit corps,
+    gris, graisse normale).
   - *Libellés* : `.font(.system(size: 13))`, en noir **gras** quand la
     rubrique est sélectionnée (`.fontWeight`), sinon `Color.textePrincipal`.
   - *Couleur des en-têtes* : `.foregroundStyle(.secondary)` (le gris de Mail,
@@ -247,9 +256,9 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   semi-gras, subheadline 15 pt, **footnote 13 pt**, caption 12/11 pt.
   Même règle que sur macOS : l'en-tête de section doit être plus PETIT que les
   libellés. Le code imposait 18 pt aux en-têtes contre 17 pt aux libellés.
-  - *En-têtes* : aucune taille imposée (`listStyle(.insetGrouped)` fournit
-    footnote/gris), graisse pilotée par « G », plus `.foregroundStyle(.secondary)`
-    pour rétablir le gris écrasé par `Color.textePrincipal`.
+  - *En-têtes* : aucune taille ni graisse imposée (`listStyle(.insetGrouped)`
+    fournit footnote/gris), plus `.foregroundStyle(.secondary)` pour rétablir
+    le gris écrasé par `Color.textePrincipal`.
   - *Libellés* : laissés au corps par défaut (body, 17 pt).
   - **Ne jamais figer une taille en points sur iOS** : cela casse le
     **Dynamic Type** (réglage système de taille de texte). C'est la différence
