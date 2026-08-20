@@ -12,35 +12,55 @@ struct VueSynthese: View {
 
     // MARK: Polices
 
-    // Cette vue est PARTAGÉE entre iOS et macOS. Les styles sémantiques n'y
-    // valent pas la même chose : .callout = 16 pt sur iOS mais 12 pt sur Mac,
-    // .body = 17 / 13, .title3 = 20 / 15. Les convertir des deux côtés aurait
-    // rétréci toute la Synthèse macOS d'environ un quart.
-    // → iOS prend les styles du barème système (et donc le Dynamic Type),
-    //   macOS conserve exactement les tailles en points d'origine.
+    // Cette vue est PARTAGÉE entre iOS et macOS, et les styles sémantiques n'y
+    // valent pas la même chose. Chaque plateforme prend donc SON barème :
+    //
+    //   rôle              iOS              macOS
+    //   libellé de tuile  .callout  16 pt  .body    13 pt
+    //   valeur chiffrée   .body     17 pt  .title3  15 pt
+    //   titre de carte    .title3   20 pt  .title2  17 pt
+    //
+    // La vue utilisait auparavant 16/18/20 pt sur les DEUX plateformes : des
+    // valeurs pensées pour iPhone, hors du barème macOS (10, 11, 12, 13, 15,
+    // 17, 22, 26), qui faisaient un corps de texte 40 % plus gros que partout
+    // ailleurs dans l'app Mac. La Synthèse macOS est donc plus compacte
+    // qu'avant : c'est voulu.
 
-    /// Libellé d'une tuile (16 pt d'origine).
+    /// Libellé d'une tuile.
     private var policeLibelle: Font {
         #if os(macOS)
-        .system(size: 16)
+        .body             // 13 pt
         #else
         .callout          // 16 pt
         #endif
     }
 
-    /// Valeur chiffrée d'une tuile (18 pt d'origine).
+    /// Compteur d'œuvres d'une tuile (« Vendues 336 »).
     private var policeValeur: Font {
         #if os(macOS)
-        .system(size: 18)
+        .body             // 13 pt, comme les prix et le reste de l'app Mac
         #else
         .body             // 17 pt
         #endif
     }
 
-    /// Titre d'une carte (20 pt d'origine).
+    /// Montants en euros. Sur macOS ils sont à 13 pt PARTOUT ailleurs dans
+    /// l'app (cellule Prix du tableau, inspecteur, légende de galerie) : la
+    /// Synthèse s'aligne dessus, au lieu des 15 pt de `policeValeur`, qui reste
+    /// réservée aux compteurs d'œuvres. Sur iOS, valeur identique à
+    /// `policeValeur` : rien n'y change.
+    private var policePrix: Font {
+        #if os(macOS)
+        .body             // 13 pt
+        #else
+        .body             // 17 pt
+        #endif
+    }
+
+    /// Titre d'une carte.
     private var policeTitre: Font {
         #if os(macOS)
-        .system(size: 20)
+        .title2           // 17 pt
         #else
         .title3           // 20 pt
         #endif
@@ -232,7 +252,7 @@ struct VueSynthese: View {
                     .font(policeLibelle)
                     .foregroundStyle(Color.orangeInternational)
                 Text(formaterEuros(total))
-                    .font(policeValeur)
+                    .font(policePrix)
                     .foregroundStyle(Color.orangeInternational)
                     .flouteSiPrixMasques()
             }
@@ -242,7 +262,7 @@ struct VueSynthese: View {
                 Image(systemName: "eurosign.circle")
                     .font(policeLibelle)
                 Text(" ")
-                    .font(policeValeur)
+                    .font(policePrix)
             }
             .hidden()
         }
@@ -277,7 +297,7 @@ struct VueSynthese: View {
                         .font(policeLibelle)
                         .foregroundStyle(Color.orangeInternational)
                     Text(detail)
-                        .font(policeValeur)
+                        .font(policePrix)
                         .foregroundStyle(Color.orangeInternational)
                         .flouteSiPrixMasques()
                 }
@@ -289,7 +309,7 @@ struct VueSynthese: View {
                     Image(systemName: "eurosign.circle")
                         .font(policeLibelle)
                     Text(" ")
-                        .font(policeTitre)
+                        .font(policePrix)
                 }
                 .hidden()
             }
@@ -313,7 +333,7 @@ struct VueSynthese: View {
                             .foregroundStyle(Color.textePrincipal)
                         Spacer()
                         Text(val)
-                            .font(policeValeur)
+                            .font(policePrix)
                             .foregroundStyle(Color.orangeInternational)
                             .monospacedDigit()
                             .flouteSiPrixMasques()
@@ -329,12 +349,15 @@ struct VueSynthese: View {
     /// Tuile « vendeur » : libellé à gauche, montant orange à droite.
     private func tuileVendeur(_ nom: String, _ montant: Double) -> some View {
         HStack {
+            // Même corps que les libellés des tuiles « lignes » (« Le plus
+            // bas », « Prix moyen »…) : c'est le même rôle, un intitulé en
+            // regard d'un montant.
             Text(nom)
-                .font(policeValeur)
+                .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
             Spacer()
             PrixText(montant)
-                .font(policeValeur)
+                .font(policePrix)
                 .foregroundStyle(Color.orangeInternational)
         }
         .padding(12)
