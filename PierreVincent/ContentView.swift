@@ -258,6 +258,17 @@ struct ContentView: View {
                     return .handled
                 }
                 #endif
+
+                // --- Zone libre en bas de la sidebar (désactivée) ---
+                // Emplacement conservé pour y poser au besoin des boutons
+                // temporaires de test. A successivement accueilli les
+                // pastilles de choix de thème, puis le bouton « G » (mise en
+                // gras des en-têtes), tous deux supprimés.
+                // Pour la réactiver : décommenter les deux lignes ci-dessous
+                // ET la propriété `barreOutilsBas` plus bas dans ce fichier.
+                //
+                // Divider()
+                // barreOutilsBas
             }
             #if os(iOS)
             // Fond de toute la colonne.
@@ -423,6 +434,20 @@ struct ContentView: View {
     }
 
     // MARK: Barre de sélection du thème (bas de la sidebar)
+
+    // MARK: Zone libre en bas de la sidebar (désactivée)
+
+    // Conteneur de boutons pour le bas de la barre latérale. Décommenter avec
+    // les deux lignes correspondantes dans la VStack de la sidebar (voir plus
+    // haut). Y ajouter les boutons voulus à la place du Spacer.
+    //
+    // private var barreOutilsBas: some View {
+    //     HStack(spacing: 10) {
+    //         Spacer()
+    //     }
+    //     .padding(.horizontal, 20)
+    //     .padding(.vertical, 10)
+    // }
 
     // MARK: Lien de catégorie (barre latérale)
 
