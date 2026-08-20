@@ -57,7 +57,11 @@ struct VueGalerie: View {
             #if os(macOS)
             // Focus clavier sur le ScrollView pour recevoir les touches fléchées.
             // focusEffectDisabled() supprime l'anneau bleu de focus.
-            .focusable()
+            // Focalisable UNIQUEMENT s'il y a une vignette sélectionnée : sinon
+            // la galerie captait le focus dès l'ouverture d'une rubrique, la
+            // sidebar le perdait (sélection qui vire au gris/marron) et ses ↑↓
+            // ne répondaient plus. Même correctif que sur le Table du mode liste.
+            .focusable(!selection.isEmpty)
             .focused($focusGalerie)
             .focusEffectDisabled()
             .onKeyPress(.leftArrow)  { naviguerClavier(delta: -1) }
@@ -186,7 +190,6 @@ struct VueGalerie: View {
     /// - sans touche : sélectionne uniquement cette entrée.
     private func cliquer(_ o: Oeuvre) {
         #if os(macOS)
-        focusGalerie = true   // active le focus clavier après un clic
         let mod = NSEvent.modifierFlags
         if mod.contains(.command) {
             if selection.contains(o.id) { selection.remove(o.id) } else { selection.insert(o.id) }
@@ -199,6 +202,10 @@ struct VueGalerie: View {
             selection = [o.id]
             derniere = o.id
         }
+        // Focus demandé APRÈS la mise à jour de la sélection : la galerie
+        // n'est focalisable que si la sélection est non vide (voir plus haut),
+        // donc une demande faite avant serait purement et simplement ignorée.
+        focusGalerie = !selection.isEmpty
         #else
         // iPhone (consultation) : un simple tap sélectionne l'entrée.
         selection = [o.id]
