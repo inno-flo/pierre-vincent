@@ -157,7 +157,13 @@ struct ContentView: View {
                             .listRowSeparator(.hidden)
                     }
                     Section(header: Text("Ventes et dons")
-                        .font(.system(size: 14, weight: intitulesEnGras ? .bold : .regular))
+                        // Aucune police imposée : `listStyle(.sidebar)` fournit
+                        // lui-même l'apparence standard des en-têtes de section
+                        // sur macOS (petit corps, gris) — c'est la convention
+                        // Apple. Forcer une taille (14 pt auparavant) l'écrasait
+                        // et donnait des intitulés bien trop gros.
+                        // Seule la graisse reste pilotable par le bouton « G ».
+                        .fontWeight(intitulesEnGras ? .bold : nil)
                         .padding(.bottom, 5)) {
                         lien(.tableauxVendus)
                             .listRowSeparator(.hidden)
@@ -169,7 +175,13 @@ struct ContentView: View {
                             .listRowSeparator(.hidden)
                     }
                     Section(header: Text("Expositions et enchères")
-                        .font(.system(size: 14, weight: intitulesEnGras ? .bold : .regular))
+                        // Aucune police imposée : `listStyle(.sidebar)` fournit
+                        // lui-même l'apparence standard des en-têtes de section
+                        // sur macOS (petit corps, gris) — c'est la convention
+                        // Apple. Forcer une taille (14 pt auparavant) l'écrasait
+                        // et donnait des intitulés bien trop gros.
+                        // Seule la graisse reste pilotable par le bouton « G ».
+                        .fontWeight(intitulesEnGras ? .bold : nil)
                         .padding(.bottom, 5)) {
                         lien(.ventesRealisees)
                             .listRowSeparator(.hidden)
@@ -195,6 +207,12 @@ struct ContentView: View {
                 }
                 #else
                 .listStyle(.sidebar)
+                // Couleur de sélection des rubriques : marron au lieu du bleu.
+                // `.tint()` n'a AUCUN effet sur la surbrillance d'une List en
+                // style sidebar (essayé, sans résultat) : on désactive la
+                // surbrillance système sur le NSOutlineView et on peint le fond
+                // nous-mêmes via .listRowBackground dans lien().
+                .background(DesactiveSurbrillanceSidebar())
                 // ↑↓ : ni onKeyPress (SwiftUI capte avant AppKit sans traiter),
                 // ni repli sur le natif (le premier répondant ne suit pas les
                 // clics de façon fiable ici). On passe par un capteur NSEvent
@@ -456,9 +474,17 @@ struct ContentView: View {
             // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
             HStack(spacing: 6) {
                 Image(systemName: cat.symbole)
-                    .foregroundStyle(categorie == cat ? Color.white : Color.orangeInternational)
+                    .foregroundStyle(categorie == cat ? Color.black : Color.orangeInternational)
+                // Rubrique sélectionnée : libellé en noir gras sur le fond
+                // marron clair (voir Color.fondSelectionSidebarMac).
+                // 13 pt = NSFont.systemFontSize, la taille standard d'un
+                // libellé de sidebar sur macOS (les en-têtes de section, eux,
+                // sont à 11 pt : ils doivent rester PLUS PETITS que les
+                // libellés qu'ils regroupent).
                 Text(cat.titre)
-                    .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
+                    .font(.system(size: 13))
+                    .fontWeight(categorie == cat ? .bold : .regular)
+                    .foregroundStyle(categorie == cat ? Color.black : Color.textePrincipal)
                 if let n = compteurPourCategorie(cat) {
                     Spacer()
                     Text("\(n)")
@@ -489,6 +515,15 @@ struct ContentView: View {
             categorieRecemmentChoisie == cat
                 ? Color.fondCelluleSidebarSelectionnee : Color.fondCelluleSidebar)
         .animation(nil, value: categorieRecemmentChoisie)
+        #else
+        // Surbrillance de la rubrique sélectionnée, peinte par nous : la
+        // surbrillance système (bleue) est désactivée sur le NSOutlineView,
+        // voir DesactiveSurbrillanceSidebar.
+        .listRowBackground(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(categorie == cat ? Color.fondSelectionSidebarMac : Color.clear)
+                .padding(.horizontal, 4)
+        )
         #endif
     }
 
@@ -573,6 +608,41 @@ extension View {
     /// Garde la barre de navigation transparente, titres en couleur système.
     func apparenceTitresNavigation() -> some View {
         modifier(ApparenceTitresNavigation())
+    }
+}
+#endif
+
+#if os(macOS)
+/// Désactive la surbrillance de sélection **système** (le bleu) sur le
+/// `NSOutlineView` de la sidebar, pour que la teinte marron peinte par
+/// `.listRowBackground` soit seule visible.
+///
+/// Nécessaire parce que `.tint()` sur une `List` en style sidebar n'a aucun
+/// effet sur cette surbrillance (essayé, sans résultat).
+struct DesactiveSurbrillanceSidebar: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        // Différé : au moment de la mise à jour SwiftUI, la vue n'est pas
+        // forcément encore rattachée à sa fenêtre.
+        DispatchQueue.main.async {
+            guard let racine = nsView.window?.contentView,
+                  let outline = Self.outlineView(dans: racine) else { return }
+            if outline.selectionHighlightStyle != .none {
+                outline.selectionHighlightStyle = .none
+            }
+        }
+    }
+
+    /// Cherche en profondeur le `NSOutlineView` de la sidebar. Le `Table` du
+    /// panneau de contenu est une `NSTableView` simple : aucun risque de
+    /// confusion, `NSOutlineView` étant plus spécifique.
+    private static func outlineView(dans vue: NSView) -> NSOutlineView? {
+        if let o = vue as? NSOutlineView { return o }
+        for sous in vue.subviews {
+            if let o = outlineView(dans: sous) { return o }
+        }
+        return nil
     }
 }
 #endif

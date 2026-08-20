@@ -125,6 +125,19 @@ extension Color {
             vertClair:  (204, 219, 206), vertSombre:  (40, 51, 43))
     }
 
+    /// Fond de la rubrique sélectionnée dans la sidebar macOS : un marron, en
+    /// remplacement du bleu de sélection système. Volontairement plus clair en
+    /// mode sombre qu'en mode clair, pour que le libellé (noir gras) reste
+    /// lisible dans les deux cas.
+    static var fondSelectionSidebarMac: Color {
+        // Mode clair : marron éclairci de 50 % (à mi-chemin du blanc depuis
+        // le (163, 118, 78) initial). Mode sombre : à ajuster séparément.
+        couleurTheme(
+            cremeClair: (209, 187, 167), cremeSombre: (178, 134, 94),
+            grisClair:  (209, 187, 167), grisSombre:  (178, 134, 94),
+            vertClair:  (209, 187, 167), vertSombre:  (178, 134, 94))
+    }
+
     // MARK: Thème « Graphite » de la vue Synthèse (sombre fixe)
     static let graphitePageBg   = Color(red: 0x1A/255, green: 0x1A/255, blue: 0x1C/255)
     static let graphiteCardBg   = Color(red: 0x24/255, green: 0x24/255, blue: 0x26/255)

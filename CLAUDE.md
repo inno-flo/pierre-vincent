@@ -218,6 +218,34 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   nombre d'œuvres correspondant (Inventaire = total de `toutes`).
   Implémenté via `HStack` + `Spacer()` dans la fonction `lien()`, calculé
   par `compteurPourCategorie(_ cat:)`.
+- **macOS — sidebar, typographie** (`ContentView.swift`) : tailles relevées
+  sur le système (via `NSFont`, valeurs qui font autorité — les pages HIG
+  sont rendues en JavaScript et inexploitables par extraction) :
+
+  | Rôle | Constante | Taille |
+  |---|---|---|
+  | Libellé de rubrique | `NSFont.systemFontSize` / body | **13 pt** |
+  | En-tête de section | `NSFont.smallSystemFontSize` / subheadline | **11 pt** |
+  | headline | — | 13 pt, semi-gras (poids 0,40) |
+  | footnote / caption | — | 10 pt |
+
+  Règle : **l'en-tête de section doit être plus PETIT que les libellés qu'il
+  regroupe** (11 < 13). Le code imposait 14 pt aux en-têtes, donc plus gros
+  que les libellés — hiérarchie visuelle inversée par rapport à Mail.
+  - *En-têtes* : **ne pas imposer de police**. `listStyle(.sidebar)` fournit
+    lui-même l'apparence standard (petit corps, gris). Seule la graisse est
+    pilotée, par le bouton « G » (`.fontWeight(intitulesEnGras ? .bold : nil)`).
+  - *Libellés* : `.font(.system(size: 13))`, en noir **gras** quand la
+    rubrique est sélectionnée (`.fontWeight`), sinon `Color.textePrincipal`.
+- **macOS — sidebar, couleur de sélection** (`ContentView.swift`,
+  `Couleurs.swift`) : marron clair `Color.fondSelectionSidebarMac`
+  (209, 187, 167 en mode clair) au lieu du bleu système.
+  **`.tint()` n'a aucun effet** sur la surbrillance d'une `List` en style
+  sidebar (essayé, sans résultat). La méthode qui marche : désactiver la
+  surbrillance système avec `selectionHighlightStyle = .none` sur le
+  `NSOutlineView` (helper `DesactiveSurbrillanceSidebar`), puis peindre le
+  fond soi-même via `.listRowBackground` (rectangle arrondi, rayon 6,
+  marges latérales 4 px). La valeur du mode sombre reste à ajuster.
 - **macOS — toolbar de la vue principale** (`VueFeuille.swift`) : tous les
   `ToolbarItem` et `ToolbarSpacer` sont sans `placement:` explicite pour
   que les boutons restent exclusivement au-dessus du panneau de contenu
