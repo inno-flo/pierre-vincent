@@ -254,6 +254,41 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - **Ne jamais figer une taille en points sur iOS** : cela casse le
     **Dynamic Type** (réglage système de taille de texte). C'est la différence
     de méthode avec macOS, où les libellés sont fixés à 13 pt.
+
+## Typographie générale (inventaire mené sur les deux plateformes)
+
+Barèmes système, relevés via `NSFont` / `UIFont` (les pages HIG sont rendues en
+JavaScript, inexploitables par extraction) :
+
+| | macOS | iOS |
+|---|---|---|
+| Valeurs du barème | 10, 11, 12, 13, 15, 17, 22, 26 | 11, 12, 13, 15, 16, 17, 20, 22, 28, 34 |
+| body | 13 | 17 |
+| headline | 13 semi-gras | 17 semi-gras |
+| callout / subheadline | 12 / 11 | 16 / 15 |
+| footnote / caption | 10 / 10 | 13 / 12 |
+| title3 / title2 | 15 / 17 | 20 / 22 |
+
+**Règles retenues :**
+
+- **macOS tourne autour de 13 pt** (libellés de sidebar, cellules du tableau,
+  inspecteur, éditeur, légende de galerie), 11 pt pour le subordonné
+  (en-têtes de section, pastilles de comptage).
+- **Les prix sont à 13 pt PARTOUT sur macOS** — cellule Prix du tableau,
+  inspecteur, légende de galerie, Synthèse (`policePrix` dans
+  `VueSynthese.swift`) et éditeur. Ne pas les remettre à une autre taille.
+- **Ne jamais figer une taille en points sur iOS** (Dynamic Type). Sur macOS
+  c'est toléré, mais préférer un style sémantique quand il existe.
+- **Vues partagées iOS/macOS** (`VueSynthese`, `VueGalerie`) : un style
+  sémantique n'y vaut PAS la même chose selon la plateforme (`.callout` = 16 pt
+  sur iOS mais 12 sur Mac). Passer par une propriété `Font` avec `#if os(macOS)`
+  — patron `policeLegende` (`VueGalerie`), `policeLibelle` / `policeValeur` /
+  `policeTitre` / `policePrix` (`VueSynthese`). **Ne pas convertir une vue
+  partagée d'un seul geste** sans vérifier l'effet sur l'autre plateforme.
+- `VueSynthese` utilisait 16/18/20 pt sur les deux plateformes — des valeurs
+  pensées pour iPhone, hors barème macOS. Corrigé des deux côtés.
+- Les tailles en points restant dans le code sont des **glyphes** SF Symbols
+  (icônes décoratives : 26, 30, 40, 48 pt), pas du texte : c'est légitime.
   - *Légende des vignettes de galerie* (`VueGalerie.swift`) : prix et
     dimensions à 13 pt sur macOS via la propriété `policeLegende`. Ils
     héritaient de `.subheadline`, qui ne vaut que 11 pt sur macOS. Le fichier
