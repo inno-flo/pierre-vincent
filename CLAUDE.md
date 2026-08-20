@@ -160,6 +160,29 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   au-dessus du panneau de contenu, utiliser des `ToolbarItem {}` et
   `ToolbarSpacer(.flexible/.fixed)` **sans `placement:` explicite** (pattern
   de l'exemple Landmarks d'Apple, validé sur macOS 26).
+- **Isoler le bouton Inspecteur à l'extrême droite (au-dessus de la colonne
+  inspecteur), les autres boutons restant au-dessus du panneau de contenu :
+  NON RÉSOLU.** Objectif visé : inspecteur fermé → tous les boutons groupés à
+  droite ; inspecteur ouvert → seul le bouton Inspecteur file à l'extrême
+  droite, les autres ne bougent pas. Quatre approches essayées sur une branche
+  dédiée, toutes abandonnées :
+  1. `ToolbarItem(placement: .primaryAction)` sur ce seul bouton → **tous** les
+     items fusionnent dans le même groupe aligné à droite de la fenêtre, et le
+     bouton se retrouve dans la même capsule que son voisin ;
+  2. `ToolbarSpacer(.flexible, placement: .primaryAction)` juste avant lui →
+     aucun effet visible ;
+  3. bouton déclaré dans `ContentView`, sur le `NavigationSplitView` lui-même
+     (possible sans rien remonter d'autre, `inspecteurVisible` étant en
+     `@AppStorage`) → il passe en **tête** du groupe, donc tout à gauche ;
+  4. `.toolbar {}` attachée au **contenu de l'inspecteur**, dans la closure de
+     `.inspector` → ne s'affiche pas.
+  **Conclusion** : aucun `placement:` public ne vise la zone de toolbar de la
+  colonne inspecteur, et un `.inspector()` posé dans une vue imbriquée à
+  l'intérieur de la colonne `detail:` d'un `NavigationSplitView` ne crée pas de
+  section de toolbar distincte. Piste restante, non tentée : faire de
+  l'inspecteur une **vraie troisième colonne** du `NavigationSplitView` (chaque
+  colonne a alors nativement sa propre section de toolbar), ce qui suppose de
+  remonter la sélection de `VueFeuille` vers `ContentView`.
 
 ## Optimisations effectuées
 
