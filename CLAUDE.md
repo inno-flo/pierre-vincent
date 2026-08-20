@@ -176,13 +176,38 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
      `@AppStorage`) → il passe en **tête** du groupe, donc tout à gauche ;
   4. `.toolbar {}` attachée au **contenu de l'inspecteur**, dans la closure de
      `.inspector` → ne s'affiche pas.
-  **Conclusion** : aucun `placement:` public ne vise la zone de toolbar de la
-  colonne inspecteur, et un `.inspector()` posé dans une vue imbriquée à
-  l'intérieur de la colonne `detail:` d'un `NavigationSplitView` ne crée pas de
-  section de toolbar distincte. Piste restante, non tentée : faire de
-  l'inspecteur une **vraie troisième colonne** du `NavigationSplitView` (chaque
-  colonne a alors nativement sa propre section de toolbar), ce qui suppose de
-  remonter la sélection de `VueFeuille` vers `ContentView`.
+  **Deuxième campagne d'essais** (branche `inspecteur-3e-colonne`), après avoir
+  remonté tout l'inspecteur dans `ContentView` — panneau extrait dans un
+  `VueInspecteur` recevant les œuvres sélectionnées, sélection remontée depuis
+  `VueFeuille` par binding, et `.inspector()` posé **sur le
+  `NavigationSplitView` lui-même** :
+  5. bouton dans `ContentView` avec `.primaryAction` → **les sections se
+     séparent enfin**, mais à l'envers : le bouton Inspecteur reste au-dessus du
+     panneau de contenu (et tout à gauche du groupe), tandis que les six autres
+     boutons, déclarés dans `VueFeuille`, passent au-dessus de la colonne
+     inspecteur ;
+  6. le même sans `placement:` → identique. Le `placement:` n'a donc aucune
+     influence ; ce qui semblait décider de la section, c'était le **niveau de
+     déclaration** (split view → panneau de contenu ; colonne `detail:` →
+     colonne inspecteur) ;
+  7. inversion complète des déclarations pour exploiter cette règle : les six
+     boutons remontés dans `ContentView` (avec trois signaux `@AppStorage`
+     `signalAjouter` / `signalSupprimer` / `signalOuvrirEditeur` pour les
+     actions touchant l'état interne de `VueFeuille`), le bouton Inspecteur
+     redescendu dans `VueFeuille` → **échec** : tous les boutons se regroupent
+     de nouveau ensemble. La « règle » du niveau de déclaration ne se vérifie
+     donc pas une fois inversée, et n'est pas exploitable.
+
+  **Conclusion générale, après sept essais** : ce placement n'est pas
+  atteignable avec l'API publique de SwiftUI sur macOS 26. Aucun `placement:`
+  ne vise la zone de toolbar de la colonne inspecteur, une `.toolbar` attachée
+  au contenu de l'inspecteur ne se rend pas, et la répartition des sections
+  n'obéit pas à une règle stable qu'on puisse piloter. **Ne pas relancer ces
+  pistes.** La seule voie non explorée serait une toolbar `NSToolbar` gérée
+  en AppKit, ou l'abandon de `.inspector()` au profit d'un panneau latéral
+  maison (un `HStack` avec une vue de droite pilotée par un état), qui
+  redonnerait la main sur la disposition — au prix de la perte du comportement
+  natif de l'inspecteur (redimensionnement, animation, mémorisation).
 
 ## Optimisations effectuées
 
