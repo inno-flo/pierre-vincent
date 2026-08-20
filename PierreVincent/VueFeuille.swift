@@ -32,6 +32,10 @@ struct VueFeuille: View {
         KeyPathComparator(\Oeuvre.type)
     ]
     @State private var selection: Set<UUID> = []
+    // Focus clavier du tableau (mode liste) : piloté nous-mêmes (comme en
+    // galerie) plutôt que de dépendre du focus natif de NSTableView, qui ne
+    // se redonne pas de façon fiable après un changement de rubrique.
+    @FocusState private var focusListe: Bool
     @State private var editionEntree: Oeuvre?
     @State private var editionNouvelle = false
     @State private var messageExport: String?
@@ -609,11 +613,29 @@ struct VueFeuille: View {
                 }
             )
         } else {
-            // ↑↓ gérés nativement par NSTableView (ne pas intercepter).
-            // ←→ ajoutés ici pour naviguer en mode liste (NSTableView ne les utilise pas).
-            tableau
-                .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
-                .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
+            // Les 4 flèches sont interceptées manuellement : le repli sur la
+            // navigation/focus natifs de NSTableView ne s'est pas montré
+            // fiable (focus perdu après un changement de rubrique, pas de
+            // défilement automatique). On pilote nous-mêmes le focus clavier
+            // (repris explicitement à chaque sélection, comme en galerie) et
+            // le défilement vers la ligne sélectionnée.
+            ScrollViewReader { proxy in
+                tableau
+                    .focusable()
+                    .focused($focusListe)
+                    .focusEffectDisabled()
+                    .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
+                    .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
+                    .onKeyPress(.upArrow)    { naviguerListe(delta: -1) }
+                    .onKeyPress(.downArrow)  { naviguerListe(delta: +1) }
+                    .onChange(of: selection) { _, nouvelle in
+                        focusListe = true
+                        guard nouvelle.count == 1, let id = nouvelle.first else { return }
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            proxy.scrollTo(id, anchor: .center)
+                        }
+                    }
+            }
         }
     }
 

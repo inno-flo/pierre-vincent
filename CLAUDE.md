@@ -110,10 +110,13 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   `List` (NSOutlineView)** : SwiftUI intercepte les événements clavier
   *avant* qu'ils arrivent à la vue AppKit sous-jacente. Ajouter
   `.onKeyPress(.upArrow)` / `.onKeyPress(.downArrow)` sur un ancêtre d'un
-  `Table` casse la navigation native ↑↓ de NSTableView. Règle : ne jamais
-  intercepter ↑↓ sur un parent de `Table` — les laisser à NSTableView natif.
-  En revanche, ←→ ne sont pas consommés par NSTableView et peuvent être
-  gérés sans danger par un `onKeyPress` parent.
+  `Table` peut casser la navigation native ↑↓ de NSTableView — mais le
+  repli inverse (laisser ↑↓ au natif, sans handler) s'est révélé **non
+  fiable** aussi (plus aucun mouvement de sélection constaté en mode
+  liste macOS). Le natif n'étant pas garanti dans un sens ni dans
+  l'autre, la règle actuelle est d'intercepter **les 4 flèches**
+  nous-mêmes en mode liste (`VueFeuille.swift`, fonction
+  `naviguerListe`), sans dépendre de NSTableView pour aucune d'elles.
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
@@ -173,10 +176,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   dans un `ZStack` (indispensable pour que `.transition(.move(edge:))` se
   voie réellement à l'intérieur d'un `ScrollView`), animation 0,25 s.
 - **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
-  sous-rubrique (Tableaux, Dessins, Tapis, Œuvres données, Ventes) affiche
-  une pastille arrondie (fond orange, texte blanc) avec le nombre d'œuvres
-  correspondant. Implémenté via `HStack` + `Spacer()` dans la fonction
-  `lien()`, calculé par `compteurPourCategorie(_ cat:)`.
+  sous-rubrique (Inventaire, Tableaux, Dessins, Tapis, Œuvres données,
+  Ventes) affiche une pastille arrondie (fond orange, texte blanc) avec le
+  nombre d'œuvres correspondant (Inventaire = total de `toutes`).
+  Implémenté via `HStack` + `Spacer()` dans la fonction `lien()`, calculé
+  par `compteurPourCategorie(_ cat:)`.
 - **macOS — toolbar de la vue principale** (`VueFeuille.swift`) : tous les
   `ToolbarItem` et `ToolbarSpacer` sont sans `placement:` explicite pour
   que les boutons restent exclusivement au-dessus du panneau de contenu
@@ -191,8 +195,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     layout). La touche Entrée ouvre l'éditeur. Focus activé via
     `@FocusState` + `.focusable()` + `.focusEffectDisabled()` sur le
     `ScrollView`.
-  - *Liste* : ←→ naviguent prev/next ; ↑↓ laissés à NSTableView natif
-    (ne pas intercepter, voir pièges).
+  - *Liste* : les 4 flèches naviguent prev/next (`naviguerListe`), toutes
+    interceptées manuellement — le repli sur NSTableView natif pour ↑↓
+    ne s'est pas montré fiable (voir pièges). Le focus clavier du tableau
+    est lui aussi repris explicitement (`@FocusState private var
+    focusListe`, mis à `true` dans `.onChange(of: selection)`, même
+    principe qu'en galerie) au lieu de dépendre du focus natif de
+    NSTableView, qui ne se redonnait pas de façon fiable après un
+    changement de rubrique dans la sidebar (navigation qui ne répondait
+    plus, avec bip système). Défilement vers la ligne sélectionnée géré
+    par un `ScrollViewReader` autour du `Table` (`proxy.scrollTo`).
   - *Sidebar* : ↑↓ circulent entre les rubriques (liste ordonnée codée en
     dur), → déplace le focus vers le panneau de contenu via
     `NSApp.keyWindow?.selectNextKeyView(nil)`.

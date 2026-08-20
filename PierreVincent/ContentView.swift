@@ -354,6 +354,8 @@ struct ContentView: View {
     /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de pastille).
     private func compteurPourCategorie(_ cat: Categorie) -> Int? {
         switch cat {
+        case .oeuvres:
+            return toutes.count
         case .tableauxVendus:
             return toutes.filter { $0.feuille == .tableauxVendus }.count
         case .dessinsVendus:
