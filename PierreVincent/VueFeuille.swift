@@ -531,8 +531,13 @@ struct VueFeuille: View {
                 }
             }
         } label: {
-            Label("Trier", systemImage: iconeMenuTri)
+            // Image seule, comme sur iOS : avec un `Label`, la toolbar macOS
+            // n'affiche que le titre (« Trier ») et l'icône du critère actif
+            // — tout l'intérêt du réglage — passait à la trappe.
+            Image(systemName: iconeMenuTri)
         }
+        .help("Trier")
+        .accessibilityLabel("Trier")
     }
 
     /// Panneau modal centré, commun à la progression et au message final d'un

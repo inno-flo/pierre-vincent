@@ -165,9 +165,18 @@ struct VueGalerie: View {
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         #if os(macOS)
-        // Sur Mac : un clic sélectionne, un double-clic ouvre la fiche.
+        // Sur Mac : un clic sélectionne, un double-clic sélectionne PUIS ouvre
+        // la fiche. Le double-clic n'appelait auparavant que `onOuvrir` : le
+        // filet orange restait donc sur la vignette précédemment sélectionnée.
+        // Sélection posée directement (et non via `cliquer`, qui tient compte
+        // des touches Cmd/Maj) : un double-clic désigne toujours cette seule
+        // vignette.
         .onTapGesture { cliquer(o) }
-        .onTapGesture(count: 2) { onOuvrir(o) }
+        .onTapGesture(count: 2) {
+            selection = [o.id]
+            derniere = o.id
+            onOuvrir(o)
+        }
         #else
         // Sur iPhone : un simple tap ouvre directement la fiche de détail.
         .onTapGesture { onOuvrir(o) }

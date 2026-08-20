@@ -474,9 +474,12 @@ struct ContentView: View {
             // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
             HStack(spacing: 6) {
                 Image(systemName: cat.symbole)
-                    .foregroundStyle(categorie == cat ? Color.black : Color.orangeInternational)
-                // Rubrique sélectionnée : libellé en noir gras sur le fond
-                // marron clair (voir Color.fondSelectionSidebarMac).
+                    .foregroundStyle(categorie == cat
+                                     ? Color.texteSelectionSidebarMac
+                                     : Color.orangeInternational)
+                // Rubrique sélectionnée : libellé gras sur le fond marron —
+                // noir en mode clair, blanc en mode sombre (le marron y est
+                // assombri). Voir Color.texteSelectionSidebarMac.
                 // 13 pt = NSFont.systemFontSize, la taille standard d'un
                 // libellé de sidebar sur macOS (les en-têtes de section, eux,
                 // sont à 11 pt : ils doivent rester PLUS PETITS que les
@@ -484,7 +487,9 @@ struct ContentView: View {
                 Text(cat.titre)
                     .font(.system(size: 13))
                     .fontWeight(categorie == cat ? .bold : .regular)
-                    .foregroundStyle(categorie == cat ? Color.black : Color.textePrincipal)
+                    .foregroundStyle(categorie == cat
+                                     ? Color.texteSelectionSidebarMac
+                                     : Color.textePrincipal)
                 if let n = compteurPourCategorie(cat) {
                     Spacer()
                     Text("\(n)")
