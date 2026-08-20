@@ -1,0 +1,12 @@
+# Réglages Xcode propres à un utilisateur (thème de l'éditeur, points d'arrêt,
+# ordre des schémas…). Ils n'ont pas leur place dans le dépôt : ils changent
+# tout seuls au fil de l'utilisation et ne concernent que la machine locale.
+# Les schémas partagés, eux, vivent dans xcshareddata et restent versionnés.
+xcuserdata/
+
+# Produits de compilation
+build/
+DerivedData/
+
+# Finder
+.DS_Store
