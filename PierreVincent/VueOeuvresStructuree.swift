@@ -267,11 +267,11 @@ struct VueOeuvresStructuree: View {
         Button(action: action) {
             HStack {
                 Text(titre)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.headline)
                     .foregroundStyle(Color.texteLegende)
                 Spacer()
                 Text("\(nombre)")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.headline.bold())
                     .foregroundStyle(Color.orangeInternational)
             }
             .padding(.horizontal, 20)
@@ -285,7 +285,8 @@ struct VueOeuvresStructuree: View {
 
     private func titreSection(_ texte: String) -> some View {
         Text(texte)
-            .font(.system(size: 24, weight: .semibold))
+            .font(.title2)
+            .fontWeight(.semibold)
             .padding(.horizontal, 20)
             .padding(.top, 24)
             .padding(.bottom, 8)

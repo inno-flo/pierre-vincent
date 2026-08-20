@@ -107,11 +107,11 @@ struct VueiOS: View {
     private var recapCell: some View {
         HStack {
             Text("Nombre de ventes")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(Color.texteLegende)
             Spacer()
             Text("\(oeuvresGalerie.count)")
-                .font(.system(size: 17, weight: .bold))
+                .font(.headline.bold())
                 .foregroundStyle(Color.orangeInternational)
         }
         .padding(.horizontal, 20)

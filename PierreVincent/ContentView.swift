@@ -563,56 +563,6 @@ struct ContentView: View {
         )
         #endif
     }
-
-    // MARK: Total en bas de la sidebar
-
-    /// Nombre d'entrées et total en euros de la catégorie sélectionnée.
-    @ViewBuilder
-    private var bandeauTotal: some View {
-        let cat = categorie ?? .oeuvres
-        if cat.estSynthese {
-            // Pas de total pertinent pour le tableau de bord : rien à afficher.
-            EmptyView()
-        } else {
-            // Nombre total d'œuvres vendues : tableaux + dessins + tapis.
-            let nbVendues = toutes.filter {
-                $0.feuille == .tableauxVendus
-                || $0.feuille == .dessinsVendus
-                || $0.feuille == .tapisVendus
-            }.count
-
-            // Nombre d'œuvres données.
-            let nbDonnees = toutes.filter { $0.feuille == .oeuvresDonnees }.count
-
-            HStack(alignment: .top, spacing: 28) {
-                // Groupe 1 : œuvres vendues.
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Œuvres vendues")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("\(nbVendues)")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-                }
-
-                // Groupe 2 : œuvres données (même style et couleur).
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Œuvres données")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("\(nbDonnees)")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // Décalage à gauche pour aligner le texte avec les icônes des blocs.
-            // La position des icônes diffère entre Mac et iPhone.
-            #if os(macOS)
-            .padding(.leading, 20).padding(.trailing, 12).padding(.vertical, 10)
-            #else
-            .padding(.leading, 40).padding(.trailing, 12).padding(.vertical, 10)
-            #endif
-        }
-    }
 }
 
 #if os(iOS)
