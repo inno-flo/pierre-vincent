@@ -136,7 +136,18 @@ struct ContentView: View {
                         lien(.synthese)
                     }
                     Section(header: Text("Ventes et dons")
-                        .font(.system(size: 18, weight: intitulesEnGras ? .bold : .regular))
+                        // Aucune taille imposée : `listStyle(.insetGrouped)`
+                        // fournit lui-même l'apparence standard des en-têtes
+                        // (footnote, 13 pt, gris). Le code forçait 18 pt, soit
+                        // PLUS GROS que les libellés qu'ils regroupent (body,
+                        // 17 pt) — hiérarchie inversée, comme sur macOS.
+                        // Ne pas figer une taille en points ici : cela
+                        // casserait aussi le Dynamic Type.
+                        .fontWeight(intitulesEnGras ? .bold : nil)
+                        // Gris : le .foregroundStyle(Color.textePrincipal) posé
+                        // sur toute la hiérarchie de ContentView écrase sinon
+                        // la couleur secondaire fournie par défaut.
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 5)) {
                         lien(.tableauxVendus)
                         lien(.dessinsVendus)
@@ -144,7 +155,18 @@ struct ContentView: View {
                         lien(.oeuvresDonnees)
                     }
                     Section(header: Text("Expositions et enchères")
-                        .font(.system(size: 18, weight: intitulesEnGras ? .bold : .regular))
+                        // Aucune taille imposée : `listStyle(.insetGrouped)`
+                        // fournit lui-même l'apparence standard des en-têtes
+                        // (footnote, 13 pt, gris). Le code forçait 18 pt, soit
+                        // PLUS GROS que les libellés qu'ils regroupent (body,
+                        // 17 pt) — hiérarchie inversée, comme sur macOS.
+                        // Ne pas figer une taille en points ici : cela
+                        // casserait aussi le Dynamic Type.
+                        .fontWeight(intitulesEnGras ? .bold : nil)
+                        // Gris : le .foregroundStyle(Color.textePrincipal) posé
+                        // sur toute la hiérarchie de ContentView écrase sinon
+                        // la couleur secondaire fournie par défaut.
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 5)) {
                         lien(.ventesRealisees)
                     }

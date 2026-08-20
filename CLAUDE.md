@@ -242,6 +242,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `listStyle(.sidebar)` fournit bien ce gris, mais le
     `.foregroundStyle(Color.textePrincipal)` appliqué à toute la hiérarchie de
     `ContentView` l'écrase.
+- **iOS — sidebar, typographie** (`ContentView.swift`) : tailles relevées via
+  `UIFont` (taille de texte « Large ») — body **17 pt**, headline 17 pt
+  semi-gras, subheadline 15 pt, **footnote 13 pt**, caption 12/11 pt.
+  Même règle que sur macOS : l'en-tête de section doit être plus PETIT que les
+  libellés. Le code imposait 18 pt aux en-têtes contre 17 pt aux libellés.
+  - *En-têtes* : aucune taille imposée (`listStyle(.insetGrouped)` fournit
+    footnote/gris), graisse pilotée par « G », plus `.foregroundStyle(.secondary)`
+    pour rétablir le gris écrasé par `Color.textePrincipal`.
+  - *Libellés* : laissés au corps par défaut (body, 17 pt).
+  - **Ne jamais figer une taille en points sur iOS** : cela casse le
+    **Dynamic Type** (réglage système de taille de texte). C'est la différence
+    de méthode avec macOS, où les libellés sont fixés à 13 pt.
   - *Légende des vignettes de galerie* (`VueGalerie.swift`) : prix et
     dimensions à 13 pt sur macOS via la propriété `policeLegende`. Ils
     héritaient de `.subheadline`, qui ne vaut que 11 pt sur macOS. Le fichier
