@@ -71,13 +71,14 @@ struct PierreVincentApp: App {
                 Divider()
                 // Tous les exports regroupés dans un sous-menu « Exporter ».
                 Menu("Exporter") {
+                    // Les deux exports les plus utilisés en tête.
+                    Button("Base pour iPhone (.pvbase)") { declencherFichier("base") }
+                    Button("PDF…") { declencherFichier("pdf") }
+                    Divider()
                     Button("CSV…") { declencherFichier("csv") }
                     Button("Excel (.xls)…") { declencherFichier("xls") }
                     Button("Excel avec images (.xlsx)…") { declencherFichier("xlsx") }
                     Button("Dossier avec images…") { declencherFichier("dossier") }
-                    Divider()
-                    Button("Base pour iPhone (.pvbase)") { declencherFichier("base") }
-                    Button("PDF…") { declencherFichier("pdf") }
                 }
                 Divider()
                 Button("Ouvrir le dossier des données") {

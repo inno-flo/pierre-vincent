@@ -21,6 +21,9 @@ struct VueDonsStructuree: View {
 
     @State private var detail: Oeuvre?
     @State private var selection: Set<UUID> = []
+    // Œuvre vers laquelle faire défiler la vue de fond, pour qu'elle suive la
+    // navigation faite dans la fiche de détail (même mécanisme que VueiOS).
+    @State private var oeuvreADefiler: UUID?
 
     private let ancreTableaux = "ancre-tableaux-donnes"
     private let ancreDessins  = "ancre-dessins-donnes"
@@ -82,6 +85,15 @@ struct VueDonsStructuree: View {
                 }
                 .padding(.bottom, 30)
             }
+            // Suit l'œuvre consultée dans la fiche de détail.
+            .onChange(of: oeuvreADefiler) { _, cible in
+                guard let cible else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(cible, anchor: .center)
+                    }
+                }
+            }
         }
         .background(Color.cremeFond)
         .navigationTitle("Œuvres données")
@@ -137,8 +149,16 @@ struct VueDonsStructuree: View {
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: true,
                       listeNavigation: tableauxDonnes + dessinsDonnes,
-                      onFermeture: { derniere in selection = [derniere.id] },
-                      onStabilise: { stable in selection = [stable.id] })
+                      onFermeture: { derniere in
+                          selection = [derniere.id]
+                          oeuvreADefiler = derniere.id
+                      },
+                      onStabilise: { stable in
+                          // Positionne la vue de fond par anticipation, pendant
+                          // les pauses de navigation (avant même la fermeture).
+                          selection = [stable.id]
+                          oeuvreADefiler = stable.id
+                      })
         }
     }
 
@@ -248,6 +268,8 @@ struct VueDonsStructuree: View {
         )
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
+        // Cible de défilement (proxy.scrollTo).
+        .id(o.id)
         .onTapGesture { selection = [o.id]; detail = o }
     }
 
@@ -285,6 +307,8 @@ struct VueDonsStructuree: View {
                     )
                 }
                 .buttonStyle(.plain)
+                // Cible de défilement (proxy.scrollTo).
+                .id(o.id)
             }
         }
         .padding(.horizontal, 16)

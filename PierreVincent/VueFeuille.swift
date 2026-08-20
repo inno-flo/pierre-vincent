@@ -67,6 +67,11 @@ struct VueFeuille: View {
     @AppStorage("editeurOuvert") private var editeurOuvert = false
     // Message affiché après un import (déplacé ici pour grouper le set Import).
     @State private var messageImport: String?
+    // Message éphémère « Prix masqués / affichés », affiché brièvement lors
+    // d'une bascule du masquage des prix. S'éteint tout seul via une tâche
+    // asynchrone (même patron que la surbrillance de section iOS).
+    @State private var messagePrix: String?
+    @State private var tacheMessagePrix: Task<Void, Never>?
 
     /// Œuvres de cette feuille (ou compilation des 4), triées par le composant.
     private var oeuvres: [Oeuvre] {
@@ -367,6 +372,20 @@ struct VueFeuille: View {
                 panneauProgression
             }
         }
+        // Message éphémère lors d'une bascule du masquage des prix.
+        .overlay(alignment: .top) { bandeauPrix }
+        .animation(.easeInOut(duration: 0.2), value: messagePrix)
+        // Déclenché par la VALEUR, pas par le bouton : la bascule est aussi
+        // possible depuis le menu « Présentation », et le message doit
+        // apparaître dans les deux cas.
+        .onChange(of: prixMasques) { _, masques in
+            messagePrix = masques ? "Prix masqués" : "Prix affichés"
+            tacheMessagePrix?.cancel()
+            tacheMessagePrix = Task {
+                try? await Task.sleep(nanoseconds: 840_000_000)   // 0,84 s
+                if !Task.isCancelled { messagePrix = nil }
+            }
+        }
         .modifier(RaccourcisClavier(
             editionActive: editionEntree != nil,
             onApercu: { declencherApercu() },
@@ -538,6 +557,28 @@ struct VueFeuille: View {
         }
         .help("Trier")
         .accessibilityLabel("Trier")
+    }
+
+    /// Bandeau éphémère « Prix masqués » / « Prix affichés », en haut du
+    /// panneau de contenu. Simple indication passagère : aucun bouton, il
+    /// disparaît de lui-même.
+    @ViewBuilder
+    private var bandeauPrix: some View {
+        if let messagePrix {
+            HStack(spacing: 8) {
+                Image(systemName: prixMasques ? "eye.slash" : "eye")
+                Text(messagePrix)
+            }
+            .font(.headline)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1))
+            .shadow(radius: 10)
+            .padding(.top, 18)
+            .transition(.opacity)
+            .allowsHitTesting(false)   // ne doit jamais gêner le clic
+        }
     }
 
     /// Panneau modal centré, commun à la progression et au message final d'un

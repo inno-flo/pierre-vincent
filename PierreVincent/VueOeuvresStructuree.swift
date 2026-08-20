@@ -32,6 +32,9 @@ struct VueOeuvresStructuree: View {
     @AppStorage("triCroissant") private var triCroissant: Bool = false
 
     @State private var selection: Set<UUID> = []
+    // Œuvre vers laquelle faire défiler la vue de fond, pour qu'elle suive la
+    // navigation faite dans la fiche de détail (même mécanisme que VueiOS).
+    @State private var oeuvreADefiler: UUID?
     @State private var detail: Oeuvre?
     @State private var vendeurFiltre: String = "Tout"
 
@@ -129,6 +132,15 @@ struct VueOeuvresStructuree: View {
                 }
                 .padding(.bottom, 30)
             }
+            // Suit l'œuvre consultée dans la fiche de détail.
+            .onChange(of: oeuvreADefiler) { _, cible in
+                guard let cible else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(cible, anchor: .center)
+                    }
+                }
+            }
         }
         .background(Color.cremeFond)
         .navigationTitle(estModeVentes ? "Ventes" : "Inventaire")
@@ -214,8 +226,16 @@ struct VueOeuvresStructuree: View {
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: o.feuille == .oeuvresDonnees,
                       listeNavigation: estModeVentes ? ventes : ventes + dons,
-                      onFermeture: { derniere in selection = [derniere.id] },
-                      onStabilise: { stable in selection = [stable.id] })
+                      onFermeture: { derniere in
+                          selection = [derniere.id]
+                          oeuvreADefiler = derniere.id
+                      },
+                      onStabilise: { stable in
+                          // Positionne la vue de fond par anticipation, pendant
+                          // les pauses de navigation (avant même la fermeture).
+                          selection = [stable.id]
+                          oeuvreADefiler = stable.id
+                      })
         }
     }
 
@@ -336,6 +356,8 @@ struct VueOeuvresStructuree: View {
         )
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
+        // Cible de défilement (proxy.scrollTo).
+        .id(o.id)
         // Sur iPhone : un simple tap ouvre la fiche de détail.
         .onTapGesture { selection = [o.id]; detail = o }
     }
@@ -388,6 +410,8 @@ struct VueOeuvresStructuree: View {
                     )
                 }
                 .buttonStyle(.plain)
+                // Cible de défilement (proxy.scrollTo).
+                .id(o.id)
             }
         }
         .padding(.horizontal, 16)
