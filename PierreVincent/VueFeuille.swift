@@ -12,8 +12,18 @@ struct VueFeuille: View {
     let feuille: Feuille?          // nil = vue compilée « Œuvres »
     let lectureSeule: Bool
     let titre: String
+    let modesVente: [String]       // filtre supplémentaire sur modeVente (vide = aucun)
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
+
+    init(feuille: Feuille?, lectureSeule: Bool, titre: String,
+         modesVente: [String] = [], nbSelection: Binding<Int>) {
+        self.feuille = feuille
+        self.lectureSeule = lectureSeule
+        self.titre = titre
+        self.modesVente = modesVente
+        self._nbSelection = nbSelection
+    }
 
     @Environment(\.modelContext) private var context
     @Query private var toutes: [Oeuvre]
@@ -60,11 +70,17 @@ struct VueFeuille: View {
 
     /// Œuvres de cette feuille (ou compilation des 4), triées par le composant.
     private var oeuvres: [Oeuvre] {
-        let base: [Oeuvre]
+        var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
+        } else if !modesVente.isEmpty {
+            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
+            base = toutes.filter { $0.feuille != .oeuvresDonnees }
         } else {
             base = toutes
+        }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
         }
         return base.sorted(using: tri)
     }
@@ -77,11 +93,17 @@ struct VueFeuille: View {
 
     /// Œuvres triées pour la galerie, selon le critère et le sens choisis.
     private var oeuvresGalerie: [Oeuvre] {
-        let base: [Oeuvre]
+        var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
+        } else if !modesVente.isEmpty {
+            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
+            base = toutes.filter { $0.feuille != .oeuvresDonnees }
         } else {
             base = toutes
+        }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
         }
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.
@@ -379,14 +401,22 @@ struct VueFeuille: View {
 
     /// Contenu de la barre d'outils, extrait dans une propriété pour éviter que
     /// le compilateur peine à vérifier le type d'une expression trop grosse.
+    ///
+    /// Important : aucun `placement:` explicite sur les items ni les spacers.
+    /// Avec placement: .primaryAction, les items s'étalent sur toute la largeur
+    /// de fenêtre (inspecteur inclus). Sans placement, macOS 26 les confine
+    /// automatiquement à la section toolbar du panneau de contenu — le pattern
+    /// de l'exemple Landmarks d'Apple.
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
+        // Spacer flexible en tête : pousse tous les boutons vers la droite
+        // du panneau de contenu (jamais au-dessus de la colonne inspecteur).
+        ToolbarSpacer(.flexible)
+
         // === Set 1 : création / suppression / modification ===
         if !lectureSeule {
-            // « Ajouter » exige une feuille cible : absent dans l'onglet
-            // « Œuvres » (vue compilée des 4 feuilles, sans feuille unique).
             if let f = feuille {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem {
                     Button {
                         let o = Oeuvre(feuille: f)
                         context.insert(o)
@@ -395,14 +425,14 @@ struct VueFeuille: View {
                     } label: { Label("Ajouter", systemImage: "plus") }
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem {
                 Button(role: .destructive) {
                     confirmerSuppression = true
                 } label: { Label(labelSupprimer, systemImage: "trash") }
                 .disabled(selection.isEmpty)
             }
             if selection.count == 1 {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem {
                     Button {
                         if let id = selection.first, let o = oeuvres.first(where: { $0.id == id }) {
                             editionNouvelle = false
@@ -412,10 +442,8 @@ struct VueFeuille: View {
                 }
             }
         }
-        ToolbarSpacer(.fixed, placement: .primaryAction)
-        // Bouton de masquage des prix, seul dans sa capsule (ToolbarSpacer
-        // avant et après pour l'isoler visuellement).
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarSpacer(.fixed)
+        ToolbarItem {
             Button {
                 prixMasques.toggle()
             } label: {
@@ -423,26 +451,24 @@ struct VueFeuille: View {
             }
             .help(prixMasques ? "Afficher les prix" : "Masquer les prix")
         }
-        ToolbarSpacer(.fixed, placement: .primaryAction)
-        // Bascule Liste / Galerie.
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarSpacer(.fixed)
+        ToolbarItem {
             Button {
                 modeAffichage = "liste"
             } label: { Label("Liste", systemImage: "list.bullet") }
             .disabled(modeAffichage == "liste")
         }
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarItem {
             Button {
                 modeAffichage = "icone"
             } label: { Label("Galerie", systemImage: "square.grid.2x2") }
             .disabled(modeAffichage == "icone")
         }
 
-        ToolbarItem(placement: .primaryAction) { Spacer() }
-
-        // === Set : tri + sens (galerie seulement) ===
+        // === Tri + sens + inspecteur (galerie seulement) ===
         if modeAffichage == "icone" {
-            ToolbarItemGroup(placement: .primaryAction) {
+            ToolbarSpacer(.fixed)
+            ToolbarItemGroup {
                 menuTri
                 Button {
                     triCroissant.toggle()
@@ -452,10 +478,8 @@ struct VueFeuille: View {
                 }
                 .help(triCroissant ? "Tri croissant" : "Tri décroissant")
             }
-
-            ToolbarItem(placement: .primaryAction) { Spacer() }
-
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarSpacer(.fixed)
+            ToolbarItem {
                 Button {
                     inspecteurVisible.toggle()
                 } label: {
@@ -463,6 +487,18 @@ struct VueFeuille: View {
                 }
                 .help(inspecteurVisible ? "Masquer l'inspecteur" : "Afficher l'inspecteur")
             }
+        }
+    }
+
+    /// Icône du bouton de menu de tri selon le critère actif (comme sur iOS).
+    private var iconeMenuTri: String {
+        if estFeuilleDon {
+            return triGalerie == "acheteur" ? "person" : "ruler"
+        }
+        switch triGalerie {
+        case "acheteur":   return "person"
+        case "dimensions": return "ruler"
+        default:           return "eurosign"
         }
     }
 
@@ -492,7 +528,7 @@ struct VueFeuille: View {
                 }
             }
         } label: {
-            Label("Trier", systemImage: "arrow.up.arrow.down")
+            Label("Trier", systemImage: iconeMenuTri)
         }
     }
 
@@ -573,8 +609,23 @@ struct VueFeuille: View {
                 }
             )
         } else {
+            // ↑↓ gérés nativement par NSTableView (ne pas intercepter).
+            // ←→ ajoutés ici pour naviguer en mode liste (NSTableView ne les utilise pas).
             tableau
+                .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
+                .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
         }
+    }
+
+    // Déplace la sélection d'une entrée dans la liste triée courante.
+    private func naviguerListe(delta: Int) -> KeyPress.Result {
+        guard selection.count == 1,
+              let id = selection.first,
+              let idx = oeuvres.firstIndex(where: { $0.id == id }) else { return .ignored }
+        let nouveauIdx = idx + delta
+        guard nouveauIdx >= 0, nouveauIdx < oeuvres.count else { return .handled }
+        selection = [oeuvres[nouveauIdx].id]
+        return .handled
     }
 
     @ViewBuilder

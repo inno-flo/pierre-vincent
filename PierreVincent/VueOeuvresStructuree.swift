@@ -2,17 +2,28 @@
 import SwiftUI
 import SwiftData
 
-/// Vue « Œuvres » structurée pour iPhone.
+/// Vue « Inventaire » structurée pour iPhone.
 ///
 /// Elle présente :
-///  1. un en-tête récapitulatif : deux lignes « Ventes » et « Dons » avec le
-///     nombre d'œuvres correspondant (un tap fait défiler jusqu'à la section) ;
+///  1. un en-tête récapitulatif : deux lignes « Ventes » et « Œuvres données »
+///     avec le nombre d'œuvres correspondant (un tap fait défiler jusqu'à la
+///     section) ;
 ///  2. une section « Ventes » avec les œuvres vendues ;
-///  3. une section « Dons » avec les œuvres données.
+///  3. une section « Œuvres données » avec les œuvres données.
 ///
 /// Le contenu de chaque section respecte le mode d'affichage choisi
 /// (liste ou galerie), comme dans les autres vues.
 struct VueOeuvresStructuree: View {
+    /// Quand non vide, filtre les ventes sur ce mode de vente (ex. vue « Ventes »).
+    let modesVente: [String]
+    /// Quand non vide, remplace le menu de tri par un filtre par vendeur.
+    let filtresVendeur: [String]
+
+    init(modesVente: [String] = [], filtresVendeur: [String] = []) {
+        self.modesVente = modesVente
+        self.filtresVendeur = filtresVendeur
+    }
+
     @Query private var toutes: [Oeuvre]
 
     @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
@@ -23,22 +34,44 @@ struct VueOeuvresStructuree: View {
 
     @State private var selection: Set<UUID> = []
     @State private var detail: Oeuvre?
+    @State private var vendeurFiltre: String = "Tout"
 
     // Identifiants d'ancrage pour le défilement vers une section.
     private let ancreVentes = "ancre-ventes"
     private let ancreDons   = "ancre-dons"
 
-    /// Œuvres vendues (tableaux + dessins + tapis), triées selon le critère.
+    /// Vrai si la vue opère en mode « filtre modeVente » (rubrique Ventes).
+    private var estModeVentes: Bool { !modesVente.isEmpty }
+
+    /// Icône du bouton de menu selon le critère actif.
+    private var iconeMenu: String {
+        if !filtresVendeur.isEmpty {
+            return vendeurFiltre == "Tout" ? "person.3" : "person.fill"
+        }
+        switch triGalerie {
+        case "acheteur":   return "person"
+        case "dimensions": return "ruler"
+        default:           return "eurosign"
+        }
+    }
+
+    /// Œuvres vendues (tableaux + dessins + tapis), filtrées si besoin, triées.
     private var ventes: [Oeuvre] {
-        let base = toutes.filter {
+        var base = toutes.filter {
             $0.feuille == .tableauxVendus
             || $0.feuille == .dessinsVendus
             || $0.feuille == .tapisVendus
         }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
+        }
+        if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
+            base = base.filter { $0.vendeur == vendeurFiltre }
+        }
         return trier(base)
     }
 
-    /// Œuvres données.
+    /// Œuvres données (masquées en mode « filtre modeVente »).
     private var dons: [Oeuvre] {
         trier(toutes.filter { $0.feuille == .oeuvresDonnees })
     }
@@ -77,20 +110,29 @@ struct VueOeuvresStructuree: View {
                     recapitulatif(proxy: proxy)
 
                     // --- 2. Section Ventes ---
-                    titreSection("Ventes")
+                    // En mode Inventaire, le titre distingue la section "Ventes" des "Œuvres données".
+                    // En mode Ventes, il est redondant avec le titre de navigation → masqué.
+                    // L'ancre invisible garantit que le scroll du recap fonctionne dans les deux modes.
+                    if !estModeVentes {
+                        titreSection("Ventes")
+                    }
+                    Color.clear.frame(height: 0)
+                        .padding(.top, estModeVentes ? 24 : 0)
                         .id(ancreVentes)
                     contenuSection(ventes, estDon: false)
 
-                    // --- 3. Section Dons ---
-                    titreSection("Dons")
-                        .id(ancreDons)
-                    contenuSection(dons, estDon: true)
+                    // --- 3. Section Œuvres données (masquée en mode filtre) ---
+                    if !estModeVentes {
+                        titreSection("Œuvres données")
+                            .id(ancreDons)
+                        contenuSection(dons, estDon: true)
+                    }
                 }
                 .padding(.bottom, 30)
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle("Œuvres")
+        .navigationTitle(estModeVentes ? "Ventes" : "Inventaire")
         .toolbar {
             // Un seul set de contrôles, compact : Liste, Galerie, tri, sens.
             // Regroupés dans un HStack pour maîtriser l'espacement.
@@ -123,22 +165,37 @@ struct VueOeuvresStructuree: View {
                 }
                 .buttonStyle(.plain)
 
-                // 3. Critère de tri.
-                Menu {
-                    Button { triGalerie = "prix" } label: {
-                        Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
-                              systemImage: "eurosign")
+                // 3. Filtre vendeur (vue Ventes) ou critère de tri standard.
+                if !filtresVendeur.isEmpty {
+                    Menu {
+                        Button { vendeurFiltre = "Tout" } label: {
+                            Text(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout")
+                        }
+                        ForEach(filtresVendeur, id: \.self) { vendeur in
+                            Button { vendeurFiltre = vendeur } label: {
+                                Text(vendeurFiltre == vendeur ? "✓ \(vendeur)" : vendeur)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: iconeMenu)
                     }
-                    Button { triGalerie = "acheteur" } label: {
-                        Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
-                              systemImage: "person")
+                } else {
+                    Menu {
+                        Button { triGalerie = "prix" } label: {
+                            Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
+                                  systemImage: "eurosign")
+                        }
+                        Button { triGalerie = "acheteur" } label: {
+                            Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
+                                  systemImage: "person")
+                        }
+                        Button { triGalerie = "dimensions" } label: {
+                            Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions",
+                                  systemImage: "ruler")
+                        }
+                    } label: {
+                        Image(systemName: iconeMenu)
                     }
-                    Button { triGalerie = "dimensions" } label: {
-                        Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions",
-                              systemImage: "ruler")
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down")
                 }
 
                 // 4. Sens du tri : on utilise UNE seule icône (dont l'existence
@@ -157,7 +214,7 @@ struct VueOeuvresStructuree: View {
         }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: o.feuille == .oeuvresDonnees,
-                      listeNavigation: ventes + dons,
+                      listeNavigation: estModeVentes ? ventes : ventes + dons,
                       onFermeture: { derniere in selection = [derniere.id] },
                       onStabilise: { stable in selection = [stable.id] })
         }
@@ -165,16 +222,19 @@ struct VueOeuvresStructuree: View {
 
     // MARK: En-tête récapitulatif
 
-    /// Deux lignes « Ventes » et « Dons » avec leur nombre.
+    /// Deux lignes « Ventes » et « Œuvres données » avec leur nombre.
     /// Un tap fait défiler la vue jusqu'à la section correspondante.
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            ligneRecap(titre: "Ventes", nombre: ventes.count) {
+            ligneRecap(titre: estModeVentes ? "Nombre de ventes" : "Ventes",
+                       nombre: ventes.count) {
                 withAnimation { proxy.scrollTo(ancreVentes, anchor: .top) }
             }
-            Divider().padding(.leading, 20)
-            ligneRecap(titre: "Dons", nombre: dons.count) {
-                withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
+            if !estModeVentes {
+                Divider().padding(.leading, 20)
+                ligneRecap(titre: "Œuvres données", nombre: dons.count) {
+                    withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
+                }
             }
         }
         .background(Color.fondLegende)
@@ -325,7 +385,7 @@ struct VueOeuvresStructuree: View {
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(selection.contains(o.id)
                                           ? Color.orangeInternational : Color.clear,
-                                          lineWidth: 1)
+                                          lineWidth: 3)
                     )
                 }
                 .buttonStyle(.plain)

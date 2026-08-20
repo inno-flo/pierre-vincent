@@ -20,28 +20,28 @@
             landmarkType = "7">
             <Locations>
                <Location
-                  uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59 - 33b07b58390e50f1"
+                  uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59 - bc8a6925fc545909"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "PierreVincent.PhotoField.traiterDrop(Swift.Array&lt;__C.NSItemProvider&gt;) -&gt; Swift.Bool"
                   moduleName = "PierreVincent.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/florianinnocente/Documents/Projets%20Xcode/Claude/PierreVincent/PierreVincent/PhotoField.swift"
+                  urlString = "file:///Users/florianinnocente/Documents/Projets%20Xcode/App%20PierreVincent/PierreVincent/PhotoField.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
                   startingLineNumber = "59"
                   endingLineNumber = "59">
                </Location>
                <Location
-                  uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59 - da9ad3c7093874c9"
+                  uuid = "937F0071-0E49-45C6-9F19-E836A63EBD59 - 55a0c1bacc627d71"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "closure #1 @Sendable (Swift.Optional&lt;Foundation.URL&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; () in PierreVincent.PhotoField.traiterDrop(Swift.Array&lt;__C.NSItemProvider&gt;) -&gt; Swift.Bool"
                   moduleName = "PierreVincent.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/florianinnocente/Documents/Projets%20Xcode/Claude/PierreVincent/PierreVincent/PhotoField.swift"
+                  urlString = "file:///Users/florianinnocente/Documents/Projets%20Xcode/App%20PierreVincent/PierreVincent/PhotoField.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
                   startingLineNumber = "60"

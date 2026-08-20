@@ -7,8 +7,17 @@ import UIKit
 /// Affiche les entrées d'une catégorie en liste ou en galerie, avec accès
 /// à une fiche de détail (photo, prix, informations) au toucher.
 struct VueiOS: View {
-    let feuille: Feuille?          // nil = vue compilée « Œuvres »
+    let feuille: Feuille?
     let titre: String
+    let modesVente: [String]
+    let filtresVendeur: [String]   // liste de vendeurs pour le filtre rapide (vide = menu de tri standard)
+
+    init(feuille: Feuille?, titre: String, modesVente: [String] = [], filtresVendeur: [String] = []) {
+        self.feuille = feuille
+        self.titre = titre
+        self.modesVente = modesVente
+        self.filtresVendeur = filtresVendeur
+    }
 
     @Query private var toutes: [Oeuvre]
     @State private var tri: [KeyPathComparator<Oeuvre>] = [
@@ -25,14 +34,25 @@ struct VueiOS: View {
     @State private var detail: Oeuvre?
     // Œuvre vers laquelle défiler à la fermeture de la fiche Détails.
     @State private var oeuvreADefiler: UUID?
+    // Filtre vendeur actif (uniquement quand filtresVendeur est non vide).
+    @State private var vendeurFiltre: String = "Tout"
 
-    /// Œuvres de cette catégorie (ou compilation des 4).
+    /// Œuvres de cette catégorie (ou compilation des 4), avec filtres modeVente et vendeur si définis.
     private var oeuvres: [Oeuvre] {
-        let base: [Oeuvre]
+        var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
+        } else if !modesVente.isEmpty {
+            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
+            base = toutes.filter { $0.feuille != .oeuvresDonnees }
         } else {
             base = toutes
+        }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
+        }
+        if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
+            base = base.filter { $0.vendeur == vendeurFiltre }
         }
         return base.sorted(using: tri)
     }
@@ -41,11 +61,20 @@ struct VueiOS: View {
 
     /// Œuvres triées pour la galerie, selon le critère choisi (prix ou acheteur).
     private var oeuvresGalerie: [Oeuvre] {
-        let base: [Oeuvre]
+        var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
+        } else if !modesVente.isEmpty {
+            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
+            base = toutes.filter { $0.feuille != .oeuvresDonnees }
         } else {
             base = toutes
+        }
+        if !modesVente.isEmpty {
+            base = base.filter { modesVente.contains($0.modeVente) }
+        }
+        if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
+            base = base.filter { $0.vendeur == vendeurFiltre }
         }
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille (ex. prix dans les dons,
@@ -75,8 +104,41 @@ struct VueiOS: View {
         return triCroissant ? triees : triees.reversed()
     }
 
+    /// Cellule récapitulative affichée en haut de la vue (nombre d'œuvres correspondant aux filtres actifs).
+    private var recapCell: some View {
+        HStack {
+            Text("Nombre de ventes")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.texteLegende)
+            Spacer()
+            Text("\(oeuvresGalerie.count)")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(Color.orangeInternational)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(Color.fondLegende)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+    }
+
+    /// Icône du bouton de menu selon le critère actif.
+    private var iconeMenu: String {
+        if !filtresVendeur.isEmpty {
+            return vendeurFiltre == "Tout" ? "person.3" : "person.fill"
+        }
+        switch triGalerie {
+        case "acheteur":   return "person"
+        case "dimensions": return "ruler"
+        default:           return "eurosign"
+        }
+    }
+
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            recapCell
             if modeAffichage == "icone" {
                 VueGalerie(
                     oeuvres: oeuvresGalerie,
@@ -88,6 +150,7 @@ struct VueiOS: View {
                 liste
             }
         }
+        .background(Color.cremeFond)
         .navigationTitle(titre)
         .toolbar {
             // Un seul set de contrôles, compact : Liste, Galerie, tri, sens.
@@ -122,34 +185,54 @@ struct VueiOS: View {
                 }
                 .buttonStyle(.plain)
 
-                // 3. Critère de tri (selon la feuille affichée).
-                Menu {
-                    // Prix : sans objet pour les dons (pas de prix).
-                    if !estFeuilleDon {
+                // 3. Filtre vendeur (Ventes réalisées) ou critère de tri standard.
+                if !filtresVendeur.isEmpty {
+                    // Mode filtre par vendeur : Tout + chaque vendeur de la liste.
+                    Menu {
                         Button {
-                            triGalerie = "prix"
+                            vendeurFiltre = "Tout"
                         } label: {
-                            Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
-                                  systemImage: "eurosign")
+                            Label(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout",
+                                  systemImage: "tray.full")
                         }
-                    }
-                    Button {
-                        triGalerie = "acheteur"
+                        ForEach(filtresVendeur, id: \.self) { vendeur in
+                            Button {
+                                vendeurFiltre = vendeur
+                            } label: {
+                                Text(vendeurFiltre == vendeur ? "✓ \(vendeur)" : vendeur)
+                            }
+                        }
                     } label: {
-                        Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
-                              systemImage: "person")
+                        Image(systemName: iconeMenu)
                     }
-                    // Dimensions : proposé partout sauf pour les tapis.
-                    if feuille != .tapisVendus {
-                        Button {
-                            triGalerie = "dimensions"
-                        } label: {
-                            Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions",
-                                  systemImage: "ruler")
+                } else {
+                    // Mode tri standard : Prix, Acheteur, Dimensions.
+                    Menu {
+                        if !estFeuilleDon {
+                            Button {
+                                triGalerie = "prix"
+                            } label: {
+                                Label(triGalerie == "prix" ? "✓ Prix" : "Prix",
+                                      systemImage: "eurosign")
+                            }
                         }
+                        Button {
+                            triGalerie = "acheteur"
+                        } label: {
+                            Label(triGalerie == "acheteur" ? "✓ Acheteur" : "Acheteur",
+                                  systemImage: "person")
+                        }
+                        if feuille != .tapisVendus {
+                            Button {
+                                triGalerie = "dimensions"
+                            } label: {
+                                Label(triGalerie == "dimensions" ? "✓ Dimensions" : "Dimensions",
+                                      systemImage: "ruler")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: iconeMenu)
                     }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down")
                 }
 
                 // 4. Sens du tri : on utilise UNE seule icône (dont l'existence
@@ -235,7 +318,7 @@ struct VueiOS: View {
                                 RoundedRectangle(cornerRadius: 10)
                                     .strokeBorder(selection.contains(o.id)
                                                   ? Color.orangeInternational : Color.clear,
-                                                  lineWidth: 1)
+                                                  lineWidth: 3)
                             )
                         }
                         .buttonStyle(.plain)

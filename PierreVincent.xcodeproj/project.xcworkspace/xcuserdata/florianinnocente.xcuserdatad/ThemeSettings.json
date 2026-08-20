@@ -1,0 +1,12 @@
+{
+  "dark" : {
+    "default" : {
+
+    }
+  },
+  "light" : {
+    "classicTheme" : {
+      "name" : "Sunset.xccolortheme"
+    }
+  }
+}

@@ -2,9 +2,9 @@
 import SwiftUI
 import SwiftData
 
-/// Vue « Dons » structurée pour iPhone.
+/// Vue « Œuvres données » structurée pour iPhone.
 ///
-/// Sur le modèle de la vue « Œuvres » :
+/// Sur le modèle de la vue « Inventaire » :
 ///  1. un bloc récapitulatif : « Tableaux donnés » et « Dessins donnés » avec
 ///     leur quantité (en orange), tapables pour défiler jusqu'à la section ;
 ///  2. une section « Tableaux » listant les tableaux donnés ;
@@ -39,6 +39,11 @@ struct VueDonsStructuree: View {
     /// Dessins donnés (type contenant « dessin »).
     private var dessinsDonnes: [Oeuvre] {
         trier(dons.filter { $0.type.localizedCaseInsensitiveContains("dessin") })
+    }
+
+    /// Icône du bouton de menu selon le critère actif.
+    private var iconeMenu: String {
+        triGalerie == "acheteur" ? "person" : "ruler"
     }
 
     /// Applique le tri choisi. Pour les dons : acheteur → destinataire,
@@ -80,7 +85,7 @@ struct VueDonsStructuree: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle("Dons")
+        .navigationTitle("Œuvres données")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -116,7 +121,7 @@ struct VueDonsStructuree: View {
                                   systemImage: "ruler")
                         }
                     } label: {
-                        Image(systemName: "arrow.up.arrow.down")
+                        Image(systemName: iconeMenu)
                     }
 
                     // Sens du tri (icône retournée pour le sens inverse).
@@ -277,7 +282,7 @@ struct VueDonsStructuree: View {
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(selection.contains(o.id)
                                           ? Color.orangeInternational : Color.clear,
-                                          lineWidth: 1)
+                                          lineWidth: 3)
                     )
                 }
                 .buttonStyle(.plain)

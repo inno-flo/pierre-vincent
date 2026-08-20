@@ -1,50 +1,73 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 /// Catégories affichées dans la barre latérale (sidebar).
-/// L'ordre est volontaire : Œuvres en premier, Œuvres données en dernier.
+/// L'ordre est volontaire : Inventaire en premier, Synthèse en dernier.
 enum Categorie: Hashable, CaseIterable, Identifiable {
     case oeuvres          // vue compilée (agrège les 4 feuilles)
     case tableauxVendus
     case dessinsVendus
     case tapisVendus
     case oeuvresDonnees
+    case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
     case synthese         // tableau de bord, en dernier
 
     var id: Self { self }
 
     var titre: String {
         switch self {
-        case .oeuvres:        return "Œuvres"
-        case .tableauxVendus: return "Tableaux vendus"
-        case .dessinsVendus:  return "Dessins vendus"
-        case .tapisVendus:    return "Tapis vendus"
-        case .oeuvresDonnees: return "Dons"
-        case .synthese:       return "Synthèse"
+        case .oeuvres:          return "Inventaire"
+        case .tableauxVendus:   return "Tableaux"
+        case .dessinsVendus:    return "Dessins"
+        case .tapisVendus:      return "Tapis"
+        case .oeuvresDonnees:   return "Dons"
+        case .ventesRealisees:  return "Ventes"
+        case .synthese:         return "Synthèse"
         }
     }
 
     var symbole: String {
         switch self {
-        case .oeuvres:        return "square.grid.2x2"
-        case .tableauxVendus: return "paintpalette"
-        case .dessinsVendus:  return "pencil.and.outline"
-        case .tapisVendus:    return "square.grid.3x3.square"
-        case .oeuvresDonnees: return "gift"
-        case .synthese:       return "chart.bar.doc.horizontal"
+        case .oeuvres:          return "square.grid.2x2"
+        case .tableauxVendus:   return "paintpalette"
+        case .dessinsVendus:    return "pencil.and.outline"
+        case .tapisVendus:      return "square.grid.3x3.square"
+        case .oeuvresDonnees:   return "gift"
+        case .ventesRealisees:  return "person.crop.circle.fill"
+        case .synthese:         return "chart.bar.doc.horizontal"
         }
     }
 
-    /// La feuille correspondante (nil pour « Œuvres » et « Synthèse »).
+    /// La feuille correspondante (nil pour les vues agrégées).
     var feuille: Feuille? {
         switch self {
-        case .oeuvres:        return nil
-        case .tableauxVendus: return .tableauxVendus
-        case .dessinsVendus:  return .dessinsVendus
-        case .tapisVendus:    return .tapisVendus
-        case .oeuvresDonnees: return .oeuvresDonnees
-        case .synthese:       return nil
+        case .oeuvres:          return nil
+        case .tableauxVendus:   return .tableauxVendus
+        case .dessinsVendus:    return .dessinsVendus
+        case .tapisVendus:      return .tapisVendus
+        case .oeuvresDonnees:   return .oeuvresDonnees
+        case .ventesRealisees:  return nil
+        case .synthese:         return nil
+        }
+    }
+
+    /// Filtre sur le mode de vente (vide = aucun filtre supplémentaire).
+    var modesVente: [String] {
+        switch self {
+        case .ventesRealisees: return ["Exposition", "Vente aux enchères"]
+        default:               return []
+        }
+    }
+
+    /// Valeurs possibles du champ Vendeur pour le filtre rapide (vide = menu de tri standard).
+    var filtresVendeur: [String] {
+        switch self {
+        case .ventesRealisees: return ["Artenchères", "Drôme Enchères", "RempART"]
+        default:               return []
         }
     }
 
@@ -56,9 +79,10 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
     /// Vrai pour la vue tableau de bord (affichage spécifique).
     var estSynthese: Bool { self == .synthese }
 
-    /// Les catégories de données (tout sauf le tableau de bord Synthèse).
+    /// Catégories du bloc principal (tout sauf Synthèse et Ventes réalisées,
+    /// qui sont placés dans leurs propres sections sur macOS).
     static var categoriesData: [Categorie] {
-        allCases.filter { $0 != .synthese }
+        allCases.filter { $0 != .synthese && $0 != .ventesRealisees }
     }
 }
 
@@ -83,6 +107,8 @@ struct ContentView: View {
     @AppStorage("themeApp") private var themeApp = "creme"
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    // Intitulés de section en gras (partagé iOS + Mac).
+    @AppStorage("intitulesEnGras") private var intitulesEnGras = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -106,33 +132,50 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 List(selection: $categorie) {
                     #if os(iOS)
-                    // Sur iPhone : quatre blocs (sections) distincts.
+                    // Sur iPhone : trois blocs (sections) distincts.
                     Section {
                         lien(.oeuvres)
+                        lien(.synthese)
                     }
-                    Section {
+                    Section(header: Text("Ventes et dons")
+                        .font(.system(size: 18, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
                         lien(.tableauxVendus)
                         lien(.dessinsVendus)
                         lien(.tapisVendus)
-                    }
-                    Section {
                         lien(.oeuvresDonnees)
                     }
-                    Section {
-                        lien(.synthese)
+                    Section(header: Text("Expositions et enchères")
+                        .font(.system(size: 18, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
+                        lien(.ventesRealisees)
                     }
                     #else
-                    // Sur Mac : liste continue avec un filet avant Synthèse.
-                    ForEach(Categorie.categoriesData) { cat in
-                        lien(cat)
+                    // Sur Mac : même organisation que la sidebar iOS.
+                    Section {
+                        lien(.oeuvres)
+                            .listRowSeparator(.hidden)
+                        lien(.synthese)
                             .listRowSeparator(.hidden)
                     }
-
-                    Divider()
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
-
-                    lien(.synthese)
+                    Section(header: Text("Ventes et dons")
+                        .font(.system(size: 14, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
+                        lien(.tableauxVendus)
+                            .listRowSeparator(.hidden)
+                        lien(.dessinsVendus)
+                            .listRowSeparator(.hidden)
+                        lien(.tapisVendus)
+                            .listRowSeparator(.hidden)
+                        lien(.oeuvresDonnees)
+                            .listRowSeparator(.hidden)
+                    }
+                    Section(header: Text("Expositions et enchères")
+                        .font(.system(size: 14, weight: intitulesEnGras ? .bold : .regular))
+                        .padding(.bottom, 5)) {
+                        lien(.ventesRealisees)
+                            .listRowSeparator(.hidden)
+                    }
                     #endif
                 }
                 #if os(iOS)
@@ -154,6 +197,16 @@ struct ContentView: View {
                 }
                 #else
                 .listStyle(.sidebar)
+                // Navigation clavier dans la sidebar (macOS uniquement).
+                // onKeyPress intercepte avant NSOutlineView, ce qui garantit
+                // que categorie (SwiftUI) est toujours synchronisée.
+                .onKeyPress(.upArrow)    { naviguerSidebar(delta: -1) }
+                .onKeyPress(.downArrow)  { naviguerSidebar(delta: +1) }
+                .onKeyPress(.rightArrow) {
+                    // Déplace le focus vers la zone de contenu (colonne détail).
+                    NSApp.keyWindow?.selectNextKeyView(nil)
+                    return .handled
+                }
                 #endif
 
                 // Un simple filet, puis les pastilles de choix de thème.
@@ -166,9 +219,10 @@ struct ContentView: View {
             #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
-            // Titre de la vue principale (liste des catégories) sur iPhone,
-            // en grand format pour laisser le même espace que les autres vues.
-            .navigationTitle("Inventaire")
+            // Pas d'intitulé pour la vue principale (liste des catégories) sur
+            // iPhone : le mode grand format est conservé (chaîne vide) pour
+            // garder le même espace de mise en page que les autres vues.
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.large)
             // Bouton d'import de la base (fichier .pvbase reçu du Mac).
             .toolbar {
@@ -214,6 +268,7 @@ struct ContentView: View {
                     VueFeuille(feuille: cat.feuille,
                                lectureSeule: cat.lectureSeule,
                                titre: cat.titre,
+                               modesVente: cat.modesVente,
                                nbSelection: $nbSelection)
                     .id(cat)
                     #else
@@ -223,11 +278,17 @@ struct ContentView: View {
                     if cat == .oeuvres {
                         VueOeuvresStructuree()
                             .id(cat)
+                    } else if cat == .ventesRealisees {
+                        VueOeuvresStructuree(modesVente: cat.modesVente,
+                                             filtresVendeur: cat.filtresVendeur)
+                            .id(cat)
                     } else if cat == .oeuvresDonnees {
                         VueDonsStructuree()
                             .id(cat)
                     } else {
-                        VueiOS(feuille: cat.feuille, titre: cat.titre)
+                        VueiOS(feuille: cat.feuille, titre: cat.titre,
+                               modesVente: cat.modesVente,
+                               filtresVendeur: cat.filtresVendeur)
                             .id(cat)
                     }
                     #endif
@@ -264,6 +325,52 @@ struct ContentView: View {
         .id(themeApp)
     }
 
+    // MARK: Navigation clavier de la sidebar (macOS)
+
+    #if os(macOS)
+    // Ordre d'affichage des catégories dans la sidebar, pour la navigation ↑↓.
+    private let categoriesSidebar: [Categorie] = [
+        .oeuvres, .synthese,
+        .tableauxVendus, .dessinsVendus, .tapisVendus, .oeuvresDonnees,
+        .ventesRealisees
+    ]
+
+    private func naviguerSidebar(delta: Int) -> KeyPress.Result {
+        if let current = categorie,
+           let idx = categoriesSidebar.firstIndex(of: current) {
+            let nouveauIdx = idx + delta
+            guard nouveauIdx >= 0, nouveauIdx < categoriesSidebar.count else { return .handled }
+            categorie = categoriesSidebar[nouveauIdx]
+        } else {
+            // Rien sélectionné : partir du début (↓) ou de la fin (↑).
+            categorie = delta > 0 ? categoriesSidebar.first : categoriesSidebar.last
+        }
+        return .handled
+    }
+    #endif
+
+    // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
+
+    /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de pastille).
+    private func compteurPourCategorie(_ cat: Categorie) -> Int? {
+        switch cat {
+        case .tableauxVendus:
+            return toutes.filter { $0.feuille == .tableauxVendus }.count
+        case .dessinsVendus:
+            return toutes.filter { $0.feuille == .dessinsVendus }.count
+        case .tapisVendus:
+            return toutes.filter { $0.feuille == .tapisVendus }.count
+        case .oeuvresDonnees:
+            return toutes.filter { $0.feuille == .oeuvresDonnees }.count
+        case .ventesRealisees:
+            return toutes.filter {
+                Categorie.ventesRealisees.modesVente.contains($0.modeVente)
+            }.count
+        default:
+            return nil
+        }
+    }
+
     // MARK: Barre de sélection du thème (bas de la sidebar)
 
     /// Pastilles de choix de thème. Seuls Crème et Gris sont proposés ;
@@ -273,10 +380,32 @@ struct ContentView: View {
         HStack(spacing: 10) {
             pastilleTheme("creme", couleur: Color(red: 0.98, green: 0.96, blue: 0.92))
             pastilleTheme("gris",  couleur: Color(red: 0.90, green: 0.93, blue: 0.94))
+            boutonGras
             Spacer()
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+
+    private var boutonGras: some View {
+        Button {
+            intitulesEnGras.toggle()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.clear)
+                    .frame(width: 26, height: 26)
+                    .overlay(
+                        Circle().strokeBorder(
+                            intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.4),
+                            lineWidth: intitulesEnGras ? 2.5 : 1)
+                    )
+                Text("G")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(intitulesEnGras ? Color.orangeInternational : Color.gray.opacity(0.6))
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func pastilleTheme(_ id: String, couleur: Color) -> some View {
@@ -328,24 +457,31 @@ struct ContentView: View {
     /// ailleurs (et sur iPhone), elle reste orange.
     private func lien(_ cat: Categorie) -> some View {
         NavigationLink(value: cat) {
-            Label {
-                #if os(macOS)
-                // Titre en blanc quand la ligne est sélectionnée (surlignée),
-                // y compris en mode Clair où il resterait noir sinon.
-                Text(cat.titre)
-                    .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
-                #else
-                Text(cat.titre)
-                #endif
-            } icon: {
-                #if os(macOS)
+            #if os(macOS)
+            // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
+            HStack(spacing: 6) {
                 Image(systemName: cat.symbole)
                     .foregroundStyle(categorie == cat ? Color.white : Color.orangeInternational)
-                #else
+                Text(cat.titre)
+                    .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
+                if let n = compteurPourCategorie(cat) {
+                    Spacer()
+                    Text("\(n)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orangeInternational, in: Capsule())
+                }
+            }
+            #else
+            Label {
+                Text(cat.titre)
+            } icon: {
                 Image(systemName: cat.symbole)
                     .foregroundStyle(Color.orangeInternational)
-                #endif
             }
+            #endif
         }
         #if os(iOS)
         // Fond de cellule suivant le thème (blanc en clair, gris en sombre),
@@ -387,7 +523,7 @@ struct ContentView: View {
                     Text("Œuvres vendues")
                         .font(.system(size: 14, weight: .bold))
                     Text("\(nbVendues)")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 20))
                         .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
                 }
 
@@ -396,7 +532,7 @@ struct ContentView: View {
                     Text("Œuvres données")
                         .font(.system(size: 14, weight: .bold))
                     Text("\(nbDonnees)")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 20))
                         .foregroundStyle(Color(red: 1.0, green: 0.31, blue: 0.0))
                 }
             }
