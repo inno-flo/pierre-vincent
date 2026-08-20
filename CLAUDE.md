@@ -106,6 +106,20 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - Le Taptic Engine de l'iPhone est un **moteur unique** : impossible de
   simuler un retour haptique « localisé » selon la zone de l'écran touchée
   (aucune spatialisation possible, contrairement à ce qu'on pourrait imaginer).
+- **`onKeyPress` sur un parent de `Table` (NSTableView) ou de la sidebar
+  `List` (NSOutlineView)** : SwiftUI intercepte les événements clavier
+  *avant* qu'ils arrivent à la vue AppKit sous-jacente. Ajouter
+  `.onKeyPress(.upArrow)` / `.onKeyPress(.downArrow)` sur un ancêtre d'un
+  `Table` casse la navigation native ↑↓ de NSTableView. Règle : ne jamais
+  intercepter ↑↓ sur un parent de `Table` — les laisser à NSTableView natif.
+  En revanche, ←→ ne sont pas consommés par NSTableView et peuvent être
+  gérés sans danger par un `onKeyPress` parent.
+- **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
+  ouvert** : les items avec ce placement s'étalent sur toute la largeur de
+  fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
+  au-dessus du panneau de contenu, utiliser des `ToolbarItem {}` et
+  `ToolbarSpacer(.flexible/.fixed)` **sans `placement:` explicite** (pattern
+  de l'exemple Landmarks d'Apple, validé sur macOS 26).
 
 ## Optimisations effectuées
 
@@ -117,7 +131,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   galerie et de la Synthèse étaient déjà correctes ; seules ces trois listes
   verticales ne l'étaient pas avant correction.
   
-- **formaterEuros() recrée un NumberFormatter à chaque appel — le plus gros gain Dans TriEtTotaux.swift : ** func formaterEuros(_ montant: Double) -> String {    let f = NumberFormatter()    f.numberStyle = .currency    f.locale = Locale(identifier: "fr_FR")    ...}Un NumberFormatter est coûteux à instancier (chargement de données de locale). Cette fonction est appelée à chaque ligne du tableau macOS, à chaque tuile de la Synthèse, dans PrixText, dans les fiches iOS — donc potentiellement des dizaines de fois à chaque rafraîchissement d'écran, et à chaque frame de défilement d'une galerie qui affiche les prix. C'est le classique "formatter créé dans une boucle de rendu". Fix : un seul formatter statique, réutilisé.private let formatteurEuros: NumberFormatter = {    let f = NumberFormatter()    f.numberStyle = .currency    f.currencyCode = "EUR"    f.locale = Locale(identifier: "fr_FR")    f.minimumFractionDigits = 0    f.maximumFractionDigits = 0    return f}() func formaterEuros(_ montant: Double) -> String {    formatteurEuros.string(from: NSNumber(value: montant)) ?? "\(Int(montant)) €"}
+- **`formaterEuros()` — formatter statique** (`TriEtTotaux.swift`) : la
+  version initiale recréait un `NumberFormatter` à chaque appel (coûteux :
+  chargement de données de locale). La fonction est appelée à chaque ligne
+  du tableau macOS, à chaque tuile de la Synthèse, dans `PrixText`, dans
+  les fiches iOS. Fix : un seul formatter statique partagé (`private let
+  formatteurEuros: NumberFormatter = { … }()`) réutilisé à chaque appel.
 
 ## Icône macOS (en cours)
 
@@ -153,6 +172,33 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   swipe gauche/droite ou chevrons) : le contenu de la fiche est enveloppé
   dans un `ZStack` (indispensable pour que `.transition(.move(edge:))` se
   voie réellement à l'intérieur d'un `ScrollView`), animation 0,25 s.
+- **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
+  sous-rubrique (Tableaux, Dessins, Tapis, Œuvres données, Ventes) affiche
+  une pastille arrondie (fond orange, texte blanc) avec le nombre d'œuvres
+  correspondant. Implémenté via `HStack` + `Spacer()` dans la fonction
+  `lien()`, calculé par `compteurPourCategorie(_ cat:)`.
+- **macOS — toolbar de la vue principale** (`VueFeuille.swift`) : tous les
+  `ToolbarItem` et `ToolbarSpacer` sont sans `placement:` explicite pour
+  que les boutons restent exclusivement au-dessus du panneau de contenu
+  (jamais au-dessus de la colonne Inspecteur). L'icône du menu de tri
+  change dynamiquement selon le critère actif (eurosign / person / ruler),
+  comme sur iOS.
+- **macOS — navigation clavier** (`VueGalerie.swift`, `VueFeuille.swift`,
+  `ContentView.swift`) :
+  - *Galerie* : après un clic, les 4 touches fléchées naviguent entre les
+    vignettes (↑↓ tiennent compte du nombre de colonnes, calculé depuis la
+    largeur mesurée par un `GeometryReader` en overlay — sans modifier le
+    layout). La touche Entrée ouvre l'éditeur. Focus activé via
+    `@FocusState` + `.focusable()` + `.focusEffectDisabled()` sur le
+    `ScrollView`.
+  - *Liste* : ←→ naviguent prev/next ; ↑↓ laissés à NSTableView natif
+    (ne pas intercepter, voir pièges).
+  - *Sidebar* : ↑↓ circulent entre les rubriques (liste ordonnée codée en
+    dur), → déplace le focus vers le panneau de contenu via
+    `NSApp.keyWindow?.selectNextKeyView(nil)`.
+- **Filets de sélection orange : 3 px** dans toutes les vues (galerie
+  macOS, listes iOS). En galerie macOS le filet non sélectionné reste à
+  1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
 - **iOS — sidebar Inventaire, libellés et regroupement** (`ContentView.swift`,
   enum `Categorie`) : intitulé de page « Inventaire » supprimé (titre vide,
   grand format conservé pour ne pas décaler la mise en page) ; rubrique
