@@ -62,4 +62,94 @@ struct CaptureEspace: NSViewRepresentable {
     }
 }
 
+
+/// Zone de l'interface qui reçoit les flèches ↑↓, pilotée explicitement par
+/// l'application (et non par le focus SwiftUI ni par le premier répondant
+/// AppKit, qui se sont tous deux révélés non fiables ici : le panneau qui
+/// paraissait focalisé n'était pas celui qui recevait les touches).
+///
+/// La zone bascule sur un geste **de l'utilisateur** : choisir une rubrique
+/// dans la sidebar met « sidebar », sélectionner une œuvre met « contenu ».
+enum ZoneClavier {
+    static let cle = "zoneClavier"
+    static let sidebar = "sidebar"
+    static let contenu = "contenu"
+
+    static var actuelle: String {
+        UserDefaults.standard.string(forKey: cle) ?? sidebar
+    }
+    static func definir(_ zone: String) {
+        UserDefaults.standard.set(zone, forKey: cle)
+    }
+}
+
+/// Capte les flèches ↑ et ↓ au niveau de la fenêtre et appelle `action(delta)`
+/// — mais **uniquement** quand la zone active est `zone`. Les autres cas sont
+/// relayés tels quels, pour qu'un autre capteur (ou AppKit) s'en charge.
+///
+/// L'événement est consommé quand il est traité : c'est ce qui supprime le bip
+/// système et empêche un scroll view de défiler à la place de la navigation.
+struct CaptureFleches: NSViewRepresentable {
+    /// Zone dans laquelle ce capteur est compétent.
+    let zone: String
+    /// Vrai pour se désactiver (édition en cours, par exemple).
+    var suspendu: Bool = false
+    /// -1 pour ↑, +1 pour ↓.
+    let action: (Int) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let vue = VueCapteurFleches()
+        vue.configurer(zone: zone, suspendu: suspendu, action: action)
+        return vue
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? VueCapteurFleches)?.configurer(zone: zone, suspendu: suspendu, action: action)
+    }
+
+    final class VueCapteurFleches: NSView {
+        private var zone = ZoneClavier.sidebar
+        private var suspendu = false
+        private var action: ((Int) -> Void)?
+        private var moniteur: Any?
+
+        func configurer(zone: String, suspendu: Bool, action: @escaping (Int) -> Void) {
+            self.zone = zone
+            self.suspendu = suspendu
+            self.action = action
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let m = moniteur { NSEvent.removeMonitor(m); moniteur = nil }
+            guard window != nil else { return }
+
+            moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self else { return event }
+                // 126 = flèche haut, 125 = flèche bas.
+                let delta: Int
+                switch event.keyCode {
+                case 126: delta = -1
+                case 125: delta = +1
+                default:  return event
+                }
+                guard !self.suspendu else { return event }
+                // Ce capteur ne traite que « sa » zone.
+                guard ZoneClavier.actuelle == self.zone else { return event }
+                // Jamais pendant une saisie de texte (même garde que CaptureEspace).
+                if let responder = self.window?.firstResponder {
+                    if responder is NSTextView || responder is NSTextField { return event }
+                    if String(describing: type(of: responder)).contains("Text") { return event }
+                }
+                self.action?(delta)
+                return nil   // traité : on consomme (pas de bip, pas de défilement)
+            }
+        }
+
+        deinit {
+            if let m = moniteur { NSEvent.removeMonitor(m) }
+        }
+    }
+}
+
 #endif

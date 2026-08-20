@@ -195,21 +195,21 @@ struct ContentView: View {
                 }
                 #else
                 .listStyle(.sidebar)
-                // ↑↓ : PAS d'onKeyPress ici — la navigation est laissée au
-                // NSOutlineView natif de la sidebar, qui la gère très bien et
-                // met à jour `categorie` tout seul.
-                //
-                // Pourquoi : posés ici, .onKeyPress(.upArrow/.downArrow)
-                // faisaient capter les flèches par SwiftUI *avant* la vue
-                // AppKit, mais sans jamais les traiter (la List n'ayant pas le
-                // focus SwiftUI) → bip système, et l'outline view ne devenait
-                // jamais premier répondant. Symptôme caractéristique : cliquer
-                // dans la galerie déplaçait le focus SwiftUI ailleurs, ce qui
-                // levait l'interception — la sidebar passait alors en bleu
-                // (= premier répondant) et ↑↓ se remettaient à marcher.
-                // Même piège que sur `Table` (voir CLAUDE.md).
-                //
-                // ←→ en revanche ne sont pas consommées par NSOutlineView.
+                // ↑↓ : ni onKeyPress (SwiftUI capte avant AppKit sans traiter),
+                // ni repli sur le natif (le premier répondant ne suit pas les
+                // clics de façon fiable ici). On passe par un capteur NSEvent
+                // au niveau fenêtre, actif seulement quand la zone clavier est
+                // la sidebar — voir ZoneClavier dans CaptureEspace.swift.
+                .background(
+                    CaptureFleches(zone: ZoneClavier.sidebar) { delta in
+                        naviguerSidebar(delta: delta)
+                    }
+                )
+                // Choisir une rubrique rend la main au clavier à la sidebar.
+                .onChange(of: categorie) { _, nouvelle in
+                    if nouvelle != nil { ZoneClavier.definir(ZoneClavier.sidebar) }
+                }
+                // ←→ ne sont pas consommées par NSOutlineView.
                 .onKeyPress(.rightArrow) {
                     // Déplace le focus vers la zone de contenu (colonne détail).
                     NSApp.keyWindow?.selectNextKeyView(nil)
@@ -336,6 +336,29 @@ struct ContentView: View {
         // focus clavier au passage (@FocusState), ce qui faisait repasser la
         // sélection de la liste en bleu et perturbait la navigation ↑↓.
     }
+
+    #if os(macOS)
+    // MARK: Navigation clavier de la sidebar (macOS)
+
+    /// Ordre d'affichage des rubriques, pour la navigation ↑↓.
+    private var categoriesSidebar: [Categorie] {
+        [.oeuvres, .synthese,
+         .tableauxVendus, .dessinsVendus, .tapisVendus, .oeuvresDonnees,
+         .ventesRealisees]
+    }
+
+    /// Déplace la rubrique sélectionnée de `delta` (−1 = ↑, +1 = ↓).
+    private func naviguerSidebar(delta: Int) {
+        guard let courante = categorie,
+              let idx = categoriesSidebar.firstIndex(of: courante) else {
+            categorie = delta > 0 ? categoriesSidebar.first : categoriesSidebar.last
+            return
+        }
+        let nouveau = idx + delta
+        guard nouveau >= 0, nouveau < categoriesSidebar.count else { return }
+        categorie = categoriesSidebar[nouveau]
+    }
+    #endif
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
 

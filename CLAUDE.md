@@ -115,25 +115,33 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - Le Taptic Engine de l'iPhone est un **moteur unique** : impossible de
   simuler un retour haptique « localisé » selon la zone de l'écran touchée
   (aucune spatialisation possible, contrairement à ce qu'on pourrait imaginer).
-- **`onKeyPress` sur un parent de `Table` (NSTableView) ou de la sidebar
-  `List` (NSOutlineView)** : SwiftUI intercepte les événements clavier
-  *avant* qu'ils arrivent à la vue AppKit sous-jacente. Ajouter
-  `.onKeyPress(.upArrow)` / `.onKeyPress(.downArrow)` sur un ancêtre d'un
-  `Table` peut casser la navigation native ↑↓ de NSTableView — mais le
-  repli inverse (laisser ↑↓ au natif, sans handler) s'est révélé **non
-  fiable** aussi (plus aucun mouvement de sélection constaté en mode
-  liste macOS). Le natif n'étant pas garanti dans un sens ni dans
-  l'autre, la règle actuelle est d'intercepter **les 4 flèches**
-  nous-mêmes en mode liste (`VueFeuille.swift`, fonction
-  `naviguerListe`), sans dépendre de NSTableView pour aucune d'elles.
-  **En revanche, sur la sidebar (`NSOutlineView`), c'est l'inverse : le
-  natif est fiable et il faut lui laisser ↑↓.** Y poser un `onKeyPress`
-  produisait le bip système sans jamais naviguer, parce que SwiftUI captait
-  la touche avant AppKit sans la traiter (la `List` n'ayant pas le focus
-  SwiftUI) et empêchait du même coup l'outline view de devenir premier
-  répondant. Indice diagnostique général : **si la sélection AppKit
-  s'affiche en bleu, la vue native a le focus et gère les flèches
-  elle-même** ; si elle est grise, c'est SwiftUI qui a (mal) capté.
+- **Navigation clavier ↑↓ entre sidebar et panneau de contenu (macOS) —
+  piège majeur, ~10 correctifs successifs avant d'en sortir.** Ni le focus
+  SwiftUI (`@FocusState`, `.focusable()`, `.onKeyPress`) ni le premier
+  répondant AppKit ne sont fiables dans ce `NavigationSplitView` :
+  - `.onKeyPress(.upArrow/.downArrow)` sur un ancêtre d'un `Table` ou de la
+    `List` de la sidebar fait capter la touche par SwiftUI **avant** AppKit,
+    mais sans la traiter si la vue n'a pas le focus SwiftUI → **bip système**,
+    et la vue AppKit ne devient jamais premier répondant ;
+  - le repli inverse (tout laisser au natif) échoue aussi : le comportement
+    observé était **inversé** — au lancement la sidebar paraissait focalisée
+    mais les flèches pilotaient le panneau central ; après un clic au centre,
+    elles pilotaient la sidebar ;
+  - forcer `makeFirstResponder` sur l'outline view, rendre `.focusable()`
+    conditionnel, reprendre le focus dans `.onAppear` : tout cela déplace le
+    symptôme sans le supprimer.
+  **Solution retenue, à ne pas défaire** : un état explicite `ZoneClavier`
+  (`CaptureEspace.swift`) dit quelle zone reçoit les flèches — `sidebar` ou
+  `contenu` — et c'est **le geste de l'utilisateur** qui le fixe (choisir une
+  rubrique → `sidebar` ; sélectionner une œuvre → `contenu`). Deux capteurs
+  `CaptureFleches` (moniteurs `NSEvent` au niveau fenêtre, même patron que
+  `CaptureEspace`) écoutent ↑↓ ; chacun n'agit que dans sa zone et
+  **consomme** l'événement (`return nil`), ce qui supprime le bip et empêche
+  un scroll view de défiler à la place de naviguer. Ils se désactivent
+  pendant une saisie de texte et quand l'éditeur est ouvert.
+  **Leçon générale** : sur ce projet, le seul mécanisme clavier fiable est le
+  moniteur `NSEvent` local avec un état applicatif explicite. Ne pas essayer
+  de déduire « qui a le focus » — le décider.
 - **`ScrollViewReader` + `proxy.scrollTo(id, anchor: .center)` autour d'un
   `Table`** : l'ancre est un `UnitPoint`, donc le recentrage s'applique aux
   **deux axes**. Le défilement horizontal parasite décalait tout le tableau
@@ -224,26 +232,15 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     layout). La touche Entrée ouvre l'éditeur. Focus activé via
     `@FocusState` + `.focusable()` + `.focusEffectDisabled()` sur le
     `ScrollView`.
-  - *Liste* : les 4 flèches naviguent prev/next (`naviguerListe`), toutes
-    interceptées manuellement — le repli sur NSTableView natif pour ↑↓
-    ne s'est pas montré fiable (voir pièges). Le focus clavier du tableau
-    est lui aussi repris explicitement (`@FocusState private var
-    focusListe`, mis à `true` dans `.onChange(of: selection)`, même
-    principe qu'en galerie) au lieu de dépendre du focus natif de
-    NSTableView, qui ne se redonnait pas de façon fiable après un
-    changement de rubrique dans la sidebar (navigation qui ne répondait
-    plus, avec bip système). Défilement vers la ligne sélectionnée géré
-    par le helper `DefilementTableau` (AppKit `scrollRowToVisible`), et
-    **surtout pas** par un `ScrollViewReader` (voir pièges).
-  - *Sidebar* : ↑↓ sont laissées au **NSOutlineView natif**, qui met à jour
-    `categorie` tout seul via le binding de sélection. Ne PAS y remettre
-    d'`.onKeyPress(.upArrow/.downArrow)` : SwiftUI captait alors les flèches
-    avant la vue AppKit sans jamais les traiter (la `List` n'ayant pas le
-    focus SwiftUI) → bip système, et l'outline view ne devenait jamais
-    premier répondant. Symptôme caractéristique : cliquer dans la galerie
-    déplaçait le focus SwiftUI ailleurs, ce qui levait l'interception — la
-    sidebar passait en bleu (= premier répondant) et ↑↓ se remettaient à
-    marcher. → déplace le focus vers le panneau de contenu via
+  - *↑↓ sidebar et liste* : pilotées par l'état explicite `ZoneClavier` +
+    les capteurs `CaptureFleches` (voir le piège détaillé plus haut, à lire
+    avant toute modification du clavier). `naviguerSidebar` dans
+    `ContentView.swift`, `naviguerListe` dans `VueFeuille.swift` ; les deux
+    entrent par le haut/bas de la liste si rien n'est sélectionné.
+  - *Liste* : défilement vers la ligne sélectionnée géré par le helper
+    `DefilementTableau` (AppKit `scrollRowToVisible`), et **surtout pas**
+    par un `ScrollViewReader` (voir pièges).
+  - *Sidebar* : → déplace le focus vers le panneau de contenu via
     `NSApp.keyWindow?.selectNextKeyView(nil)`.
 - **Filets de sélection orange : 3 px** dans toutes les vues (galerie
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à

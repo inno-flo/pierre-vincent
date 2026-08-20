@@ -32,10 +32,6 @@ struct VueFeuille: View {
         KeyPathComparator(\Oeuvre.type)
     ]
     @State private var selection: Set<UUID> = []
-    // Focus clavier du tableau (mode liste) : piloté nous-mêmes (comme en
-    // galerie) plutôt que de dépendre du focus natif de NSTableView, qui ne
-    // se redonne pas de façon fiable après un changement de rubrique.
-    @FocusState private var focusListe: Bool
     @State private var editionEntree: Oeuvre?
     @State private var editionNouvelle = false
     @State private var messageExport: String?
@@ -311,6 +307,9 @@ struct VueFeuille: View {
         .onChange(of: selection) { _, nouvelle in
             uneSelectionExiste = !nouvelle.isEmpty
             nbSelection = nouvelle.count
+            // Sélectionner une œuvre (clic en liste ou en galerie) donne la
+            // main au clavier au panneau de contenu.
+            if !nouvelle.isEmpty { ZoneClavier.definir(ZoneClavier.contenu) }
         }
         // Action import/export déclenchée depuis le menu « Fichier ».
         .onChange(of: actionFichierSignal) { _, _ in
@@ -381,14 +380,6 @@ struct VueFeuille: View {
             nbSelection = selection.count
             uneSelectionExiste = !selection.isEmpty
             editeurOuvert = (editionEntree != nil)
-            // Reprise du focus clavier après une reconstruction de la vue :
-            // @FocusState repart à false, la NSTableView redeviendrait
-            // premier répondant et la sélection repasserait en bleu.
-            // Uniquement s'il y a déjà une sélection — sinon on volerait le
-            // focus à la sidebar au moment où l'on change de rubrique.
-            if modeAffichage != "icone" && !selection.isEmpty {
-                focusListe = true
-            }
         }
     }
 
@@ -621,12 +612,10 @@ struct VueFeuille: View {
                 }
             )
         } else {
-            // Les 4 flèches sont interceptées manuellement : le repli sur la
-            // navigation/focus natifs de NSTableView ne s'est pas montré
-            // fiable (focus perdu après un changement de rubrique, pas de
-            // défilement automatique). On pilote nous-mêmes le focus clavier
-            // (repris explicitement à chaque sélection, comme en galerie) et
-            // le défilement vers la ligne sélectionnée.
+            // Navigation clavier : capteur NSEvent au niveau fenêtre, actif
+            // seulement quand la zone clavier est le panneau de contenu.
+            // Ni onKeyPress ni @FocusState : voir ZoneClavier (CaptureEspace.swift)
+            // et la section « pièges » de CLAUDE.md.
             tableau
                 // Fond du tableau suivant le thème : contrairement à la
                 // galerie et à la Synthèse, qui peignent leur propre
@@ -634,22 +623,12 @@ struct VueFeuille: View {
                 // défaut et ne suivait donc aucun thème.
                 .scrollContentBackground(.hidden)
                 .background(Color.cremeFond)
-                // Focalisable UNIQUEMENT s'il y a une sélection à déplacer.
-                // Sinon, à l'ouverture d'une rubrique (sélection vide), le
-                // tableau captait le focus automatiquement, la sidebar le
-                // perdait, et les ↑↓ arrivaient sur le onKeyPress ci-dessous
-                // qui renvoyait .ignored faute de sélection → bip système et
-                // navigation sidebar inutilisable.
-                .focusable(!selection.isEmpty)
-                .focused($focusListe)
-                .focusEffectDisabled()
-                .onKeyPress(.leftArrow)  { naviguerListe(delta: -1) }
-                .onKeyPress(.rightArrow) { naviguerListe(delta: +1) }
-                .onKeyPress(.upArrow)    { naviguerListe(delta: -1) }
-                .onKeyPress(.downArrow)  { naviguerListe(delta: +1) }
-                .onChange(of: selection) { _, _ in
-                    focusListe = true
-                }
+                .background(
+                    CaptureFleches(zone: ZoneClavier.contenu,
+                                   suspendu: editionEntree != nil) { delta in
+                        naviguerListe(delta: delta)
+                    }
+                )
                 // Défilement vers la ligne sélectionnée, en VERTICAL seulement.
                 .background(DefilementTableau(ligne: ligneSelectionnee))
         }
@@ -662,15 +641,20 @@ struct VueFeuille: View {
         return oeuvres.firstIndex(where: { $0.id == id })
     }
 
-    // Déplace la sélection d'une entrée dans la liste triée courante.
-    private func naviguerListe(delta: Int) -> KeyPress.Result {
+    /// Déplace la sélection d'une ligne (−1 = ↑, +1 = ↓). Si rien n'est
+    /// sélectionné, on entre par le haut ou par le bas de la liste — plutôt
+    /// que de ne rien faire, ce qui laissait l'utilisateur sans repère.
+    private func naviguerListe(delta: Int) {
+        guard !oeuvres.isEmpty else { return }
         guard selection.count == 1,
               let id = selection.first,
-              let idx = oeuvres.firstIndex(where: { $0.id == id }) else { return .ignored }
-        let nouveauIdx = idx + delta
-        guard nouveauIdx >= 0, nouveauIdx < oeuvres.count else { return .handled }
-        selection = [oeuvres[nouveauIdx].id]
-        return .handled
+              let idx = oeuvres.firstIndex(where: { $0.id == id }) else {
+            selection = [delta > 0 ? oeuvres[0].id : oeuvres[oeuvres.count - 1].id]
+            return
+        }
+        let nouveau = idx + delta
+        guard nouveau >= 0, nouveau < oeuvres.count else { return }
+        selection = [oeuvres[nouveau].id]
     }
 
     @ViewBuilder
