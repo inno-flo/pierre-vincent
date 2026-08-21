@@ -146,6 +146,8 @@ struct ContentView: View {
     @AppStorage("statutParDefautRempli") private var statutParDefautRempli = false
     // `modeVenteDonRempli` : troisième passe, Mode de vente « Don » sur les dons.
     @AppStorage("modeVenteDonRempli") private var modeVenteDonRempli = false
+    // `champsVidesRemplis` : quatrième passe, « Inconnu » partout où c'est vide.
+    @AppStorage("champsVidesRemplis") private var champsVidesRemplis = false
     // TEMPORAIRE — nuance du fond de sélection de la sidebar : marron clair
     // (par défaut) ou 50 % plus foncé. Piloté par le bouton en pied de sidebar.
     @AppStorage("selectionFoncee") private var selectionFoncee = false
@@ -383,6 +385,15 @@ struct ContentView: View {
             if !modeVenteDonRempli {
                 RepriseDonnees.remplirModeVenteDon(context: context)
                 modeVenteDonRempli = true
+            }
+
+            // Reprise ponctuelle : « Inconnu » dans tous les champs texte
+            // encore vides. À faire APRÈS les reprises de statut ci-dessus,
+            // qui ne remplissent que les champs vides — sinon elles ne
+            // trouveraient plus rien à remplir.
+            if !champsVidesRemplis {
+                RepriseDonnees.remplirChampsVides(context: context)
+                champsVidesRemplis = true
             }
         }
         #if os(iOS)

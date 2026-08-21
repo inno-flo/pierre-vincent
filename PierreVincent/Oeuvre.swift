@@ -87,6 +87,38 @@ enum RepriseDonnees {
         return compte
     }
 
+    /// Écrit « Inconnu » dans tous les champs texte encore vides.
+    ///
+    /// Convention de la base : un champ non renseigné contient « Inconnu »,
+    /// et non une chaîne vide. L'éditeur fait la conversion inverse à la
+    /// lecture, pour que l'utilisateur n'ait pas à effacer ce mot avant de
+    /// saisir (voir `EditeurEntree`).
+    ///
+    /// `photoNom` est exclu : c'est un champ technique, dont le vide signifie
+    /// « aucune photo » et non « inconnu ».
+    @discardableResult
+    @MainActor
+    static func remplirChampsVides(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        let champs: [ReferenceWritableKeyPath<Oeuvre, String>] = [
+            \.type, \.dimensions, \.format, \.remarques,
+            \.vendeur, \.modeVente, \.acheteur, \.date,
+            \.destinataire, \.statut, \.theme, \.emplacement,
+        ]
+        var compte = 0
+        for o in toutes {
+            var modifiee = false
+            for champ in champs
+            where o[keyPath: champ].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                o[keyPath: champ] = valeurInconnue
+                modifiee = true
+            }
+            if modifiee { compte += 1 }
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
     /// Renseigne le Mode de vente « Don » sur les œuvres de la feuille
     /// « Œuvres données » dont ce champ est encore vide.
     ///

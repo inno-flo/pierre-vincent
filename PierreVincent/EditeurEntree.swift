@@ -233,22 +233,38 @@ struct EditeurEntree: View {
     // MARK: Chargement / enregistrement
 
     private func chargerDepuis(_ o: Oeuvre) {
+        // La base stocke « Inconnu » dans les champs non renseignés. On le
+        // convertit en champ VIDE pour la saisie : sans ça, il faudrait
+        // effacer ce mot avant de taper la vraie valeur.
         photoNom     = o.photoNom
-        type         = o.type
-        dimensions   = o.dimensions
-        format       = o.format
-        vendeur      = o.vendeur
-        modeVente    = o.modeVente
-        acheteur     = o.acheteur
-        date         = o.date
-        destinataire = o.destinataire
-        statut       = o.statut
-        theme        = o.theme
-        emplacement  = o.emplacement
-        remarques    = o.remarques
+        type         = pourSaisie(o.type)
+        dimensions   = pourSaisie(o.dimensions)
+        format       = pourSaisie(o.format)
+        vendeur      = pourSaisie(o.vendeur)
+        modeVente    = pourSaisie(o.modeVente)
+        acheteur     = pourSaisie(o.acheteur)
+        date         = pourSaisie(o.date)
+        destinataire = pourSaisie(o.destinataire)
+        statut       = pourSaisie(o.statut)
+        theme        = pourSaisie(o.theme)
+        emplacement  = pourSaisie(o.emplacement)
+        remarques    = pourSaisie(o.remarques)
         prixTexte    = o.prix == 0 ? "" : String(Int(o.prix.rounded()))
         // Mémorise l'état initial pour détecter d'éventuelles modifications.
         instantaneInitial = instantaneCourant
+    }
+
+    // MARK: Conversion base <-> saisie
+
+    /// Base → champ de saisie : « Inconnu » devient vide.
+    private func pourSaisie(_ v: String) -> String {
+        v.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(valeurInconnue) == .orderedSame ? "" : v
+    }
+
+    /// Champ de saisie → base : vide devient « Inconnu ».
+    private func pourBase(_ v: String) -> String {
+        v.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? valeurInconnue : v
     }
 
     /// Concatène tous les champs : sert à comparer l'état courant à l'initial.
@@ -271,19 +287,21 @@ struct EditeurEntree: View {
 
     /// Recopie les champs locaux dans l'entrée donnée.
     private func appliquer(sur o: Oeuvre) {
+        // Conversion inverse de `chargerDepuis` : un champ laissé vide est
+        // enregistré « Inconnu », conformément à la convention de la base.
         o.photoNom     = photoNom
-        o.type         = type
-        o.dimensions   = dimensions
-        o.format       = format
-        o.vendeur      = vendeur
-        o.modeVente    = modeVente
-        o.acheteur     = acheteur
-        o.date         = date
-        o.destinataire = destinataire
-        o.statut       = statut
-        o.theme        = theme
-        o.emplacement  = emplacement
-        o.remarques    = remarques
+        o.type         = pourBase(type)
+        o.dimensions   = pourBase(dimensions)
+        o.format       = pourBase(format)
+        o.vendeur      = pourBase(vendeur)
+        o.modeVente    = pourBase(modeVente)
+        o.acheteur     = pourBase(acheteur)
+        o.date         = pourBase(date)
+        o.destinataire = pourBase(destinataire)
+        o.statut       = pourBase(statut)
+        o.theme        = pourBase(theme)
+        o.emplacement  = pourBase(emplacement)
+        o.remarques    = pourBase(remarques)
         let net = prixTexte
             .replacingOccurrences(of: "€", with: "")
             .replacingOccurrences(of: " ", with: "")
