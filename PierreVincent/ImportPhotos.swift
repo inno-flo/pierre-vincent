@@ -73,34 +73,112 @@ enum ImportPhotos {
 /// Traduit les métadonnées d'une photo en champs d'une œuvre.
 ///
 /// **C'est ici, et nulle part ailleurs, que se règle la correspondance.**
-/// Tant que la table définitive n'est pas arrêtée, rien n'est perdu : les
-/// mots-clés, la légende et le nom du fichier sont recopiés tels quels dans
-/// les Remarques, prêts à être répartis dans les bons champs.
+/// Ajouter un mot-clé revient à ajouter une entrée dans l'une des tables
+/// ci-dessous ; rien d'autre n'est à toucher.
 ///
-/// Exemple de mots-clés relevés sur les photos de test :
-///   « Dessin disponible »      → Statut
-///   « Dessin nature morte »    → Thème
-///   « Natures mortes carton 2 »→ Emplacement
-///   « Dessin Pierre Innocente »→ Type
+/// Les clés sont écrites en minuscules sans accent : la comparaison passe par
+/// `normaliser`, si bien que « Dessin à garder » est reconnu même saisi
+/// « dessin a garder » ou avec des espaces en trop.
 enum CorrespondanceMotsCles {
+
+    // MARK: Tables
+
+    /// Mot-clé → valeur du champ **Statut**.
+    private static let statuts: [String: String] = [
+        "dessin disponible": "Disponible",
+        "dessin a garder":   "À garder",
+    ]
+
+    /// Mot-clé → valeur du champ **Thème**.
+    private static let themes: [String: String] = [
+        "dessin bouquet":      "Bouquet",
+        "dessin nature morte": "Nature morte",
+        "dessin animaux":      "Animaux",
+        "dessin paysage":      "Paysage",
+        "dessin personnage":   "Personnage",
+    ]
+
+    /// Mot-clé → valeur du champ **Type**.
+    private static let types: [String: String] = [
+        "dessin pierre innocente": "Dessin",
+    ]
+
+    /// Mots-clés recopiés **à l'identique** dans le champ **Emplacement**.
+    private static let emplacements: Set<String> = [
+        "collection personnelle carton 1",
+        "collection personnelle carton 2",
+        "collection personnelle carton 3",
+        "collection personnelle carton 4",
+        "natures mortes carton 1",
+        "natures mortes carton 2",
+        "grands formats carton 1",
+        "grands formats carton 2",
+        "paysages carton 1",
+        "paysages carton 2",
+        "paysages carton 3",
+        "personnages carton 1",
+        "animaux carton 1",
+        "bouquets carton 1",
+    ]
+
+    // MARK: Application
 
     @MainActor
     static func appliquer(motsCles: [String],
                           legende: String,
                           nomFichier: String,
                           sur o: Oeuvre) {
-        // --- Table de correspondance : À COMPLÉTER ---
-        // Pour chaque mot-clé, décider du champ de destination puis écrire
-        // par exemple `o.statut = mot`. Voir les préfixes ci-dessus.
+        var nonReconnus: [String] = []
 
-        // En attendant, on conserve TOUT dans les Remarques : aucun import ne
-        // perd d'information, et la répartition pourra se faire ensuite.
-        var lignes: [String] = ["Fichier : \(nomFichier)"]
-        if !legende.isEmpty { lignes.append("Légende : \(legende)") }
-        if !motsCles.isEmpty {
-            lignes.append("Mots-clés : " + motsCles.joined(separator: " · "))
+        for mot in motsCles {
+            let cle = normaliser(mot)
+            if let v = statuts[cle] {
+                ecrire(v, dans: \.statut, sur: o)
+            } else if let v = themes[cle] {
+                ecrire(v, dans: \.theme, sur: o)
+            } else if let v = types[cle] {
+                ecrire(v, dans: \.type, sur: o)
+            } else if emplacements.contains(cle) {
+                // Recopié tel quel, avec sa casse d'origine.
+                ecrire(mot.trimmingCharacters(in: .whitespacesAndNewlines),
+                       dans: \.emplacement, sur: o)
+            } else {
+                nonReconnus.append(mot)
+            }
         }
-        o.remarques = lignes.joined(separator: "\n")
+
+        // Remarques : la légende du fichier, puis les mots-clés absents des
+        // tables — signalés plutôt que perdus silencieusement — et enfin le
+        // nom du fichier d'origine, que rien d'autre ne conserve (la photo est
+        // stockée sous un nom généré).
+        var lignes: [String] = []
+        if !legende.isEmpty { lignes.append(legende) }
+        for mot in nonReconnus { lignes.append("Mot clef non reconnu : \(mot)") }
+        lignes.append("Fichier : \(nomFichier)")
+        ecrire(lignes.joined(separator: "\n"), dans: \.remarques, sur: o)
+    }
+
+    // MARK: Outils
+
+    /// N'écrit QUE si le champ est vide ou vaut « Inconnu » : une valeur déjà
+    /// saisie n'est jamais écrasée. Couvre les deux conventions possibles —
+    /// champ vide en base, ou « Inconnu » réellement stocké.
+    @MainActor
+    private static func ecrire(_ valeur: String,
+                               dans champ: ReferenceWritableKeyPath<Oeuvre, String>,
+                               sur o: Oeuvre) {
+        let actuel = o[keyPath: champ].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard actuel.isEmpty || actuel.caseInsensitiveCompare(valeurInconnue) == .orderedSame
+        else { return }
+        o[keyPath: champ] = valeur
+    }
+
+    /// Minuscules, sans accent, sans espaces de bord : la comparaison tolère
+    /// les variantes de saisie.
+    private static func normaliser(_ texte: String) -> String {
+        texte.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive],
+                     locale: Locale(identifier: "fr_FR"))
     }
 }
 
