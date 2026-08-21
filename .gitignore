@@ -10,3 +10,8 @@ DerivedData/
 
 # Finder
 .DS_Store
+
+# Images de travail / d'essai posées dans le dossier du projet. Git conserve
+# chaque version de chaque binaire : versionner des photos ferait grossir le
+# dépôt de façon irréversible, pour des fichiers qui ne sont pas du code.
+Images exportées/
