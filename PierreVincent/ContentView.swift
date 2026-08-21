@@ -105,6 +105,9 @@ struct ContentView: View {
     @State private var nbSelection: Int = 0
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    // TEMPORAIRE — nuance du fond de sélection de la sidebar : marron clair
+    // (par défaut) ou 50 % plus foncé. Piloté par le bouton en pied de sidebar.
+    @AppStorage("selectionFoncee") private var selectionFoncee = false
     // Ouverture/fermeture des blocs de la sidebar, mémorisée entre les sessions
     // (comportement des sidebars système).
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
@@ -144,7 +147,7 @@ struct ContentView: View {
                     Section(isExpanded: $blocStockOuvert) {
                         contenuStock
                     } header: {
-                        Text("Stock").font(policeGrandIntitule).fontWeight(.bold)
+                        Text("Réserve").font(policeGrandIntitule).fontWeight(.bold)
                     }
                     #else
                     // Sur iOS, `Section(isExpanded:)` n'est honoré qu'avec
@@ -162,7 +165,7 @@ struct ContentView: View {
                         DisclosureGroup(isExpanded: $blocStockOuvert) {
                             contenuStock
                         } label: {
-                            Text("Stock").font(policeGrandIntitule).fontWeight(.bold)
+                            Text("Réserve").font(policeGrandIntitule).fontWeight(.bold)
                         }
                     }
                     #endif
@@ -214,16 +217,11 @@ struct ContentView: View {
                 }
                 #endif
 
-                // --- Zone libre en bas de la sidebar (désactivée) ---
-                // Emplacement conservé pour y poser au besoin des boutons
-                // temporaires de test. A successivement accueilli les
-                // pastilles de choix de thème, puis le bouton « G » (mise en
-                // gras des en-têtes), tous deux supprimés.
-                // Pour la réactiver : décommenter les deux lignes ci-dessous
-                // ET la propriété `barreOutilsBas` plus bas dans ce fichier.
-                //
-                // Divider()
-                // barreOutilsBas
+                // --- Zone du bas de la sidebar ---
+                // Accueille des boutons temporaires de test. A successivement
+                // porté les pastilles de choix de thème, puis le bouton « G ».
+                Divider()
+                barreOutilsBas
             }
             #if os(iOS)
             // Fond de toute la colonne.
@@ -390,19 +388,36 @@ struct ContentView: View {
 
     // MARK: Barre de sélection du thème (bas de la sidebar)
 
-    // MARK: Zone libre en bas de la sidebar (désactivée)
+    // MARK: Zone du bas de la sidebar
 
-    // Conteneur de boutons pour le bas de la barre latérale. Décommenter avec
-    // les deux lignes correspondantes dans la VStack de la sidebar (voir plus
-    // haut). Y ajouter les boutons voulus à la place du Spacer.
-    //
-    // private var barreOutilsBas: some View {
-    //     HStack(spacing: 10) {
-    //         Spacer()
-    //     }
-    //     .padding(.horizontal, 20)
-    //     .padding(.vertical, 10)
-    // }
+    /// Conteneur de boutons temporaires, en pied de barre latérale.
+    private var barreOutilsBas: some View {
+        HStack(spacing: 10) {
+            boutonNuanceSelection
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+    }
+
+    /// TEMPORAIRE — bascule la nuance du fond de sélection de la sidebar entre
+    /// le marron clair actuel et une version 50 % plus foncée, pour comparer
+    /// les deux à l'œil. La pastille montre la nuance qui s'appliquera si on
+    /// clique (donc l'autre que celle en cours).
+    private var boutonNuanceSelection: some View {
+        Button {
+            selectionFoncee.toggle()
+        } label: {
+            Circle()
+                .fill(Color.nuanceSelectionSidebar(foncee: !selectionFoncee))
+                .frame(width: 22, height: 22)
+                .overlay(Circle().strokeBorder(Color.gray.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help(selectionFoncee
+              ? "Revenir au marron clair"
+              : "Passer au marron foncé")
+    }
 
     // MARK: Lien de catégorie (barre latérale)
 
@@ -466,7 +481,7 @@ struct ContentView: View {
         }
     }
 
-    /// Contenu du bloc « Stock », encore à définir.
+    /// Contenu du bloc « Réserve ». Ses sous-rubriques restent à créer.
     @ViewBuilder
     private var contenuStock: some View {
         Text("À définir")
