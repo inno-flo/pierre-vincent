@@ -63,8 +63,12 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   écraser de saisie). Chaque passe a son propre drapeau `@AppStorage` :
   **une passe déjà consommée ne se redéclenche pas**, il faut un nouveau
   drapeau pour toute reprise supplémentaire.
-  Faites à ce jour : statut « Vendu » hors dons et « Donné » pour les dons ;
-  mode de vente « Don » pour les dons.
+  Faites à ce jour, **dans cet ordre** : statut « Vendu » hors dons et
+  « Donné » pour les dons ; mode de vente « Don » pour les dons ; puis
+  « Inconnu » dans tous les champs texte encore vides.
+  **L'ordre compte** : la dernière passe ne remplit que les champs vides, donc
+  toute reprise qui en dépend doit s'exécuter AVANT elle, sinon elle ne trouve
+  plus rien à remplir.
 - **Format d'échange `.pvbase`** (`EchangeBase.swift`) : tout champ ajouté au
   modèle doit y être ajouté aussi, **en optionnel**, sinon un transfert
   Mac → iPhone le perd silencieusement. Optionnel car un `Codable` synthétisé
@@ -291,13 +295,17 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 
 ## Détails d'interface déjà en place
 
-- **Un champ vide s'affiche TOUJOURS, avec « Inconnu ».** Règle générale de
-  l'app, implantée dans les fonctions d'affichage elles-mêmes — `ligne`
-  (`VueiOS`) et `ligneInspecteur` (`VueFeuille`) — et non appel par appel :
-  elle couvre donc d'un coup tous les champs des fiches. Le mot est isolé dans
-  `valeurInconnue` / `afficher(_:)` (`TriEtTotaux.swift`). L'**éditeur** en est
-  exclu : ses champs de saisie sont déjà toujours visibles, et y écrire
-  « Inconnu » obligerait à l'effacer avant de taper.
+- **Un champ non renseigné vaut « Inconnu », et ce mot est STOCKÉ EN BASE**
+  (et non substitué à l'affichage, comme c'était le cas au départ). Mot isolé
+  dans `valeurInconnue` (`TriEtTotaux.swift`). Douze champs texte concernés ;
+  **`photoNom` est exclu**, son vide signifiant « aucune photo » et non
+  « inconnu » — y écrire « Inconnu » casserait le chargement des images.
+  - **L'éditeur convertit dans les DEUX SENS** (`pourSaisie` / `pourBase`) :
+    « Inconnu » devient un champ vide à la lecture, un champ vide redevient
+    « Inconnu » à l'enregistrement. **Ne pas retirer cette conversion** :
+    sans elle il faudrait effacer le mot dans chaque champ avant de taper.
+  - `afficher(_:)` reste en place dans `ligne` / `ligneInspecteur` comme
+    filet de sécurité, pour une œuvre créée hors de ce circuit.
 - **Les trois surfaces qui affichent une œuvre doivent proposer les mêmes
   champs, dans le même ordre** : éditeur (boîte de dialogue), inspecteur
   (colonne) et fiche iPhone. Ordre de référence : Prix · Type ·
