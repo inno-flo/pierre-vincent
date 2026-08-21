@@ -44,6 +44,63 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   Le `rawValue` sert de clé d'import CSV (ex. « Œuvres données », « Dessins vendus »).
 - Photos stockées **hors base**, sur disque, via `PhotoStore` (dossier « Photos »
   dans Application Support). La base ne contient que le nom de fichier.
+- **Champs de suivi** ajoutés à `Oeuvre` : `statut`, `theme`, `emplacement`
+  (texte, défaut vide → SwiftData fait une migration légère automatique).
+  Présents dans l'éditeur, l'inspecteur, la fiche iOS, le mode Liste et tous
+  les exports.
+- **Le statut pilote la visibilité.** Les rubriques de « Ventes et dons »
+  (Inventaire, Tableaux, Dessins, Tapis, Dons, Ventes) ne recensent que les
+  œuvres **sorties du fonds** : statut « Vendu » ou « Donné ». Prédicat unique
+  `estVenduOuDonne` (+ `statutsVentesEtDons`) dans `TriEtTotaux.swift`,
+  appliqué aussi aux **pastilles de comptage** de la sidebar et à la vue
+  **Synthèse**. Les œuvres encore disponibles — celles importées depuis des
+  photos — n'apparaissent nulle part tant que la section « Réserve » n'a pas
+  ses rubriques. Sans ce filtre sur la Synthèse, une œuvre disponible à 0 €
+  tirerait le prix moyen vers le bas et fausserait le prix minimum.
+- **Reprises de données ponctuelles** : `RepriseDonnees` (`Oeuvre.swift`),
+  exécutées une fois au lancement depuis `ContentView.onAppear`. Elles ne
+  remplissent que les champs **vides** (donc rejouables sans risque, et sans
+  écraser de saisie). Chaque passe a son propre drapeau `@AppStorage` :
+  **une passe déjà consommée ne se redéclenche pas**, il faut un nouveau
+  drapeau pour toute reprise supplémentaire.
+  Faites à ce jour : statut « Vendu » hors dons et « Donné » pour les dons ;
+  mode de vente « Don » pour les dons.
+- **Format d'échange `.pvbase`** (`EchangeBase.swift`) : tout champ ajouté au
+  modèle doit y être ajouté aussi, **en optionnel**, sinon un transfert
+  Mac → iPhone le perd silencieusement. Optionnel car un `Codable` synthétisé
+  **n'applique pas les valeurs par défaut aux clés absentes** : un fichier
+  exporté avant l'ajout deviendrait illisible.
+
+## Import de photos (macOS)
+
+Moteur **séparé** du moteur CSV (`ImportPhotos.swift`), atteint par
+Fichier › Importer › « Photos… ». Le CSV garde « Dossier CSV et photos… ».
+Les deux n'ont aucune étape commune : entrée, source des données et traitement
+diffèrent en tout.
+
+- Une œuvre créée **par photo** choisie (sélection multiple).
+- **Les mots-clés IPTC** — pas la légende — alimentent les champs. Les photos
+  de test portent p. ex. « Dessin disponible » (statut), « Dessin nature
+  morte » (thème), « Natures mortes carton 2 » (emplacement), « Dessin Pierre
+  Innocente » (type). Certaines ont aussi une légende, d'autres non.
+- Métadonnées lues **AVANT** la compression : la version stockée est
+  ré-encodée et ne conserve pas l'IPTC d'origine.
+- **Table de correspondance** isolée dans `CorrespondanceMotsCles`, seul point
+  à compléter. Tant qu'elle est vide, nom de fichier, légende et mots-clés
+  sont recopiés dans les **Remarques** : aucun import ne perd d'information.
+- **Compression** (`PhotoStore.importerImageCompressee`) : réduction à
+  **2000 px** de côté long, puis HEIC à qualité dégressive jusqu'à passer sous
+  **450 Ko**. La boucle s'arrête au premier palier qui tient.
+  - Réduire **avant** de compresser : à 450 Ko, 12 Mpx font ~0,03 bit/pixel,
+    l'image serait molle.
+  - `CGImageSourceCreateThumbnailAtIndex` décode directement à la taille
+    voulue, sans jamais charger les 12 Mpx en mémoire.
+  - **HEIC et non JPEG** : mesuré sur une photo de test, 325 Ko à qualité 0,42
+    contre 344 Ko à 0,35 en JPEG. L'app étant 100 % Apple, aucun souci de
+    compatibilité.
+  - Attention : `PhotoStore.importerImage` (glisser-déposer, bouton Choisir)
+    convertit toujours en **PNG** — 13,5 Mo pour une photo de 1,4 Mo. À
+    basculer sur la compression le jour où on y touchera.
 
 ## Thèmes de couleurs
 
@@ -233,6 +290,29 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - Illustration source : un kaki (persimmon), détouré sur fond transparent, 1024×1024.
 
 ## Détails d'interface déjà en place
+
+- **Un champ vide s'affiche TOUJOURS, avec « Inconnu ».** Règle générale de
+  l'app, implantée dans les fonctions d'affichage elles-mêmes — `ligne`
+  (`VueiOS`) et `ligneInspecteur` (`VueFeuille`) — et non appel par appel :
+  elle couvre donc d'un coup tous les champs des fiches. Le mot est isolé dans
+  `valeurInconnue` / `afficher(_:)` (`TriEtTotaux.swift`). L'**éditeur** en est
+  exclu : ses champs de saisie sont déjà toujours visibles, et y écrire
+  « Inconnu » obligerait à l'effacer avant de taper.
+- **Les trois surfaces qui affichent une œuvre doivent proposer les mêmes
+  champs, dans le même ordre** : éditeur (boîte de dialogue), inspecteur
+  (colonne) et fiche iPhone. Ordre de référence : Prix · Type ·
+  Dimensions/Format · Statut/Thème/Emplacement · Vendeur-Acheteur-Mode de
+  vente (ou Destinataire-Mode de vente) · Date · Remarques.
+- **Le caractère « don » se lit sur l'ŒUVRE (`o.feuille`), jamais sur la
+  rubrique affichée.** Dans les vues agrégées (Inventaire, Ventes), la feuille
+  de la rubrique vaut `nil` : l'inspecteur affichait donc Prix/Vendeur/
+  Acheteur/Date pour une œuvre donnée, et la galerie « 0 € » sous sa vignette,
+  alors que l'éditeur et la fiche iOS se fondaient déjà sur l'œuvre. Corrigé
+  sur les quatre surfaces ; `VueGalerie` n'a plus de paramètre `estFeuilleDon`.
+- **`Table` (SwiftUI, macOS) : 10 colonnes maximum** au premier niveau du
+  builder. Au-delà, erreur « extra arguments at positions #11… ». Envelopper
+  les colonnes excédentaires dans un `Group`, qui conforme à
+  `TableColumnContent` (le tableau des ventes en compte 13).
 
 - **macOS** : menu Fichier restructuré (sous-menu Exporter, accès au dossier des
   données), navigation Précédent/Suivant dans l'éditeur, bas de sidebar vide.
