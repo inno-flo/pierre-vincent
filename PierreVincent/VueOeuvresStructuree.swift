@@ -64,6 +64,9 @@ struct VueOeuvresStructuree: View {
             || $0.feuille == .dessinsVendus
             || $0.feuille == .tapisVendus
         }
+        // Rubriques de « Ventes et dons » : uniquement les œuvres sorties du
+        // fonds, en mode Inventaire comme en mode Ventes.
+        base = base.filter(estVenduOuDonne)
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
@@ -75,7 +78,9 @@ struct VueOeuvresStructuree: View {
 
     /// Œuvres données (masquées en mode « filtre modeVente »).
     private var dons: [Oeuvre] {
-        trier(toutes.filter { $0.feuille == .oeuvresDonnees })
+        let base = toutes.filter { $0.feuille == .oeuvresDonnees }
+            .filter(estVenduOuDonne)
+        return trier(base)
     }
 
     /// Applique le tri choisi (prix décroissant, ou acheteur alphabétique).

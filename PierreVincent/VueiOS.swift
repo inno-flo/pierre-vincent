@@ -50,6 +50,9 @@ struct VueiOS: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
+        // Rubriques de « Ventes et dons » : uniquement les œuvres sorties du
+        // fonds (voir `estVenduOuDonne`).
+        base = base.filter(estVenduOuDonne)
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
             base = base.filter { $0.vendeur == vendeurFiltre }
         }
@@ -72,6 +75,9 @@ struct VueiOS: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
+        // Rubriques de « Ventes et dons » : uniquement les œuvres sorties du
+        // fonds (voir `estVenduOuDonne`).
+        base = base.filter(estVenduOuDonne)
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
             base = base.filter { $0.vendeur == vendeurFiltre }
         }

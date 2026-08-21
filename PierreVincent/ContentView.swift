@@ -391,19 +391,22 @@ struct ContentView: View {
 
     /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de pastille).
     private func compteurPourCategorie(_ cat: Categorie) -> Int? {
+        // Même filtre que les vues, sinon les pastilles annonceraient des
+        // nombres que l'utilisateur ne retrouverait pas à l'écran.
+        let recensees = toutes.filter(estVenduOuDonne)
         switch cat {
         case .oeuvres:
-            return toutes.count
+            return recensees.count
         case .tableauxVendus:
-            return toutes.filter { $0.feuille == .tableauxVendus }.count
+            return recensees.filter { $0.feuille == .tableauxVendus }.count
         case .dessinsVendus:
-            return toutes.filter { $0.feuille == .dessinsVendus }.count
+            return recensees.filter { $0.feuille == .dessinsVendus }.count
         case .tapisVendus:
-            return toutes.filter { $0.feuille == .tapisVendus }.count
+            return recensees.filter { $0.feuille == .tapisVendus }.count
         case .oeuvresDonnees:
-            return toutes.filter { $0.feuille == .oeuvresDonnees }.count
+            return recensees.filter { $0.feuille == .oeuvresDonnees }.count
         case .ventesRealisees:
-            return toutes.filter {
+            return recensees.filter {
                 Categorie.ventesRealisees.modesVente.contains($0.modeVente)
             }.count
         default:

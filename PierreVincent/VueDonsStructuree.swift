@@ -30,7 +30,9 @@ struct VueDonsStructuree: View {
 
     /// Tous les dons.
     private var dons: [Oeuvre] {
-        toutes.filter { $0.feuille == .oeuvresDonnees }
+        // Ne recense que les œuvres sorties du fonds (voir `estVenduOuDonne`) :
+        // celles encore disponibles relèvent de la section « Réserve ».
+        toutes.filter { $0.feuille == .oeuvresDonnees }.filter(estVenduOuDonne)
     }
 
     /// Tableaux donnés (type contenant « tableau »).

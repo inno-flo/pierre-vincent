@@ -87,6 +87,9 @@ struct VueFeuille: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
+        // Toutes les rubriques de « Ventes et dons » ne recensent que les
+        // œuvres sorties du fonds (voir `estVenduOuDonne`).
+        base = base.filter(estVenduOuDonne)
         return base.sorted(using: tri)
     }
 
@@ -110,6 +113,9 @@ struct VueFeuille: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
+        // Toutes les rubriques de « Ventes et dons » ne recensent que les
+        // œuvres sorties du fonds (voir `estVenduOuDonne`).
+        base = base.filter(estVenduOuDonne)
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.
         var critere = triGalerie
@@ -424,6 +430,7 @@ struct VueFeuille: View {
     private func executerActionFichier(_ action: String) {
         switch action {
         case "importer":     importerDonnees()
+        case "importerPhotos": importerPhotos()
         case "csv":          exporterCSV()
         case "xls":          exporterXLS()
         case "dossier":      exporterDossier()
@@ -974,6 +981,33 @@ struct VueFeuille: View {
 
     /// Importe soit un fichier CSV seul (sans images), soit un dossier de
     /// migration (import.csv + sous-dossier Photos, avec les images).
+    /// Import d'œuvres depuis des fichiers image (mots-clés IPTC + photo
+    /// compressée). Sélection multiple : une œuvre créée par photo.
+    private func importerPhotos() {
+        let p = NSOpenPanel()
+        p.canChooseFiles = true
+        p.canChooseDirectories = false
+        p.allowsMultipleSelection = true
+        p.allowedContentTypes = PhotoStore.typesAcceptes
+        p.prompt = "Importer"
+        p.message = "Choisissez une ou plusieurs photos. "
+            + "Leurs mots-clés serviront à remplir les champs de chaque œuvre."
+        guard p.runModal() == .OK, !p.urls.isEmpty else { return }
+
+        // Les vues agrégées (Inventaire, Ventes) n'ont pas de feuille propre :
+        // on retombe sur « Tableaux vendus », comme l'import CSV.
+        let cible = feuille ?? .tableauxVendus
+        let r = ImportPhotos.importer(fichiers: p.urls, feuilleCible: cible, context: context)
+
+        if let err = r.erreur {
+            messageImport = "Échec : \(err)"
+        } else if r.ignorees > 0 {
+            messageImport = "\(r.importees) photo(s) importée(s), \(r.ignorees) ignorée(s) (illisibles)."
+        } else {
+            messageImport = "\(r.importees) photo(s) importée(s)."
+        }
+    }
+
     private func importerDonnees() {
         let p = NSOpenPanel()
         p.canChooseFiles = true

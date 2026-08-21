@@ -67,7 +67,12 @@ struct PierreVincentApp: App {
 
             // Import / export dans le menu système « Fichier ».
             CommandGroup(replacing: .importExport) {
-                Button("Importer…") { declencherFichier("importer") }
+                // Deux moteurs distincts : les photos passent par un import
+                // fondé sur les métadonnées IPTC, le dossier par le moteur CSV.
+                Menu("Importer") {
+                    Button("Photos…") { declencherFichier("importerPhotos") }
+                    Button("Dossier CSV et photos…") { declencherFichier("importer") }
+                }
                 Divider()
                 // Tous les exports regroupés dans un sous-menu « Exporter ».
                 Menu("Exporter") {

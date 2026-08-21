@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
@@ -128,6 +129,87 @@ enum PhotoStore {
 
     /// Types de fichiers acceptés au glisser-déposer.
     static let typesAcceptes: [UTType] = [.jpeg, .png, .heic]
+
+    // MARK: Compression
+
+    /// Poids maximal d'une photo importée, en octets.
+    static let poidsMaxImport = 450 * 1024
+
+    /// Côté long maximal après réduction. 2000 px reste confortable pour un
+    /// affichage plein écran sur Mac comme sur iPhone, tout en divisant par
+    /// quatre le nombre de pixels d'une photo d'iPhone (4032 px).
+    static let coteMaxImport = 2000
+
+    /// Importe une image en la RÉDUISANT et la COMPRESSANT sous `poidsMaxImport`.
+    /// Renvoie le nom du fichier créé, ou nil en cas d'échec.
+    ///
+    /// Deux leviers, dans cet ordre : on réduit d'abord la définition, puis on
+    /// baisse la qualité par paliers jusqu'à passer sous le seuil. Compresser
+    /// sans réduire donnerait une image molle — à 450 Ko, 12 Mpx font environ
+    /// 0,03 bit par pixel.
+    ///
+    /// Sortie en HEIC : à définition égale il permet une qualité nettement plus
+    /// élevée que le JPEG pour le même poids, et l'app est 100 % Apple.
+    static func importerImageCompressee(depuis url: URL) -> String? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+
+        // Réduction : `CGImageSourceCreateThumbnailAtIndex` décode directement
+        // à la taille voulue, sans jamais charger l'image entière en mémoire.
+        let optionsReduction: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,   // respecte l'orientation EXIF
+            kCGImageSourceThumbnailMaxPixelSize: coteMaxImport
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(
+                source, 0, optionsReduction as CFDictionary) else { return nil }
+
+        // Qualité dégressive : on s'arrête dès qu'on passe sous le seuil, pour
+        // ne pas dégrader inutilement une photo qui y tient facilement.
+        for pas in stride(from: 90, through: 20, by: -5) {
+            let qualite = CGFloat(pas) / 100
+            guard let donnees = encoder(image, qualite: qualite) else { continue }
+            if donnees.count <= poidsMaxImport {
+                return enregistrerDonnees(donnees, extension: "heic")
+            }
+        }
+        // Dernier recours : on garde la qualité minimale même si le seuil est
+        // dépassé, plutôt que de perdre la photo.
+        if let donnees = encoder(image, qualite: 0.20) {
+            return enregistrerDonnees(donnees, extension: "heic")
+        }
+        return nil
+    }
+
+    /// Encode une image en HEIC à la qualité demandée.
+    private static func encoder(_ image: CGImage, qualite: CGFloat) -> Data? {
+        let donnees = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(
+                donnees, UTType.heic.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(
+            dest, image,
+            [kCGImageDestinationLossyCompressionQuality: qualite] as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return donnees as Data
+    }
+
+    /// Mots-clés IPTC d'un fichier image (vide si absents).
+    /// C'est là que Photos range les étiquettes saisies par l'utilisateur.
+    static func motsCles(de url: URL) -> [String] {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let iptc = props[kCGImagePropertyIPTCDictionary] as? [CFString: Any],
+              let mots = iptc[kCGImagePropertyIPTCKeywords] as? [String] else { return [] }
+        return mots
+    }
+
+    /// Légende IPTC d'un fichier image (vide si absente).
+    static func legende(de url: URL) -> String {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let iptc = props[kCGImagePropertyIPTCDictionary] as? [CFString: Any],
+              let texte = iptc[kCGImagePropertyIPTCCaptionAbstract] as? String else { return "" }
+        return texte
+    }
 
     /// Supprime du dossier Photos tous les fichiers qui ne sont plus référencés
     /// par une entrée. À appeler AU DÉMARRAGE de l'app : à ce moment l'historique

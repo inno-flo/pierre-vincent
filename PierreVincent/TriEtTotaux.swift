@@ -9,6 +9,19 @@ func afficher(_ valeur: String) -> String {
     valeur.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? valeurInconnue : valeur
 }
 
+/// Statuts recensés par la section « Ventes et dons ».
+///
+/// TOUTES les rubriques de cette section — Inventaire, Tableaux, Dessins,
+/// Tapis, Dons, Ventes — ne montrent que les œuvres SORTIES du fonds :
+/// vendues ou données. Les œuvres encore disponibles, notamment celles
+/// importées depuis des photos, relèvent de la section « Réserve ».
+let statutsVentesEtDons: Set<String> = ["Vendu", "Donné"]
+
+/// Vrai si l'œuvre relève de la section « Ventes et dons ».
+func estVenduOuDonne(_ o: Oeuvre) -> Bool {
+    statutsVentesEtDons.contains(o.statut)
+}
+
 /// Sens du tri d'une colonne.
 enum SensTri {
     case ascendant

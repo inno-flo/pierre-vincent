@@ -68,10 +68,17 @@ struct VueSynthese: View {
 
     // MARK: Sous-ensembles par feuille
 
-    private var tableauxVendus: [Oeuvre] { toutes.filter { $0.feuille == .tableauxVendus } }
-    private var dessinsVendus:  [Oeuvre] { toutes.filter { $0.feuille == .dessinsVendus } }
-    private var tapisVendus:    [Oeuvre] { toutes.filter { $0.feuille == .tapisVendus } }
-    private var oeuvresDonnees: [Oeuvre] { toutes.filter { $0.feuille == .oeuvresDonnees } }
+    /// Œuvres recensées par la Synthèse : mêmes règles que la section
+    /// « Ventes et dons » — uniquement celles sorties du fonds. Les œuvres
+    /// encore disponibles (section « Réserve ») ne doivent pas peser dans les
+    /// totaux, sans quoi la Synthèse compterait des ventes qui n'ont pas eu lieu.
+    /// Tous les sous-ensembles ci-dessous en dérivent.
+    private var recensees: [Oeuvre] { toutes.filter(estVenduOuDonne) }
+
+    private var tableauxVendus: [Oeuvre] { recensees.filter { $0.feuille == .tableauxVendus } }
+    private var dessinsVendus:  [Oeuvre] { recensees.filter { $0.feuille == .dessinsVendus } }
+    private var tapisVendus:    [Oeuvre] { recensees.filter { $0.feuille == .tapisVendus } }
+    private var oeuvresDonnees: [Oeuvre] { recensees.filter { $0.feuille == .oeuvresDonnees } }
 
     private var tableauxDonnes: [Oeuvre] {
         oeuvresDonnees.filter { $0.type.localizedCaseInsensitiveContains("tableau") }
