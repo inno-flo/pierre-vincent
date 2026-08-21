@@ -100,10 +100,9 @@ struct EditeurEntree: View {
                             // Cellule Date.
                             celluleEditeur { champTexte("Date", $date, champ: .date) }
                         } else {
-                            // Cellule Destinataire.
-                            celluleEditeur {
-                                champTexte("Destinataire", $destinataire, champ: .destinataire)
-                            }
+                            // Ordre calqué sur celui de l'inspecteur en
+                            // colonne : Type, Dimensions/Format, Suivi, puis
+                            // Destinataire — mêmes champs, même enchaînement.
                             // Cellule Type.
                             celluleEditeur { champTexte("Type", $type, champ: .type) }
                             // Cellule Dimensions + Format.
@@ -113,6 +112,11 @@ struct EditeurEntree: View {
                             }
                             // Cellule Statut + Thème + Emplacement.
                             celluleEditeur { blocSuivi }
+                            // Cellule Destinataire + Mode de vente.
+                            celluleEditeur {
+                                champTexte("Destinataire", $destinataire, champ: .destinataire)
+                                champTexte("Mode de vente", $modeVente, champ: .modeVente)
+                            }
                         }
                         // Cellule Remarques.
                         celluleEditeur { champRemarques() }

@@ -62,3 +62,45 @@ final class Oeuvre {
         set { feuilleBrute = newValue.rawValue }
     }
 }
+
+// MARK: Reprise de données
+
+/// Opérations ponctuelles sur la base existante, exécutées une seule fois.
+enum RepriseDonnees {
+
+    /// Renseigne le Statut par défaut des œuvres dont il est encore vide :
+    /// « Donné » pour les dons, « Vendu » pour toutes les autres.
+    ///
+    /// Ne touche jamais un statut déjà renseigné : l'opération est donc sans
+    /// risque si elle venait à être relancée, et elle n'écrase pas une saisie
+    /// manuelle. Renvoie le nombre d'œuvres modifiées.
+    @discardableResult
+    @MainActor
+    static func remplirStatutParDefaut(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes where o.statut.isEmpty {
+            o.statut = (o.feuille == .oeuvresDonnees) ? "Donné" : "Vendu"
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
+    /// Renseigne le Mode de vente « Don » sur les œuvres de la feuille
+    /// « Œuvres données » dont ce champ est encore vide.
+    ///
+    /// Même précaution que ci-dessus : aucune valeur existante n'est écrasée.
+    @discardableResult
+    @MainActor
+    static func remplirModeVenteDon(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes where o.feuille == .oeuvresDonnees && o.modeVente.isEmpty {
+            o.modeVente = "Don"
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+}

@@ -105,6 +105,13 @@ struct ContentView: View {
     @State private var nbSelection: Int = 0
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    // Repères des reprises de données ponctuelles sur le champ Statut.
+    // `statutVenduRempli` : première passe, ventes uniquement (déjà exécutée).
+    // `statutParDefautRempli` : seconde passe, qui ajoute « Donné » aux dons.
+    @AppStorage("statutVenduRempli") private var statutVenduRempli = false
+    @AppStorage("statutParDefautRempli") private var statutParDefautRempli = false
+    // `modeVenteDonRempli` : troisième passe, Mode de vente « Don » sur les dons.
+    @AppStorage("modeVenteDonRempli") private var modeVenteDonRempli = false
     // TEMPORAIRE — nuance du fond de sélection de la sidebar : marron clair
     // (par défaut) ou 50 % plus foncé. Piloté par le bouton en pied de sidebar.
     @AppStorage("selectionFoncee") private var selectionFoncee = false
@@ -320,6 +327,24 @@ struct ContentView: View {
             // vide, pour visualiser l'interface. Ne s'active jamais si des
             // données existent déjà, donc sans risque pour de vraies données.
             DonneesTest.genererSiVide(context: context)
+
+            // Reprise ponctuelle : renseigne le Statut par défaut — « Donné »
+            // pour les dons, « Vendu » pour les autres — sur les œuvres dont il
+            // est encore vide. Ne s'exécute qu'une fois et n'écrase aucune
+            // saisie. Repère distinct de `statutVenduRempli` : cette première
+            // reprise a déjà tourné, il faut donc un nouveau déclencheur pour
+            // rattraper les dons.
+            if !statutParDefautRempli {
+                RepriseDonnees.remplirStatutParDefaut(context: context)
+                statutParDefautRempli = true
+            }
+
+            // Reprise ponctuelle : Mode de vente « Don » sur les dons dont ce
+            // champ est vide. Repère distinct, les précédents ayant déjà tourné.
+            if !modeVenteDonRempli {
+                RepriseDonnees.remplirModeVenteDon(context: context)
+                modeVenteDonRempli = true
+            }
         }
         #if os(iOS)
         .detecteSecoussePourPrix()

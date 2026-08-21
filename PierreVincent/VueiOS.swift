@@ -141,7 +141,6 @@ struct VueiOS: View {
             if modeAffichage == "icone" {
                 VueGalerie(
                     oeuvres: oeuvresGalerie,
-                    estFeuilleDon: estFeuilleDon,
                     selection: $selection,
                     onOuvrir: { o in selection = [o.id]; detail = o }
                 )
@@ -498,18 +497,17 @@ struct DetailiOS: View {
             }
 
             // Cellule 4 : Statut, Thème, Emplacement.
-            // Bloc TOUJOURS complet : `afficher` substitue « Inconnu » aux
-            // valeurs vides, qui seraient sinon masquées par `ligne`.
             cellule {
-                ligne("Statut", afficher(oeuvre.statut))
-                ligne("Thème", afficher(oeuvre.theme))
-                ligne("Emplacement", afficher(oeuvre.emplacement))
+                ligne("Statut", oeuvre.statut)
+                ligne("Thème", oeuvre.theme)
+                ligne("Emplacement", oeuvre.emplacement)
             }
 
             // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
             cellule {
                 if estFeuilleDon {
                     ligne("Destinataire", oeuvre.destinataire)
+                    ligne("Mode de vente", oeuvre.modeVente)
                 } else {
                     ligne("Vendeur", oeuvre.vendeur)
                     ligne("Acheteur", oeuvre.acheteur)
@@ -524,11 +522,9 @@ struct DetailiOS: View {
                 }
             }
 
-            // Cellule 7 : Remarques, seulement si renseignées.
-            if !oeuvre.remarques.isEmpty {
-                cellule {
-                    ligne("Remarques", oeuvre.remarques)
-                }
+            // Cellule 7 : Remarques.
+            cellule {
+                ligne("Remarques", oeuvre.remarques)
             }
         }
         .padding()
@@ -591,18 +587,18 @@ struct DetailiOS: View {
     private func ligne(_ titre: String, _ valeur: String,
                        couleur: Color = .primary,
                        estPrix: Bool = false) -> some View {
-        if !valeur.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(titre).font(.body).fontWeight(.bold).foregroundStyle(.secondary)
-                if estPrix {
-                    Text(valeur).font(.body).foregroundStyle(couleur)
-                        .flouteSiPrixMasques()
-                } else {
-                    Text(valeur).font(.body).foregroundStyle(couleur)
-                }
+        // Règle générale de l'app : un champ vide s'affiche TOUJOURS, avec
+        // « Inconnu » à la place de la valeur (voir `afficher`).
+        VStack(alignment: .leading, spacing: 2) {
+            Text(titre).font(.body).fontWeight(.bold).foregroundStyle(.secondary)
+            if estPrix {
+                Text(afficher(valeur)).font(.body).foregroundStyle(couleur)
+                    .flouteSiPrixMasques()
+            } else {
+                Text(afficher(valeur)).font(.body).foregroundStyle(couleur)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 #endif

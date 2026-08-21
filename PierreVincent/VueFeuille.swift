@@ -154,6 +154,12 @@ struct VueFeuille: View {
     @ViewBuilder
     private var inspecteurContenu: some View {
         if let o = oeuvreInspectee {
+            // Le caractère « don » se lit sur l'ŒUVRE, pas sur la rubrique :
+            // dans les vues agrégées (Inventaire, Ventes), `feuille` vaut nil,
+            // et l'inspecteur affichait donc Prix/Vendeur/Acheteur/Date même
+            // pour une œuvre donnée — alors que l'éditeur, lui, se fonde déjà
+            // sur o.feuille. Les deux vues divergeaient sur les mêmes données.
+            let estDon = o.feuille == .oeuvresDonnees
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     // Grande image en tête.
@@ -164,7 +170,7 @@ struct VueFeuille: View {
                     }
 
                     // Cellule 1 : Prix (sauf dons).
-                    if !estFeuilleDon {
+                    if !estDon {
                         celluleInspecteur {
                             ligneInspecteur("Prix", formaterEuros(o.prix),
                                             couleur: Color.orangeInternational, estPrix: true)
@@ -183,18 +189,17 @@ struct VueFeuille: View {
                     }
 
                     // Cellule 4 : Statut, Thème, Emplacement.
-                    // Bloc TOUJOURS complet : `afficher` substitue « Inconnu »
-                    // aux valeurs vides, qui seraient sinon masquées.
                     celluleInspecteur {
-                        ligneInspecteur("Statut", afficher(o.statut))
-                        ligneInspecteur("Thème", afficher(o.theme))
-                        ligneInspecteur("Emplacement", afficher(o.emplacement))
+                        ligneInspecteur("Statut", o.statut)
+                        ligneInspecteur("Thème", o.theme)
+                        ligneInspecteur("Emplacement", o.emplacement)
                     }
 
                     // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
                     celluleInspecteur {
-                        if estFeuilleDon {
+                        if estDon {
                             ligneInspecteur("Destinataire", o.destinataire)
+                            ligneInspecteur("Mode de vente", o.modeVente)
                         } else {
                             ligneInspecteur("Vendeur", o.vendeur)
                             ligneInspecteur("Acheteur", o.acheteur)
@@ -203,17 +208,15 @@ struct VueFeuille: View {
                     }
 
                     // Cellule 6 : Date (sauf dons, qui n'en ont pas).
-                    if !estFeuilleDon {
+                    if !estDon {
                         celluleInspecteur {
                             ligneInspecteur("Date", o.date)
                         }
                     }
 
-                    // Cellule 7 : Remarques, seulement si renseignées.
-                    if !o.remarques.isEmpty {
-                        celluleInspecteur {
-                            ligneInspecteur("Remarques", o.remarques)
-                        }
+                    // Cellule 7 : Remarques.
+                    celluleInspecteur {
+                        ligneInspecteur("Remarques", o.remarques)
                     }
                 }
                 .padding()
@@ -273,17 +276,18 @@ struct VueFeuille: View {
     private func ligneInspecteur(_ titre: String, _ valeur: String,
                                  couleur: Color = .primary,
                                  estPrix: Bool = false) -> some View {
-        if !valeur.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(titre).font(.body).fontWeight(.bold).foregroundStyle(.secondary)
-                Text(valeur).font(.body).foregroundStyle(couleur)
-                    // Floutage piloté directement par l'état de la vue (fiable
-                    // dans l'inspecteur, contrairement au modificateur AppStorage).
-                    .blur(radius: (estPrix && prixMasques) ? 6 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: prixMasques)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        // Règle générale de l'app : un champ vide s'affiche TOUJOURS, avec
+        // « Inconnu » à la place de la valeur (voir `afficher`). L'utilisateur
+        // voit ainsi la fiche complète et repère ce qui reste à renseigner.
+        VStack(alignment: .leading, spacing: 2) {
+            Text(titre).font(.body).fontWeight(.bold).foregroundStyle(.secondary)
+            Text(afficher(valeur)).font(.body).foregroundStyle(couleur)
+                // Floutage piloté directement par l'état de la vue (fiable
+                // dans l'inspecteur, contrairement au modificateur AppStorage).
+                .blur(radius: (estPrix && prixMasques) ? 6 : 0)
+                .animation(.easeInOut(duration: 0.2), value: prixMasques)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Alignement du contenu des cellules « vente » : centré (toutes les
@@ -514,7 +518,7 @@ struct VueFeuille: View {
                 Button {
                     inspecteurVisible.toggle()
                 } label: {
-                    Label("Inspecteur", systemImage: "sidebar.right")
+                    Label("Inspecteur", systemImage: "info.circle")
                 }
                 .help(inspecteurVisible ? "Masquer l'inspecteur" : "Afficher l'inspecteur")
             }
@@ -660,7 +664,6 @@ struct VueFeuille: View {
         if modeAffichage == "icone" {
             VueGalerie(
                 oeuvres: oeuvresGalerie,
-                estFeuilleDon: estFeuilleDon,
                 selection: $selection,
                 onOuvrir: { o in
                     if !lectureSeule { editionNouvelle = false; editionEntree = o }

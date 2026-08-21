@@ -8,7 +8,6 @@ import AppKit
 /// (200×200 max), avec en dessous le prix et les dimensions.
 struct VueGalerie: View {
     let oeuvres: [Oeuvre]
-    let estFeuilleDon: Bool
     @Binding var selection: Set<UUID>
     /// Double-clic sur une carte : ouvre la fiche d'édition.
     var onOuvrir: (Oeuvre) -> Void
@@ -151,8 +150,13 @@ struct VueGalerie: View {
                     .lineLimit(1)
 
                 // En dessous : prix à gauche, dimensions à droite.
+                // Le test porte sur l'ŒUVRE et non sur la rubrique affichée :
+                // dans les vues agrégées (Inventaire, Ventes), une œuvre donnée
+                // affichait « 0 € » sous sa vignette. Même correctif que dans
+                // l'inspecteur. La vue n'a donc plus besoin qu'on lui passe le
+                // caractère « don » de la rubrique.
                 HStack {
-                    if !estFeuilleDon {
+                    if o.feuille != .oeuvresDonnees {
                         PrixText(o.prix)
                             .foregroundStyle(Color.orangeInternational)
                     }
