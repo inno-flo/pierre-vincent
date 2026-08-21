@@ -14,6 +14,8 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
     case tapisVendus
     case oeuvresDonnees
     case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
+    case reserveInventaire // Réserve : toutes les œuvres encore détenues
+    case reserveDessins   // Réserve : dessins encore disponibles
     case synthese         // tableau de bord, en dernier
 
     var id: Self { self }
@@ -26,6 +28,8 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         case .tapisVendus:      return "Tapis"
         case .oeuvresDonnees:   return "Dons"
         case .ventesRealisees:  return "Ventes"
+        case .reserveInventaire: return "Inventaire"
+        case .reserveDessins:   return "Dessins"
         case .synthese:         return "Synthèse"
         }
     }
@@ -38,6 +42,8 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         case .tapisVendus:      return "square.grid.3x3.square"
         case .oeuvresDonnees:   return "gift"
         case .ventesRealisees:  return "person.crop.circle.fill"
+        case .reserveInventaire: return "square.grid.2x2"
+        case .reserveDessins:   return "pencil.and.outline"
         case .synthese:         return "chart.bar.doc.horizontal"
         }
     }
@@ -51,6 +57,11 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         case .tapisVendus:      return .tapisVendus
         case .oeuvresDonnees:   return .oeuvresDonnees
         case .ventesRealisees:  return nil
+        // Vue agrégée, comme l'Inventaire de Ventes et dons : toutes feuilles.
+        case .reserveInventaire: return nil
+        // Même feuille que « Dessins » de Ventes et dons : les deux rubriques
+        // parlent des mêmes œuvres, seul le statut les sépare.
+        case .reserveDessins:   return .dessinsVendus
         case .synthese:         return nil
         }
     }
@@ -68,6 +79,29 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         switch self {
         case .ventesRealisees: return ["Artenchères", "Drôme Enchères", "RempART"]
         default:               return []
+        }
+    }
+
+    /// Statuts recensés par la rubrique.
+    ///
+    /// Par défaut, ceux de « Ventes et dons » — les œuvres sorties du fonds.
+    /// Les rubriques de la **Réserve** recensent au contraire les œuvres
+    /// encore détenues.
+    var statuts: [String] {
+        switch self {
+        case .reserveInventaire, .reserveDessins:
+            return ["Disponible", "À garder"]
+        default:
+            return Array(statutsVentesEtDons)
+        }
+    }
+
+    /// Filtre sur le champ Type (vide = aucun filtre).
+    /// Comparaison insensible à la casse et aux espaces de bord.
+    var types: [String] {
+        switch self {
+        case .reserveDessins: return ["Dessin"]
+        default:              return []
         }
     }
 
@@ -121,6 +155,7 @@ struct ContentView: View {
     @AppStorage("blocStockOuvert") private var blocStockOuvert = true
     @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
     @AppStorage("sousBlocExpositionsOuvert") private var sousBlocExpositionsOuvert = true
+    @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = true
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -286,6 +321,8 @@ struct ContentView: View {
                                lectureSeule: cat.lectureSeule,
                                titre: cat.titre,
                                modesVente: cat.modesVente,
+                               statuts: cat.statuts,
+                               types: cat.types,
                                nbSelection: $nbSelection)
                     .id(cat)
                     #else
@@ -305,7 +342,9 @@ struct ContentView: View {
                     } else {
                         VueiOS(feuille: cat.feuille, titre: cat.titre,
                                modesVente: cat.modesVente,
-                               filtresVendeur: cat.filtresVendeur)
+                               filtresVendeur: cat.filtresVendeur,
+                               statuts: cat.statuts,
+                               types: cat.types)
                             .id(cat)
                     }
                     #endif
@@ -387,6 +426,11 @@ struct ContentView: View {
     }
     #endif
 
+    /// Raccourci : l'œuvre relève-t-elle de cette rubrique (statut + type) ?
+    private func correspond(_ o: Oeuvre, a cat: Categorie) -> Bool {
+        PierreVincent.correspond(o, statuts: cat.statuts, types: cat.types)
+    }
+
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
 
     /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de pastille).
@@ -409,6 +453,9 @@ struct ContentView: View {
             return recensees.filter {
                 Categorie.ventesRealisees.modesVente.contains($0.modeVente)
             }.count
+        case .reserveInventaire, .reserveDessins:
+            // Rubriques de la Réserve : leurs propres statuts, pas `recensees`.
+            return toutes.filter { correspond($0, a: cat) }.count
         default:
             return nil
         }
@@ -509,11 +556,17 @@ struct ContentView: View {
         }
     }
 
-    /// Contenu du bloc « Réserve ». Ses sous-rubriques restent à créer.
+    /// Contenu du bloc « Réserve » : les œuvres encore détenues.
     @ViewBuilder
     private var contenuStock: some View {
-        Text("À définir")
-            .foregroundStyle(.secondary)
+        lien(.reserveInventaire)
+        // Même structure que « Ventes et dons » : un sous-groupe repliable
+        // pour les catégories d'œuvres.
+        DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
+            lien(.reserveDessins)
+        } label: {
+            Text("Catégories").fontWeight(.semibold)
+        }
     }
 
     /// Un lien de navigation vers une catégorie, avec son icône.

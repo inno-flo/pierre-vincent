@@ -11,12 +11,19 @@ struct VueiOS: View {
     let titre: String
     let modesVente: [String]
     let filtresVendeur: [String]   // liste de vendeurs pour le filtre rapide (vide = menu de tri standard)
+    let statuts: [String]          // statuts recensés par la rubrique
+    let types: [String]            // filtre sur le champ Type (vide = aucun)
 
-    init(feuille: Feuille?, titre: String, modesVente: [String] = [], filtresVendeur: [String] = []) {
+    init(feuille: Feuille?, titre: String, modesVente: [String] = [],
+         filtresVendeur: [String] = [],
+         statuts: [String] = Array(statutsVentesEtDons),
+         types: [String] = []) {
         self.feuille = feuille
         self.titre = titre
         self.modesVente = modesVente
         self.filtresVendeur = filtresVendeur
+        self.statuts = statuts
+        self.types = types
     }
 
     @Query private var toutes: [Oeuvre]
@@ -50,9 +57,8 @@ struct VueiOS: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
-        // Rubriques de « Ventes et dons » : uniquement les œuvres sorties du
-        // fonds (voir `estVenduOuDonne`).
-        base = base.filter(estVenduOuDonne)
+        // Filtres propres à la rubrique : statut, et éventuellement type.
+        base = base.filter { correspond($0, statuts: statuts, types: types) }
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
             base = base.filter { $0.vendeur == vendeurFiltre }
         }
@@ -75,9 +81,8 @@ struct VueiOS: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
-        // Rubriques de « Ventes et dons » : uniquement les œuvres sorties du
-        // fonds (voir `estVenduOuDonne`).
-        base = base.filter(estVenduOuDonne)
+        // Filtres propres à la rubrique : statut, et éventuellement type.
+        base = base.filter { correspond($0, statuts: statuts, types: types) }
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
             base = base.filter { $0.vendeur == vendeurFiltre }
         }

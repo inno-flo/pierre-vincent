@@ -13,15 +13,22 @@ struct VueFeuille: View {
     let lectureSeule: Bool
     let titre: String
     let modesVente: [String]       // filtre supplémentaire sur modeVente (vide = aucun)
+    let statuts: [String]          // statuts recensés par la rubrique
+    let types: [String]            // filtre sur le champ Type (vide = aucun)
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
     init(feuille: Feuille?, lectureSeule: Bool, titre: String,
-         modesVente: [String] = [], nbSelection: Binding<Int>) {
+         modesVente: [String] = [],
+         statuts: [String] = Array(statutsVentesEtDons),
+         types: [String] = [],
+         nbSelection: Binding<Int>) {
         self.feuille = feuille
         self.lectureSeule = lectureSeule
         self.titre = titre
         self.modesVente = modesVente
+        self.statuts = statuts
+        self.types = types
         self._nbSelection = nbSelection
     }
 
@@ -87,9 +94,10 @@ struct VueFeuille: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
-        // Toutes les rubriques de « Ventes et dons » ne recensent que les
-        // œuvres sorties du fonds (voir `estVenduOuDonne`).
-        base = base.filter(estVenduOuDonne)
+        // Filtres propres à la rubrique : statut, et éventuellement type.
+        // « Ventes et dons » recense les œuvres sorties du fonds ; la Réserve
+        // celles encore détenues (voir `Categorie.statuts`).
+        base = base.filter { correspond($0, statuts: statuts, types: types) }
         return base.sorted(using: tri)
     }
 
@@ -113,9 +121,10 @@ struct VueFeuille: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
-        // Toutes les rubriques de « Ventes et dons » ne recensent que les
-        // œuvres sorties du fonds (voir `estVenduOuDonne`).
-        base = base.filter(estVenduOuDonne)
+        // Filtres propres à la rubrique : statut, et éventuellement type.
+        // « Ventes et dons » recense les œuvres sorties du fonds ; la Réserve
+        // celles encore détenues (voir `Categorie.statuts`).
+        base = base.filter { correspond($0, statuts: statuts, types: types) }
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.
         var critere = triGalerie
