@@ -1,5 +1,14 @@
 import Foundation
 
+/// Valeur affichable d'un champ de suivi (statut, thème, emplacement).
+/// Ces trois champs s'affichent TOUJOURS, même vides : le bloc doit rester
+/// complet et lisible, avec « Inconnu » à la place d'une ligne manquante.
+let valeurInconnue = "Inconnu"
+
+func afficher(_ valeur: String) -> String {
+    valeur.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? valeurInconnue : valeur
+}
+
 /// Sens du tri d'une colonne.
 enum SensTri {
     case ascendant

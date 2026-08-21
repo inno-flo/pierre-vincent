@@ -21,6 +21,9 @@ enum CleColonne {
     case acheteur
     case date
     case destinataire
+    case statut
+    case theme
+    case emplacement
     case remarques
 
     /// Le texte affiché pour cette colonne d'une entrée donnée
@@ -37,6 +40,9 @@ enum CleColonne {
         case .acheteur:     return o.acheteur
         case .date:         return o.date
         case .destinataire: return o.destinataire
+        case .statut:       return o.statut
+        case .theme:        return o.theme
+        case .emplacement:  return o.emplacement
         case .remarques:    return o.remarques
         }
     }
@@ -60,6 +66,9 @@ enum CleColonne {
         case .acheteur:     o.acheteur = valeur
         case .date:         o.date = valeur
         case .destinataire: o.destinataire = valeur
+        case .statut:       o.statut = valeur
+        case .theme:        o.theme = valeur
+        case .emplacement:  o.emplacement = valeur
         case .remarques:    o.remarques = valeur
         }
     }
@@ -103,6 +112,9 @@ enum SchemaFeuille {
         Colonne(titre: "Acheteur",   cle: .acheteur),
         Colonne(titre: "Mode de vente", cle: .modeVente),
         Colonne(titre: "Date",       cle: .date),
+        Colonne(titre: "Statut",     cle: .statut),
+        Colonne(titre: "Thème",      cle: .theme),
+        Colonne(titre: "Emplacement", cle: .emplacement),
         Colonne(titre: "Remarques",  cle: .remarques),
     ]
 
@@ -112,6 +124,9 @@ enum SchemaFeuille {
         Colonne(titre: "Type",         cle: .type),
         Colonne(titre: "Dimensions",   cle: .dimensions),
         Colonne(titre: "Format",       cle: .format),
+        Colonne(titre: "Statut",       cle: .statut),
+        Colonne(titre: "Thème",        cle: .theme),
+        Colonne(titre: "Emplacement",  cle: .emplacement),
         Colonne(titre: "Remarques",    cle: .remarques),
     ]
 

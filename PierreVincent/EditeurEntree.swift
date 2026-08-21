@@ -41,6 +41,7 @@ struct EditeurEntree: View {
     // Champs pour la navigation au clavier (Tab).
     private enum Champ: Hashable {
         case type, prix, dimensions, format, vendeur, modeVente, acheteur, date, destinataire, remarques
+        case statut, theme, emplacement
     }
     @FocusState private var focus: Champ?
 
@@ -54,6 +55,9 @@ struct EditeurEntree: View {
     @State private var acheteur = ""
     @State private var date = ""
     @State private var destinataire = ""
+    @State private var statut = ""
+    @State private var theme = ""
+    @State private var emplacement = ""
     @State private var remarques = ""
     @State private var prixTexte = ""
     // Instantané des valeurs au chargement, pour détecter les modifications.
@@ -85,6 +89,8 @@ struct EditeurEntree: View {
                                 champTexte("Dimensions", $dimensions, champ: .dimensions)
                                 champTexte("Format", $format, champ: .format)
                             }
+                            // Cellule Statut + Thème + Emplacement.
+                            celluleEditeur { blocSuivi }
                             // Cellule Vendeur + Acheteur + Mode de vente.
                             celluleEditeur {
                                 champTexte("Vendeur", $vendeur, champ: .vendeur)
@@ -105,6 +111,8 @@ struct EditeurEntree: View {
                                 champTexte("Dimensions", $dimensions, champ: .dimensions)
                                 champTexte("Format", $format, champ: .format)
                             }
+                            // Cellule Statut + Thème + Emplacement.
+                            celluleEditeur { blocSuivi }
                         }
                         // Cellule Remarques.
                         celluleEditeur { champRemarques() }
@@ -230,6 +238,9 @@ struct EditeurEntree: View {
         acheteur     = o.acheteur
         date         = o.date
         destinataire = o.destinataire
+        statut       = o.statut
+        theme        = o.theme
+        emplacement  = o.emplacement
         remarques    = o.remarques
         prixTexte    = o.prix == 0 ? "" : String(Int(o.prix.rounded()))
         // Mémorise l'état initial pour détecter d'éventuelles modifications.
@@ -239,7 +250,8 @@ struct EditeurEntree: View {
     /// Concatène tous les champs : sert à comparer l'état courant à l'initial.
     private var instantaneCourant: String {
         [photoNom, type, dimensions, format, vendeur, modeVente,
-         acheteur, date, destinataire, remarques, prixTexte].joined(separator: "␟")
+         acheteur, date, destinataire, statut, theme, emplacement,
+         remarques, prixTexte].joined(separator: "␟")
     }
 
     /// Vrai si au moins un champ a changé depuis l'ouverture.
@@ -264,6 +276,9 @@ struct EditeurEntree: View {
         o.acheteur     = acheteur
         o.date         = date
         o.destinataire = destinataire
+        o.statut       = statut
+        o.theme        = theme
+        o.emplacement  = emplacement
         o.remarques    = remarques
         let net = prixTexte
             .replacingOccurrences(of: "€", with: "")
@@ -313,6 +328,15 @@ struct EditeurEntree: View {
                         .strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1)
                 )
         )
+    }
+
+    /// Bloc de suivi : statut, thème et emplacement de l'œuvre.
+    /// Commun aux ventes et aux dons, d'où l'extraction.
+    @ViewBuilder
+    private var blocSuivi: some View {
+        champTexte("Statut", $statut, champ: .statut)
+        champTexte("Thème", $theme, champ: .theme)
+        champTexte("Emplacement", $emplacement, champ: .emplacement)
     }
 
     private func champTexte(_ titre: String, _ liaison: Binding<String>, champ: Champ) -> some View {

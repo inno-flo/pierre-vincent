@@ -182,7 +182,16 @@ struct VueFeuille: View {
                         ligneInspecteur("Format", o.format)
                     }
 
-                    // Cellule 4 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
+                    // Cellule 4 : Statut, Thème, Emplacement.
+                    // Bloc TOUJOURS complet : `afficher` substitue « Inconnu »
+                    // aux valeurs vides, qui seraient sinon masquées.
+                    celluleInspecteur {
+                        ligneInspecteur("Statut", afficher(o.statut))
+                        ligneInspecteur("Thème", afficher(o.theme))
+                        ligneInspecteur("Emplacement", afficher(o.emplacement))
+                    }
+
+                    // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
                     celluleInspecteur {
                         if estFeuilleDon {
                             ligneInspecteur("Destinataire", o.destinataire)
@@ -193,14 +202,14 @@ struct VueFeuille: View {
                         }
                     }
 
-                    // Cellule 5 : Date (sauf dons, qui n'en ont pas).
+                    // Cellule 6 : Date (sauf dons, qui n'en ont pas).
                     if !estFeuilleDon {
                         celluleInspecteur {
                             ligneInspecteur("Date", o.date)
                         }
                     }
 
-                    // Cellule 6 : Remarques, seulement si renseignées.
+                    // Cellule 7 : Remarques, seulement si renseignées.
                     if !o.remarques.isEmpty {
                         celluleInspecteur {
                             ligneInspecteur("Remarques", o.remarques)
@@ -757,9 +766,25 @@ struct VueFeuille: View {
                 Text(o.date)
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
-            TableColumn("Remarques", value: \Oeuvre.remarques) { o in
-                Text(o.remarques)
-                    .frame(minHeight: hauteurContenu, alignment: .leading)
+            // Regroupées : le builder de `Table` n'accepte que 10 colonnes
+            // au premier niveau, et ce tableau en compte désormais 13.
+            Group {
+                TableColumn("Statut", value: \Oeuvre.statut) { o in
+                    Text(afficher(o.statut))
+                        .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
+                }
+                TableColumn("Thème", value: \Oeuvre.theme) { o in
+                    Text(afficher(o.theme))
+                        .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
+                }
+                TableColumn("Emplacement", value: \Oeuvre.emplacement) { o in
+                    Text(afficher(o.emplacement))
+                        .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
+                }
+                TableColumn("Remarques", value: \Oeuvre.remarques) { o in
+                    Text(o.remarques)
+                        .frame(minHeight: hauteurContenu, alignment: .leading)
+                }
             }
         }
         .contextMenu(forSelectionType: UUID.self) { _ in
@@ -791,6 +816,18 @@ struct VueFeuille: View {
             }
             TableColumn("Format", value: \Oeuvre.format) { o in
                 Text(o.format)
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Statut", value: \Oeuvre.statut) { o in
+                Text(afficher(o.statut))
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Thème", value: \Oeuvre.theme) { o in
+                Text(afficher(o.theme))
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Emplacement", value: \Oeuvre.emplacement) { o in
+                Text(afficher(o.emplacement))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Remarques", value: \Oeuvre.remarques) { o in

@@ -34,6 +34,13 @@ enum EchangeBase {
         var acheteur: String
         var date: String
         var destinataire: String
+        // Champs ajoutés après la version 1 du format. Optionnels : un Codable
+        // synthétisé n'applique PAS les valeurs par défaut aux clés absentes,
+        // donc un .pvbase exporté avant leur ajout deviendrait illisible s'ils
+        // étaient obligatoires.
+        var statut: String?
+        var theme: String?
+        var emplacement: String?
         // Image encodée en base64 (vide si aucune photo).
         var imageBase64: String
         var imageExtension: String   // "png", "jpeg"… (pour ré-enregistrer)
@@ -73,6 +80,9 @@ enum EchangeBase {
                 acheteur: o.acheteur,
                 date: o.date,
                 destinataire: o.destinataire,
+                statut: o.statut,
+                theme: o.theme,
+                emplacement: o.emplacement,
                 imageBase64: b64,
                 imageExtension: ext))
         }
@@ -123,6 +133,9 @@ enum EchangeBase {
             o.acheteur     = e.acheteur
             o.date         = e.date
             o.destinataire = e.destinataire
+            o.statut       = e.statut ?? ""
+            o.theme        = e.theme ?? ""
+            o.emplacement  = e.emplacement ?? ""
 
             // Image : on écrit DIRECTEMENT les octets décodés du base64, sans
             // les transformer en image en mémoire (bien plus léger et rapide).

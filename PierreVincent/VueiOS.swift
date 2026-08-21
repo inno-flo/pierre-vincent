@@ -497,7 +497,16 @@ struct DetailiOS: View {
                 ligne("Format", oeuvre.format)
             }
 
-            // Cellule 4 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
+            // Cellule 4 : Statut, Thème, Emplacement.
+            // Bloc TOUJOURS complet : `afficher` substitue « Inconnu » aux
+            // valeurs vides, qui seraient sinon masquées par `ligne`.
+            cellule {
+                ligne("Statut", afficher(oeuvre.statut))
+                ligne("Thème", afficher(oeuvre.theme))
+                ligne("Emplacement", afficher(oeuvre.emplacement))
+            }
+
+            // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
             cellule {
                 if estFeuilleDon {
                     ligne("Destinataire", oeuvre.destinataire)
@@ -508,14 +517,14 @@ struct DetailiOS: View {
                 }
             }
 
-            // Cellule 5 : Date (sauf dons).
+            // Cellule 6 : Date (sauf dons).
             if !estFeuilleDon {
                 cellule {
                     ligne("Date", oeuvre.date)
                 }
             }
 
-            // Cellule 6 : Remarques, seulement si renseignées.
+            // Cellule 7 : Remarques, seulement si renseignées.
             if !oeuvre.remarques.isEmpty {
                 cellule {
                     ligne("Remarques", oeuvre.remarques)

@@ -42,6 +42,13 @@ final class Oeuvre {
     // Champ de la feuille « données »
     var destinataire: String = ""
 
+    // Champs communs ajoutés pour le suivi des œuvres.
+    // Valeur par défaut vide : SwiftData migre la base existante tout seul
+    // (migration légère), sans perte de données.
+    var statut: String = ""
+    var theme: String = ""
+    var emplacement: String = ""
+
     // Date technique de création de l'entrée (pour l'ordre par défaut)
     var creeLe: Date = Date()
 
