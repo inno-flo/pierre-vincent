@@ -38,7 +38,9 @@ struct PhotoField: View {
                 }
             }
             .frame(width: 320, height: 400)
-            .onDrop(of: PhotoStore.typesAcceptes, isTargeted: $survol) { fournisseurs in
+            // On accepte `fileURL`, et NON la liste des types d'image : un
+            // fichier glissé depuis le Finder est fourni comme URL de fichier.
+            .onDrop(of: [UTType.fileURL], isTargeted: $survol) { fournisseurs in
                 traiterDrop(fournisseurs)
             }
 
@@ -54,13 +56,34 @@ struct PhotoField: View {
         }
     }
 
+    /// Reçoit un fichier image glissé depuis le Finder.
+    ///
+    /// On passe par `loadItem(forTypeIdentifier:)` et non par
+    /// `loadObject(ofClass: URL.self)` : `URL` ne se charge pas de façon fiable
+    /// par cette seconde voie sur macOS, et l'échec est SILENCIEUX — le champ
+    /// restait vide sans le moindre message. Même patron que le dépôt sur la
+    /// cellule Photo du tableau (`deposerPhoto` dans VueFeuille).
     private func traiterDrop(_ fournisseurs: [NSItemProvider]) -> Bool {
         guard let f = fournisseurs.first else { return false }
-        _ = f.loadObject(ofClass: URL.self) { url, _ in
-            guard let url = url else { return }
+
+        f.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
+            // L'élément arrive tantôt en Data (URL encodée), tantôt en URL.
+            var url: URL?
+            if let data = item as? Data {
+                url = URL(dataRepresentation: data, relativeTo: nil)
+            } else if let u = item as? URL {
+                url = u
+            }
+            guard let fichier = url else { return }
+
+            // Filtrage sur l'extension, puisque le drop accepte désormais
+            // n'importe quel fichier.
+            let ext = fichier.pathExtension.lowercased()
+            guard ["jpg", "jpeg", "png", "heic"].contains(ext) else { return }
+
             DispatchQueue.main.async {
                 if !photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: photoNom) }
-                if let nom = PhotoStore.importerImage(depuis: url) {
+                if let nom = PhotoStore.importerImage(depuis: fichier) {
                     photoNom = nom
                 }
             }

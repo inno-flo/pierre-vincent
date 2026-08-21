@@ -105,6 +105,12 @@ struct ContentView: View {
     @State private var nbSelection: Int = 0
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    // Ouverture/fermeture des blocs de la sidebar, mémorisée entre les sessions
+    // (comportement des sidebars système).
+    @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
+    @AppStorage("blocStockOuvert") private var blocStockOuvert = true
+    @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
+    @AppStorage("sousBlocExpositionsOuvert") private var sousBlocExpositionsOuvert = true
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -127,88 +133,37 @@ struct ContentView: View {
             // --- Barre latérale ---
             VStack(spacing: 0) {
                 List(selection: $categorie) {
-                    #if os(iOS)
-                    // Sur iPhone : trois blocs (sections) distincts.
-                    Section {
-                        lien(.oeuvres)
-                        lien(.synthese)
+                    #if os(macOS)
+                    // `Section(isExpanded:)` : mécanisme standard des sidebars
+                    // macOS (le triangle d'affichage de Finder ou Mail).
+                    Section(isExpanded: $blocVentesOuvert) {
+                        contenuVentesEtDons
+                    } header: {
+                        Text("Ventes et dons").font(policeGrandIntitule).fontWeight(.bold)
                     }
-                    Section(header: Text("Ventes et dons")
-                        // Aucune taille imposée : `listStyle(.insetGrouped)`
-                        // fournit lui-même l'apparence standard des en-têtes
-                        // (footnote, 13 pt, gris). Le code forçait 18 pt, soit
-                        // PLUS GROS que les libellés qu'ils regroupent (body,
-                        // 17 pt) — hiérarchie inversée, comme sur macOS.
-                        // Ne pas figer une taille en points ici : cela
-                        // casserait aussi le Dynamic Type.
-                        // Gris : le .foregroundStyle(Color.textePrincipal) posé
-                        // sur toute la hiérarchie de ContentView écrase sinon
-                        // la couleur secondaire fournie par défaut.
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom, 5)) {
-                        lien(.tableauxVendus)
-                        lien(.dessinsVendus)
-                        lien(.tapisVendus)
-                        lien(.oeuvresDonnees)
-                    }
-                    Section(header: Text("Expositions et enchères")
-                        // Aucune taille imposée : `listStyle(.insetGrouped)`
-                        // fournit lui-même l'apparence standard des en-têtes
-                        // (footnote, 13 pt, gris). Le code forçait 18 pt, soit
-                        // PLUS GROS que les libellés qu'ils regroupent (body,
-                        // 17 pt) — hiérarchie inversée, comme sur macOS.
-                        // Ne pas figer une taille en points ici : cela
-                        // casserait aussi le Dynamic Type.
-                        // Gris : le .foregroundStyle(Color.textePrincipal) posé
-                        // sur toute la hiérarchie de ContentView écrase sinon
-                        // la couleur secondaire fournie par défaut.
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom, 5)) {
-                        lien(.ventesRealisees)
+                    Section(isExpanded: $blocStockOuvert) {
+                        contenuStock
+                    } header: {
+                        Text("Stock").font(policeGrandIntitule).fontWeight(.bold)
                     }
                     #else
-                    // Sur Mac : même organisation que la sidebar iOS.
+                    // Sur iOS, `Section(isExpanded:)` n'est honoré qu'avec
+                    // `listStyle(.sidebar)` : en `.insetGrouped`, le paramètre
+                    // est ignoré et la section n'est pas repliable. On passe
+                    // donc par un `DisclosureGroup`, qui l'est toujours.
                     Section {
-                        lien(.oeuvres)
-                            .listRowSeparator(.hidden)
-                        lien(.synthese)
-                            .listRowSeparator(.hidden)
+                        DisclosureGroup(isExpanded: $blocVentesOuvert) {
+                            contenuVentesEtDons
+                        } label: {
+                            Text("Ventes et dons").font(policeGrandIntitule).fontWeight(.bold)
+                        }
                     }
-                    Section(header: Text("Ventes et dons")
-                        // Aucune police imposée : `listStyle(.sidebar)` fournit
-                        // lui-même l'apparence standard des en-têtes de section
-                        // sur macOS (petit corps, gris) — c'est la convention
-                        // Apple. Forcer une taille (14 pt auparavant) l'écrasait
-                        // et donnait des intitulés bien trop gros.
-                        // Gris, comme les en-têtes de Mail. Nécessaire car le
-                        // .foregroundStyle(Color.textePrincipal) posé sur toute
-                        // la hiérarchie de ContentView écrase sinon le gris
-                        // fourni par défaut avec listStyle(.sidebar).
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom, 5)) {
-                        lien(.tableauxVendus)
-                            .listRowSeparator(.hidden)
-                        lien(.dessinsVendus)
-                            .listRowSeparator(.hidden)
-                        lien(.tapisVendus)
-                            .listRowSeparator(.hidden)
-                        lien(.oeuvresDonnees)
-                            .listRowSeparator(.hidden)
-                    }
-                    Section(header: Text("Expositions et enchères")
-                        // Aucune police imposée : `listStyle(.sidebar)` fournit
-                        // lui-même l'apparence standard des en-têtes de section
-                        // sur macOS (petit corps, gris) — c'est la convention
-                        // Apple. Forcer une taille (14 pt auparavant) l'écrasait
-                        // et donnait des intitulés bien trop gros.
-                        // Gris, comme les en-têtes de Mail. Nécessaire car le
-                        // .foregroundStyle(Color.textePrincipal) posé sur toute
-                        // la hiérarchie de ContentView écrase sinon le gris
-                        // fourni par défaut avec listStyle(.sidebar).
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom, 5)) {
-                        lien(.ventesRealisees)
-                            .listRowSeparator(.hidden)
+                    Section {
+                        DisclosureGroup(isExpanded: $blocStockOuvert) {
+                            contenuStock
+                        } label: {
+                            Text("Stock").font(policeGrandIntitule).fontWeight(.bold)
+                        }
                     }
                     #endif
                 }
@@ -476,6 +431,47 @@ struct ContentView: View {
         }
     }
     #endif
+
+    // MARK: Contenu des deux grands blocs de la sidebar
+    //
+    // Trois niveaux de hiérarchie, marqués par la taille ET la graisse :
+    //   1. grand intitulé   .title3 + gras   (Ventes et dons, Stock)
+    //   2. sous-groupe      corps + semi-gras (Catégories, Expositions…)
+    //   3. libellé          corps normal      (Tableaux, Dessins…)
+
+    /// Police des deux grands intitulés (« Ventes et dons », « Stock »).
+    /// `.title3` = 15 pt sur macOS, 20 pt sur iOS : plus gros que les libellés
+    /// de rubrique (13 / 17 pt) dans les deux cas, ce qui marque la hiérarchie
+    /// sans sortir du barème système.
+    private var policeGrandIntitule: Font { .title3 }
+
+    @ViewBuilder
+    private var contenuVentesEtDons: some View {
+        lien(.oeuvres)
+        lien(.synthese)
+        // Sous-groupes repliables. `DisclosureGroup` et non `Section` : une
+        // `List` n'accepte pas de Section imbriquée dans une Section.
+        DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
+            lien(.tableauxVendus)
+            lien(.dessinsVendus)
+            lien(.tapisVendus)
+            lien(.oeuvresDonnees)
+        } label: {
+            Text("Catégories").fontWeight(.semibold)
+        }
+        DisclosureGroup(isExpanded: $sousBlocExpositionsOuvert) {
+            lien(.ventesRealisees)
+        } label: {
+            Text("Expositions et enchères").fontWeight(.semibold)
+        }
+    }
+
+    /// Contenu du bloc « Stock », encore à définir.
+    @ViewBuilder
+    private var contenuStock: some View {
+        Text("À définir")
+            .foregroundStyle(.secondary)
+    }
 
     /// Un lien de navigation vers une catégorie, avec son icône.
     /// Sur Mac, l'icône passe en blanc quand la catégorie est sélectionnée ;

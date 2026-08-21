@@ -126,14 +126,11 @@ extension Color {
     }
 
     /// Fond de la rubrique sélectionnée dans la sidebar macOS : un marron, en
-    /// remplacement du bleu de sélection système. Volontairement plus clair en
-    /// mode sombre qu'en mode clair, pour que le libellé (noir gras) reste
-    /// lisible dans les deux cas.
+    /// remplacement du bleu de sélection système.
     static var fondSelectionSidebarMac: Color {
-        // Mode clair : marron éclairci de 50 % (à mi-chemin du blanc depuis
-        // le (163, 118, 78) initial) → libellé en NOIR.
-        // Mode sombre : marron assombri de 50 % (moitié du (178, 134, 94)
-        // initial) → libellé en BLANC. Voir texteSelectionSidebarMac.
+        // Mode clair : marron éclairci de 50 % depuis le (163, 118, 78)
+        // initial. Mode sombre : marron assombri de 50 % depuis (178, 134, 94).
+        // Le libellé est en BLANC dans les deux cas (texteSelectionSidebarMac).
         couleurTheme(
             cremeClair: (209, 187, 167), cremeSombre: (89, 67, 47),
             grisClair:  (209, 187, 167), grisSombre:  (89, 67, 47),
@@ -141,18 +138,8 @@ extension Color {
     }
 
     /// Libellé et icône de la rubrique sélectionnée dans la sidebar macOS :
-    /// noir sur le marron clair (mode clair), blanc sur le marron sombre
-    /// (mode sombre). Suit le mode système, pas le thème de l'app.
-    static var texteSelectionSidebarMac: Color {
-        #if os(macOS)
-        return Color(nsColor: NSColor(name: nil) { app in
-            let sombre = app.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            return sombre ? .white : .black
-        })
-        #else
-        return .primary
-        #endif
-    }
+    /// **blanc dans les deux modes**, sur le fond marron de la sélection.
+    static var texteSelectionSidebarMac: Color { .white }
 
     // MARK: Thème « Graphite » de la vue Synthèse (sombre fixe)
     static let graphitePageBg   = Color(red: 0x1A/255, green: 0x1A/255, blue: 0x1C/255)
