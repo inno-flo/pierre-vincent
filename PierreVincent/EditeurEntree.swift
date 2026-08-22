@@ -86,7 +86,7 @@ struct EditeurEntree: View {
                             // Cellule Prix.
                             celluleEditeur { champPrix() }
                             // Cellule Type.
-                            celluleEditeur { champTexte("Type", $type, champ: .type) }
+                            celluleEditeur { champType() }
                             // Cellule Dimensions + Format.
                             celluleEditeur {
                                 champTexte("Dimensions", $dimensions, champ: .dimensions)
@@ -107,7 +107,7 @@ struct EditeurEntree: View {
                             // colonne : Type, Dimensions/Format, Suivi, puis
                             // Destinataire — mêmes champs, même enchaînement.
                             // Cellule Type.
-                            celluleEditeur { champTexte("Type", $type, champ: .type) }
+                            celluleEditeur { champType() }
                             // Cellule Dimensions + Format.
                             celluleEditeur {
                                 champTexte("Dimensions", $dimensions, champ: .dimensions)
@@ -384,6 +384,34 @@ struct EditeurEntree: View {
                 .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Valeurs proposées par le menu Type : « Inconnu » (la valeur vide, selon
+    /// la convention de la base), puis les trois types.
+    ///
+    /// Si l'œuvre porte autre chose — une technique héritée de l'ancien champ
+    /// libre, ou une variante de casse — cette valeur est ajoutée au menu
+    /// telle quelle. Sans ça, le menu s'afficherait vide et le premier
+    /// enregistrement remplacerait la donnée en silence.
+    private var choixType: [String] {
+        var choix = [""] + typesOeuvre
+        if !type.isEmpty, !choix.contains(type) { choix.insert(type, at: 1) }
+        return choix
+    }
+
+    /// Champ Type : menu déroulant et non saisie libre, pour garantir la règle
+    /// sur laquelle s'appuient les rubriques par catégorie.
+    private func champType() -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Type").font(.body).fontWeight(.bold).foregroundStyle(.secondary)
+            Picker("", selection: $type) {
+                ForEach(choixType, id: \.self) { valeur in
+                    Text(valeur.isEmpty ? valeurInconnue : valeur).tag(valeur)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+        }
     }
 
     private func champTexte(_ titre: String, _ liaison: Binding<String>, champ: Champ) -> some View {

@@ -30,19 +30,13 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String]) -> Bool {
     return true
 }
 
-/// Vrai si l'œuvre relève du canal choisi dans le filtre rapide de la vue
-/// « Ventes ».
+/// Les seuls types d'œuvre possibles, dans l'ordre du menu de l'éditeur.
 ///
-/// Le menu mélange deux natures de critère : trois **vendeurs** (Artenchères,
-/// Drôme Enchères, RempART) et un **mode de vente** (Vente privée). On teste
-/// donc les deux champs — un seul suffit à retenir l'œuvre.
-func correspondAuCanal(_ o: Oeuvre, canal: String) -> Bool {
-    func egal(_ a: String, _ b: String) -> Bool {
-        a.trimmingCharacters(in: .whitespacesAndNewlines)
-            .caseInsensitiveCompare(b.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
-    }
-    return egal(o.vendeur, canal) || egal(o.modeVente, canal)
-}
+/// Liste **fermée** : le champ `type` était en saisie libre et portait parfois
+/// une technique (« Huile sur toile », « Aquarelle »), ce qui rendait muets
+/// les filtres par type — une œuvre ainsi renseignée n'apparaissait dans
+/// aucune rubrique de catégorie.
+let typesOeuvre: [String] = ["Dessin", "Tableau", "Tapis"]
 
 /// Statuts recensés par la section « Réserve » : les œuvres encore détenues.
 /// Défini ici, et non dans `Categorie`, pour que les rubriques de la sidebar
@@ -66,6 +60,20 @@ let feuillesSansPrix: Set<Feuille> = [.oeuvresDonnees, .reserve]
 /// rencontré sur les dons, que la Réserve rejouerait à l'identique.
 func aUnPrix(_ o: Oeuvre) -> Bool {
     !feuillesSansPrix.contains(o.feuille)
+}
+
+/// Vrai si l'œuvre relève du canal choisi dans le filtre rapide de la vue
+/// « Ventes ».
+///
+/// Le menu mélange deux natures de critère : trois **vendeurs** (Artenchères,
+/// Drôme Enchères, RempART) et un **mode de vente** (Vente privée). On teste
+/// donc les deux champs — un seul suffit à retenir l'œuvre.
+func correspondAuCanal(_ o: Oeuvre, canal: String) -> Bool {
+    func egal(_ a: String, _ b: String) -> Bool {
+        a.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(b.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+    }
+    return egal(o.vendeur, canal) || egal(o.modeVente, canal)
 }
 
 /// Vrai si l'œuvre relève de la section « Ventes et dons ».
