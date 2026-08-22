@@ -64,8 +64,6 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   **Le menu ne propose PAS « Inconnu »** : ce serait entériner l'état qu'on
   cherche à corriger. Une œuvre encore dans cet état ouvre un menu sans
   sélection — c'est le signe qu'un choix reste à faire.
-  **Les données ne respectent pas encore la règle.** Sur 53 dons, 9 seulement
-  ont un type nommant leur catégorie ; les 44 autres restent à reprendre.
 - Photos stockées **hors base**, sur disque, via `PhotoStore` (dossier « Photos »
   dans Application Support). La base ne contient que le nom de fichier.
 - **Champs de suivi** ajoutés à `Oeuvre` : `statut`, `theme`, `emplacement`
@@ -491,10 +489,10 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     vendeur. Le champ `type` porte encore des libellés composés
     (« Tableau — huile sur toile ») : collecter les valeurs distinctes
     donnerait des dizaines de pastilles, pas deux.
-  - Filtrage par **inclusion** du mot. Corollaire : une œuvre dont le type ne
-    nomme ni l'un ni l'autre n'est retenue par AUCUNE pastille — les deux
-    comptes ne feront pas le total tant que les types ne sont pas normalisés.
-    Sans filtre elle reste visible, ce qui est l'état par défaut.
+  - Filtrage par **inclusion** du mot. Corollaire à garder en tête : une œuvre
+    dont le type ne nomme ni l'un ni l'autre n'est retenue par AUCUNE pastille,
+    et les deux comptes ne totalisent alors pas la rubrique. Sans filtre elle
+    reste visible, ce qui est l'état par défaut.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
