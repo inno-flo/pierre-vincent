@@ -480,19 +480,24 @@ JavaScript, inexploitables par extraction) :
   identique sur les deux plateformes :
 
   ```
-  ▼ VENTES ET DONS          ▼ RÉSERVE
-       Catalogue                 Catalogue
-       Ventes                  ▼ Catégories
-       Dons                         Dessins
+  ▼ VENTES ET DONS               ▼ RÉSERVE
+       Catalogue                      Catalogue
+       Ventes                       ▼ Catégories
+       Dons                              Dessins
        Synthèse
+     ▼ Modes de vente
+          Expositions
+          Ventes aux enchères
+          Vente privée
+          …tout mode inédit
      ▼ Catégories
           Tableaux · Dessins · Tapis
   ```
 
-  - Deux grands blocs **repliables**, plus un sous-groupe « Catégories » dans
-    chacun. Le premier niveau réunit les **vues d'ensemble**, le sous-groupe
-    les **types d'œuvres** — d'où Dons au premier niveau, qui désigne un mode
-    de sortie et non un type.
+  - Deux grands blocs **repliables**, avec leurs sous-groupes. Le premier
+    niveau réunit les **vues d'ensemble**, les sous-groupes les **types
+    d'œuvres** et les **canaux de vente** — d'où Dons au premier niveau, qui
+    désigne un mode de sortie et non un type.
   - `Categorie.titre` pilote à la fois le libellé de sidebar ET le titre de la
     page associée : renommer une rubrique se fait à un seul endroit. Attention
     aux titres codés en dur ailleurs (`VueOeuvresStructuree` en avait un).
@@ -505,3 +510,40 @@ JavaScript, inexploitables par extraction) :
     rubrique, Ventes, est remontée au premier niveau.
   - La carte « Œuvres » de la vue Synthèse (bloc statistique, concept
     différent) n'a jamais été concernée par ces renommages.
+
+- **Sous-catégories dynamiques par mode de vente** (`ContentView.swift`) :
+  le groupe « Modes de vente » n'est **pas déclaré** — il est déduit des
+  données par `modesDeVentePresents`. Un mode inédit crée sa rubrique dès
+  qu'une œuvre le porte, et elle disparaît quand plus aucune ne l'a. Les modes
+  de `modesDeVenteReference` gardent leur ordre, les inédits suivent par ordre
+  alphabétique ; les valeurs vides, « Inconnu » et « Don » sont écartées.
+  - Rendu possible par `case modeVente(String)`, un cas **à valeur associée**.
+    `Categorie` a donc dû perdre `CaseIterable`, incompatible — sans
+    conséquence, `allCases` ne servait qu'à du code mort.
+  - **`.ventesRealisees.modesVente` renvoie `[]` volontairement** : Ventes
+    recense TOUTES les œuvres vendues quel que soit le canal, et c'est son
+    `statuts` (« Vendu ») qui la restreint. Y remettre une liste en dur
+    ferait qu'un mode inédit aurait sa sous-catégorie **sans figurer dans
+    Ventes** — le parent cesserait d'être la somme de ses enfants.
+  - Corollaire : **ne pas déduire le rôle d'une vue de `modesVente`**.
+    `VueOeuvresStructuree` calculait `estModeVentes = !modesVente.isEmpty` ;
+    la liste devenue vide, la vue Ventes s'est mise à afficher le titre
+    « Catalogue » et la section des dons. Le rôle et le titre lui sont
+    désormais **passés en paramètre**.
+  - Aiguillage par `Categorie.estVenteRealisee` : un test `== .ventesRealisees`
+    ne couvrirait pas le cas à valeur associée.
+  - Les libellés « Expositions » et « Ventes aux enchères » sont un **rendu
+    au pluriel** dans `titre` ; la valeur stockée sur l'œuvre reste au
+    singulier, et c'est elle que voient l'éditeur, l'inspecteur et le filtre.
+
+- **iOS — le récapitulatif défile avec le contenu** dans toutes les vues.
+  Placé au-dessus du `ScrollView` (ce qu'il était dans `VueiOS`), il restait
+  ancré et la barre de navigation ne prenait pas sa transparence. En mode
+  galerie, `VueGalerie` étant partagée avec macOS et ayant son propre
+  `ScrollView`, elle reçoit un paramètre `entete` **optionnel** rendu dans la
+  zone de défilement — nul côté Mac, où rien ne change.
+
+- **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
+  `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit
+  donc PAS à pouvoir la passer à l'appel, il faut aussi étendre l'`init`.
+  Rencontré deux fois.
