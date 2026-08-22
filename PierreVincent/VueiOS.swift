@@ -147,13 +147,18 @@ struct VueiOS: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            recapCell
+        // Le récapitulatif est passé DANS la zone de défilement, en galerie
+        // comme en liste : il défile donc avec le contenu et la barre de
+        // navigation prend sa transparence, comme dans les vues Catalogue,
+        // Ventes et Dons. Placé au-dessus du ScrollView, il restait ancré et
+        // ces deux effets manquaient.
+        Group {
             if modeAffichage == "icone" {
                 VueGalerie(
                     oeuvres: oeuvresGalerie,
                     selection: $selection,
-                    onOuvrir: { o in selection = [o.id]; detail = o }
+                    onOuvrir: { o in selection = [o.id]; detail = o },
+                    entete: AnyView(recapCell)
                 )
             } else {
                 liste
@@ -281,6 +286,7 @@ struct VueiOS: View {
     private var liste: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                recapCell
                 // Lazy : ne construit que les lignes visibles à l'écran.
                 LazyVStack(spacing: 8) {
                     ForEach(oeuvresGalerie) { o in

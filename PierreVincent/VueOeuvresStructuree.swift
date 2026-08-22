@@ -18,10 +18,14 @@ struct VueOeuvresStructuree: View {
     let modesVente: [String]
     /// Quand non vide, remplace le menu de tri par un filtre par vendeur.
     let filtresVendeur: [String]
+    let estModeVentes: Bool
 
-    init(modesVente: [String] = [], filtresVendeur: [String] = []) {
+    init(modesVente: [String] = [], filtresVendeur: [String] = [],
+         estModeVentes: Bool = false, titre: String = "Catalogue") {
         self.modesVente = modesVente
         self.filtresVendeur = filtresVendeur
+        self.estModeVentes = estModeVentes
+        self.titre = titre
     }
 
     @Query private var toutes: [Oeuvre]
@@ -43,7 +47,14 @@ struct VueOeuvresStructuree: View {
     private let ancreDons   = "ancre-dons"
 
     /// Vrai si la vue opère en mode « filtre modeVente » (rubrique Ventes).
-    private var estModeVentes: Bool { !modesVente.isEmpty }
+    /// Titre de la page, fourni par l'appelant.
+    let titre: String
+    /// Vrai pour la rubrique Ventes et ses sous-catégories : la section des
+    /// dons est alors masquée.
+    ///
+    /// Reçu en paramètre et NON déduit de `modesVente` : depuis que Ventes
+    /// n'impose plus de liste de modes (pour rester la somme de ses
+    /// sous-catégories), cette liste est vide et la déduction basculait à faux.
 
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
@@ -130,7 +141,7 @@ struct VueOeuvresStructuree: View {
 
                     // --- 3. Section Œuvres données (masquée en mode filtre) ---
                     if !estModeVentes {
-                        titreSection("Œuvres données")
+                        titreSection("Dons")
                             .id(ancreDons)
                         contenuSection(dons, estDon: true)
                     }
@@ -148,7 +159,7 @@ struct VueOeuvresStructuree: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle(estModeVentes ? "Ventes" : "Catalogue")
+        .navigationTitle(titre)
         .toolbar {
             // Un seul set de contrôles, compact : Liste, Galerie, tri, sens.
             // Regroupés dans un HStack pour maîtriser l'espacement.
@@ -256,7 +267,7 @@ struct VueOeuvresStructuree: View {
             }
             if !estModeVentes {
                 Divider().padding(.leading, 20)
-                ligneRecap(titre: "Œuvres données", nombre: dons.count) {
+                ligneRecap(titre: "Dons", nombre: dons.count) {
                     withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
                 }
             }

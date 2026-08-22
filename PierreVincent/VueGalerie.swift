@@ -11,6 +11,9 @@ struct VueGalerie: View {
     @Binding var selection: Set<UUID>
     /// Double-clic sur une carte : ouvre la fiche d'édition.
     var onOuvrir: (Oeuvre) -> Void
+    /// En-tête facultatif, placé DANS la zone de défilement : il défile donc
+    /// avec les vignettes. Sert au récapitulatif des vues iOS ; nul sur Mac.
+    var entete: AnyView? = nil
 
     // Ancre pour la sélection par plage (Maj + clic).
     @State private var derniere: UUID?
@@ -36,6 +39,7 @@ struct VueGalerie: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                entete
                 LazyVGrid(columns: colonnes, spacing: 16) {
                     ForEach(oeuvres) { o in
                         carte(o)

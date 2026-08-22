@@ -136,6 +136,23 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
+    /// Titre de la page, qui n'est pas toujours le libellé de sidebar : la
+    /// sidebar nomme le mode au singulier (« Exposition »), la page décrit son
+    /// contenu au pluriel (« Expositions »). Un mode inédit garde son libellé
+    /// tel quel, faute de forme connue.
+    var titrePage: String {
+        switch self {
+        case .modeVente(let m):
+            switch m.lowercased() {
+            case "exposition":        return "Expositions"
+            case "vente aux enchères": return "Ventes aux enchères"
+            default:                  return m
+            }
+        default:
+            return titre
+        }
+    }
+
     /// Vrai pour la rubrique Ventes ET ses sous-catégories par mode : elles
     /// partagent la même vue. Un test d'égalité `== .ventesRealisees` ne
     /// couvrirait pas le cas à valeur associée.
@@ -366,7 +383,9 @@ struct ContentView: View {
                             .id(cat)
                     } else if cat.estVenteRealisee {
                         VueOeuvresStructuree(modesVente: cat.modesVente,
-                                             filtresVendeur: cat.filtresVendeur)
+                                             filtresVendeur: cat.filtresVendeur,
+                                             estModeVentes: true,
+                                             titre: cat.titrePage)
                             .id(cat)
                     } else if cat == .oeuvresDonnees {
                         VueDonsStructuree()

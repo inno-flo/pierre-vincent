@@ -98,7 +98,7 @@ struct VueDonsStructuree: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle("Œuvres données")
+        .navigationTitle("Dons")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -168,11 +168,7 @@ struct VueDonsStructuree: View {
 
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            ligneRecap(titre: "Tableaux donnés", nombre: tableauxDonnes.count) {
-                withAnimation { proxy.scrollTo(ancreTableaux, anchor: .top) }
-            }
-            Divider().padding(.leading, 20)
-            ligneRecap(titre: "Dessins donnés", nombre: dessinsDonnes.count) {
+            ligneRecap(titre: "Dons", nombre: dessinsDonnes.count) {
                 withAnimation { proxy.scrollTo(ancreDessins, anchor: .top) }
             }
         }
