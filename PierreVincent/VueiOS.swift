@@ -60,7 +60,7 @@ struct VueiOS: View {
         // Filtres propres à la rubrique : statut, et éventuellement type.
         base = base.filter { correspond($0, statuts: statuts, types: types) }
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
-            base = base.filter { $0.vendeur == vendeurFiltre }
+            base = base.filter { correspondAuCanal($0, canal: vendeurFiltre) }
         }
         return base.sorted(using: tri)
     }
@@ -84,7 +84,7 @@ struct VueiOS: View {
         // Filtres propres à la rubrique : statut, et éventuellement type.
         base = base.filter { correspond($0, statuts: statuts, types: types) }
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
-            base = base.filter { $0.vendeur == vendeurFiltre }
+            base = base.filter { correspondAuCanal($0, canal: vendeurFiltre) }
         }
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille (ex. prix dans les dons,

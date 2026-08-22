@@ -7,7 +7,9 @@ import AppKit
 
 /// Catégories affichées dans la barre latérale (sidebar).
 /// L'ordre est volontaire : Inventaire en premier, Synthèse en dernier.
-enum Categorie: Hashable, CaseIterable, Identifiable {
+/// Note : pas de `CaseIterable`, incompatible avec un cas à valeur associée.
+/// `allCases` ne servait qu'à `categoriesData`, qui n'était appelé nulle part.
+enum Categorie: Hashable, Identifiable {
     case oeuvres          // vue compilée (agrège les 4 feuilles)
     case tableauxVendus
     case dessinsVendus
@@ -16,6 +18,10 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
     case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
     case reserveInventaire // Réserve : toutes les œuvres encore détenues
     case reserveDessins   // Réserve : dessins encore disponibles
+    /// Sous-catégorie de Ventes : un mode de vente précis. La valeur est
+    /// portée par le cas lui-même, ce qui permet un nombre variable de
+    /// sous-catégories, déduites des données (voir `modesDeVentePresents`).
+    case modeVente(String)
     case synthese         // tableau de bord, en dernier
 
     var id: Self { self }
@@ -31,6 +37,7 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
         case .synthese:         return "Synthèse"
+        case .modeVente(let m): return m
         }
     }
 
@@ -45,6 +52,7 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         case .reserveInventaire: return "square.grid.2x2"
         case .reserveDessins:   return "pencil.and.outline"
         case .synthese:         return "chart.bar.doc.horizontal"
+        case .modeVente:        return "tag"
         }
     }
 
@@ -63,21 +71,35 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         // parlent des mêmes œuvres, seul le statut les sépare.
         case .reserveDessins:   return .dessinsVendus
         case .synthese:         return nil
+        // Vue agrégée, comme Ventes : le filtre porte sur le mode, pas la feuille.
+        case .modeVente:        return nil
         }
     }
 
     /// Filtre sur le mode de vente (vide = aucun filtre supplémentaire).
+    ///
+    /// `.ventesRealisees` n'impose AUCUN mode : la rubrique recense toutes les
+    /// œuvres vendues, quel que soit le canal. Sans quoi un mode inédit aurait
+    /// sa sous-catégorie sans figurer dans Ventes — le parent cesserait d'être
+    /// la somme de ses enfants. C'est `statuts` qui la restreint aux ventes.
     var modesVente: [String] {
         switch self {
-        case .ventesRealisees: return ["Exposition", "Vente aux enchères"]
-        default:               return []
+        case .modeVente(let m): return [m]
+        default:                return []
         }
     }
 
-    /// Valeurs possibles du champ Vendeur pour le filtre rapide (vide = menu de tri standard).
+    /// Modes de vente de référence, dans leur ordre d'affichage. Les modes
+    /// trouvés dans les données mais absents d'ici s'ajoutent à leur suite.
+    static let modesDeVenteReference = ["Exposition", "Vente aux enchères", "Vente privée"]
+
+    /// Canaux proposés par le filtre rapide (vide = menu de tri standard).
+    /// Trois vendeurs, plus un mode de vente : « Vente privée » n'est pas un
+    /// vendeur, d'où le test sur les deux champs dans `correspondAuCanal`.
     var filtresVendeur: [String] {
         switch self {
-        case .ventesRealisees: return ["Artenchères", "Drôme Enchères", "RempART"]
+        case .ventesRealisees, .modeVente:
+            return ["Artenchères", "Drôme Enchères", "RempART", "Vente privée"]
         default:               return []
         }
     }
@@ -91,6 +113,10 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
         switch self {
         case .reserveInventaire, .reserveDessins:
             return ["Disponible", "À garder"]
+        // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
+        // dons ont leur propre rubrique.
+        case .ventesRealisees, .modeVente:
+            return ["Vendu"]
         default:
             return Array(statutsVentesEtDons)
         }
@@ -110,14 +136,18 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
+    /// Vrai pour la rubrique Ventes ET ses sous-catégories par mode : elles
+    /// partagent la même vue. Un test d'égalité `== .ventesRealisees` ne
+    /// couvrirait pas le cas à valeur associée.
+    var estVenteRealisee: Bool {
+        switch self {
+        case .ventesRealisees, .modeVente: return true
+        default:                           return false
+        }
+    }
+
     /// Vrai pour la vue tableau de bord (affichage spécifique).
     var estSynthese: Bool { self == .synthese }
-
-    /// Catégories du bloc principal (tout sauf Synthèse et Ventes réalisées,
-    /// qui sont placés dans leurs propres sections sur macOS).
-    static var categoriesData: [Categorie] {
-        allCases.filter { $0 != .synthese && $0 != .ventesRealisees }
-    }
 }
 
 /// Vue principale : barre latérale (catégories) + zone de contenu (canvas),
@@ -156,6 +186,7 @@ struct ContentView: View {
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
     @AppStorage("blocStockOuvert") private var blocStockOuvert = true
     @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
+    @AppStorage("sousBlocModesVenteOuvert") private var sousBlocModesVenteOuvert = true
     @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = true
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
@@ -333,7 +364,7 @@ struct ContentView: View {
                     if cat == .oeuvres {
                         VueOeuvresStructuree()
                             .id(cat)
-                    } else if cat == .ventesRealisees {
+                    } else if cat.estVenteRealisee {
                         VueOeuvresStructuree(modesVente: cat.modesVente,
                                              filtresVendeur: cat.filtresVendeur)
                             .id(cat)
@@ -459,13 +490,17 @@ struct ContentView: View {
             return recensees.filter { $0.feuille == .tapisVendus }.count
         case .oeuvresDonnees:
             return recensees.filter { $0.feuille == .oeuvresDonnees }.count
-        case .ventesRealisees:
-            return recensees.filter {
-                Categorie.ventesRealisees.modesVente.contains($0.modeVente)
+        // Ventes, ses sous-catégories et la Réserve ont leurs propres statuts :
+        // on repart de `toutes`, pas de `recensees`.
+        case .ventesRealisees, .modeVente,
+             .reserveInventaire, .reserveDessins:
+            return toutes.filter { o in
+                guard correspond(o, a: cat) else { return false }
+                let modes = cat.modesVente
+                return modes.isEmpty || modes.contains(where: {
+                    $0.caseInsensitiveCompare(o.modeVente) == .orderedSame
+                })
             }.count
-        case .reserveInventaire, .reserveDessins:
-            // Rubriques de la Réserve : leurs propres statuts, pas `recensees`.
-            return toutes.filter { correspond($0, a: cat) }.count
         default:
             return nil
         }
@@ -553,6 +588,14 @@ struct ContentView: View {
         lien(.ventesRealisees)
         lien(.oeuvresDonnees)
         lien(.synthese)
+        // Sous-groupe des modes de vente, construit d'après les données.
+        DisclosureGroup(isExpanded: $sousBlocModesVenteOuvert) {
+            ForEach(modesDeVentePresents, id: \.self) { mode in
+                lien(.modeVente(mode))
+            }
+        } label: {
+            Text("Modes de vente").fontWeight(.semibold)
+        }
         // Sous-groupe repliable des catégories d'œuvres. `DisclosureGroup` et
         // non `Section` : une `List` n'accepte pas de Section dans une Section.
         DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
@@ -562,6 +605,46 @@ struct ContentView: View {
         } label: {
             Text("Catégories").fontWeight(.semibold)
         }
+    }
+
+    /// Modes de vente réellement présents dans les données, dans l'ordre
+    /// d'affichage : d'abord les modes de référence, puis les inédits par ordre
+    /// alphabétique.
+    ///
+    /// C'est ce qui rend les sous-catégories **dynamiques** : un mode encore
+    /// jamais vu — une nouvelle exposition, par exemple — crée sa rubrique dès
+    /// qu'une œuvre le porte, sans modification du code.
+    ///
+    /// On écarte les valeurs vides, « Inconnu » et « Don » : la première ne
+    /// désigne rien, la deuxième non plus, et les dons ont leur propre rubrique.
+    private var modesDeVentePresents: [String] {
+        func normal(_ v: String) -> String {
+            v.trimmingCharacters(in: .whitespacesAndNewlines)
+                .folding(options: [.diacriticInsensitive, .caseInsensitive],
+                         locale: Locale(identifier: "fr_FR"))
+        }
+        let exclus: Set<String> = [normal(valeurInconnue), normal("Don"), ""]
+
+        // Dédoublonnage sur la forme normalisée, mais on conserve la casse
+        // d'origine pour l'affichage.
+        var trouves: [String: String] = [:]
+        for o in toutes where o.statut.caseInsensitiveCompare("Vendu") == .orderedSame {
+            let brut = o.modeVente.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cle = normal(brut)
+            guard !exclus.contains(cle), trouves[cle] == nil else { continue }
+            trouves[cle] = brut
+        }
+
+        let reference = Categorie.modesDeVenteReference
+        let clesReference = Set(reference.map(normal))
+        let inedits = trouves
+            .filter { !clesReference.contains($0.key) }
+            .values
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+
+        // Les modes de référence ne s'affichent que s'ils sont présents.
+        let presentsParmiReference = reference.filter { trouves[normal($0)] != nil }
+        return presentsParmiReference + inedits
     }
 
     /// Contenu du bloc « Réserve » : les œuvres encore détenues.

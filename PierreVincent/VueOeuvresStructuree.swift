@@ -71,7 +71,7 @@ struct VueOeuvresStructuree: View {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
         if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
-            base = base.filter { $0.vendeur == vendeurFiltre }
+            base = base.filter { correspondAuCanal($0, canal: vendeurFiltre) }
         }
         return trier(base)
     }

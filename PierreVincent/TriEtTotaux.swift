@@ -30,6 +30,20 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String]) -> Bool {
     return true
 }
 
+/// Vrai si l'œuvre relève du canal choisi dans le filtre rapide de la vue
+/// « Ventes ».
+///
+/// Le menu mélange deux natures de critère : trois **vendeurs** (Artenchères,
+/// Drôme Enchères, RempART) et un **mode de vente** (Vente privée). On teste
+/// donc les deux champs — un seul suffit à retenir l'œuvre.
+func correspondAuCanal(_ o: Oeuvre, canal: String) -> Bool {
+    func egal(_ a: String, _ b: String) -> Bool {
+        a.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(b.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+    }
+    return egal(o.vendeur, canal) || egal(o.modeVente, canal)
+}
+
 /// Vrai si l'œuvre relève de la section « Ventes et dons ».
 func estVenduOuDonne(_ o: Oeuvre) -> Bool {
     statutsVentesEtDons.contains(o.statut)
