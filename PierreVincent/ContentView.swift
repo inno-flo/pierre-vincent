@@ -37,7 +37,16 @@ enum Categorie: Hashable, Identifiable {
         case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
         case .synthese:         return "Synthèse"
-        case .modeVente(let m): return m
+        // Forme d'affichage du mode : la rubrique regroupe PLUSIEURS ventes,
+        // d'où le pluriel, alors que la valeur stockée sur une œuvre reste au
+        // singulier (« Exposition »). Un mode inédit garde son libellé tel
+        // quel, faute de forme plurielle connue.
+        case .modeVente(let m):
+            switch m.lowercased() {
+            case "exposition":         return "Expositions"
+            case "vente aux enchères": return "Ventes aux enchères"
+            default:                   return m
+            }
         }
     }
 
@@ -135,23 +144,6 @@ enum Categorie: Hashable, Identifiable {
     // Ajouter/Modifier/Supprimer y sont possibles sur chaque entrée, seul le
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
-
-    /// Titre de la page, qui n'est pas toujours le libellé de sidebar : la
-    /// sidebar nomme le mode au singulier (« Exposition »), la page décrit son
-    /// contenu au pluriel (« Expositions »). Un mode inédit garde son libellé
-    /// tel quel, faute de forme connue.
-    var titrePage: String {
-        switch self {
-        case .modeVente(let m):
-            switch m.lowercased() {
-            case "exposition":        return "Expositions"
-            case "vente aux enchères": return "Ventes aux enchères"
-            default:                  return m
-            }
-        default:
-            return titre
-        }
-    }
 
     /// Vrai pour la rubrique Ventes ET ses sous-catégories par mode : elles
     /// partagent la même vue. Un test d'égalité `== .ventesRealisees` ne
@@ -385,7 +377,7 @@ struct ContentView: View {
                         VueOeuvresStructuree(modesVente: cat.modesVente,
                                              filtresVendeur: cat.filtresVendeur,
                                              estModeVentes: true,
-                                             titre: cat.titrePage)
+                                             titre: cat.titre)
                             .id(cat)
                     } else if cat == .oeuvresDonnees {
                         VueDonsStructuree()
