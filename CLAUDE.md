@@ -102,9 +102,13 @@ diffèrent en tout.
   - **HEIC et non JPEG** : mesuré sur une photo de test, 325 Ko à qualité 0,42
     contre 344 Ko à 0,35 en JPEG. L'app étant 100 % Apple, aucun souci de
     compatibilité.
-  - Attention : `PhotoStore.importerImage` (glisser-déposer, bouton Choisir)
-    convertit toujours en **PNG** — 13,5 Mo pour une photo de 1,4 Mo. À
-    basculer sur la compression le jour où on y touchera.
+  - **Chemin rapide** : un fichier pesant déjà 450 Ko ou moins est recopié
+    **tel quel, octet pour octet**. Le ré-encoder ne ferait que dégrader
+    l'image sans rien gagner en poids.
+  - `importerImageCompressee` sert à TOUTES les entrées : import de photos,
+    glisser-déposer sur l'éditeur ou sur la cellule Photo, bouton
+    « Choisir… ». L'ancienne `importerImage` ré-encodait en **PNG** — 4,3 Mo
+    à partir d'une photo légère — et a été supprimée. Ne pas la réintroduire.
 
 ## Thèmes de couleurs
 
@@ -203,6 +207,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   **Leçon générale** : sur ce projet, le seul mécanisme clavier fiable est le
   moniteur `NSEvent` local avec un état applicatif explicite. Ne pas essayer
   de déduire « qui a le focus » — le décider.
+- **Vue d'image chargée dans `.onAppear` avec un garde `image == nil`** :
+  une vue DÉJÀ à l'écran ne rechargeait jamais. Après remplacement d'une photo
+  (éditeur ou glisser-déposer), l'ancienne vignette restait affichée jusqu'à ce
+  qu'on quitte la vue et y revienne. `VignetteCachee` et
+  `VignetteCacheeFlexible` utilisent désormais **`.task(id: nom)`**, qui se
+  rejoue à chaque changement de nom de fichier.
 - **`ScrollViewReader` + `proxy.scrollTo(id, anchor: .center)` autour d'un
   `Table`** : l'ancre est un `UnitPoint`, donc le recentrage s'applique aux
   **deux axes**. Le défilement horizontal parasite décalait tout le tableau
@@ -358,12 +368,39 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   propriété `barreOutilsBas` près de `lien()`. Les réactiver demande de
   décommenter **les deux**, sinon la compilation échoue.
 - **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
-  rubrique affiche une pastille arrondie (fond orange, texte blanc) avec le
-  nombre d'œuvres correspondant. Le compte applique **les mêmes filtres que
+  rubrique affiche une pastille arrondie avec le nombre d'œuvres
+  correspondant. Deux états, alignés sur le libellé qu'elles accompagnent :
+  **au repos** contour orange, fond transparent, texte `textePrincipal` en
+  graisse normale ; **rubrique sélectionnée** fond orange plein, texte blanc
+  et gras. En mode sombre le texte est blanc dans les deux cas, sans règle
+  spéciale — `textePrincipal` y vaut déjà blanc. Corps de **11 pt**, et non
+  les 13 pt des pastilles du panneau : dans la sidebar, tout ce qui est
+  subordonné aux libellés reste à 11. Le compte applique **les mêmes filtres que
   la vue** (statut, et type pour la Réserve) : sans quoi la pastille
   annoncerait un nombre introuvable à l'écran.
   Implémenté via `HStack` + `Spacer()` dans la fonction `lien()`, calculé
   par `compteurPourCategorie(_ cat:)`.
+- **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
+  en haut du panneau des rubriques listées dans
+  `Categorie.modesAvecFiltreVendeur` (Ventes aux enchères, Expositions). Une
+  pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
+  inédit obtient la sienne d'elle-même — plus un **compteur** des œuvres
+  affichées, ancré à droite hors du défilement horizontal. Un clic filtre, un
+  second lève le filtre.
+  - **`safeAreaInset(edge: .top)` et NON un `VStack`** : le contenu doit
+    continuer de défiler SOUS le bandeau et sous la toolbar, condition de leur
+    translucidité. Empilé, le bandeau coupe la zone de défilement et les deux
+    barres deviennent pleines.
+  - **Aucun fond sur le bandeau** : la toolbar applique déjà son effet de
+    verre ; un matériau ici s'y ajoute et donne deux couches de flou, donc une
+    barre visiblement plus opaque qu'ailleurs.
+  - `oeuvres` et `oeuvresGalerie` dérivent d'un `baseRubrique` commun. Les
+    vendeurs présents s'y calculent **avant** le filtre : après, retenir une
+    pastille ferait disparaître toutes les autres, sans retour possible.
+- **Champ « Image »** en fin d'inspecteur et d'éditeur : poids, définition et
+  nom du fichier stocké, via `PhotoStore.infosImage`. Sert à vérifier que la
+  compression a tenu ses 450 Ko. Dans l'éditeur il est en lecture seule et
+  fondé sur le `photoNom` **local**, donc à jour avant même l'enregistrement.
 - **macOS — sidebar, typographie** (`ContentView.swift`) : tailles relevées
   sur le système (via `NSFont`, valeurs qui font autorité — les pages HIG
   sont rendues en JavaScript et inexploitables par extraction) :
