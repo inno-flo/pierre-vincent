@@ -76,9 +76,15 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return nil
         // Vue agrégée, comme l'Inventaire de Ventes et dons : toutes feuilles.
         case .reserveInventaire: return nil
-        // Même feuille que « Dessins » de Ventes et dons : les deux rubriques
-        // parlent des mêmes œuvres, seul le statut les sépare.
-        case .reserveDessins:   return .dessinsVendus
+        // nil, comme les autres vues agrégées : **la Réserve se discrimine par
+        // le TYPE, pas par la feuille** (voir `types`). Les feuilles sont un
+        // héritage du CSV et s'appellent toutes « … vendus » : une œuvre encore
+        // détenue n'appartient légitimement à aucune. Renvoyer `.dessinsVendus`
+        // ici ajoutait un filtre sur la feuille que le compteur de la sidebar,
+        // lui, n'appliquait pas — d'où une pastille à 9 au-dessus d'une vue
+        // vide, les œuvres importées par photo portant la feuille de repli
+        // `.tableauxVendus`.
+        case .reserveDessins:   return nil
         case .synthese:         return nil
         // Vue agrégée, comme Ventes : le filtre porte sur le mode, pas la feuille.
         case .modeVente:        return nil
@@ -204,7 +210,9 @@ struct ContentView: View {
     @AppStorage("champsVidesRemplis") private var champsVidesRemplis = false
     // TEMPORAIRE — nuance du fond de sélection de la sidebar : marron clair
     // (par défaut) ou 50 % plus foncé. Piloté par le bouton en pied de sidebar.
+    #if os(macOS)
     @AppStorage("selectionFoncee") private var selectionFoncee = false
+    #endif
     // Ouverture/fermeture des blocs de la sidebar, mémorisée entre les sessions
     // (comportement des sidebars système).
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
@@ -318,8 +326,12 @@ struct ContentView: View {
                 // --- Zone du bas de la sidebar ---
                 // Accueille des boutons temporaires de test. A successivement
                 // porté les pastilles de choix de thème, puis le bouton « G ».
+                // macOS UNIQUEMENT : son seul occupant règle la couleur de
+                // sélection de la sidebar Mac, qui n'existe pas sur iPhone.
+                #if os(macOS)
                 Divider()
                 barreOutilsBas
+                #endif
             }
             #if os(iOS)
             // Fond de toute la colonne.
@@ -574,6 +586,8 @@ struct ContentView: View {
     // MARK: Zone du bas de la sidebar
 
     /// Conteneur de boutons temporaires, en pied de barre latérale.
+    /// macOS uniquement : voir la remarque au point d'appel.
+    #if os(macOS)
     private var barreOutilsBas: some View {
         HStack(spacing: 10) {
             boutonNuanceSelection
@@ -601,6 +615,7 @@ struct ContentView: View {
               ? "Revenir au marron clair"
               : "Passer au marron foncé")
     }
+    #endif
 
     // MARK: Lien de catégorie (barre latérale)
 
