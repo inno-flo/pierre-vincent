@@ -133,7 +133,7 @@ extension Color {
     ///
     /// Deux nuances sont proposées à la comparaison, via le bouton en pied de
     /// sidebar (réglage `selectionFoncee`) : le marron clair d'origine, sur
-    /// lequel le texte blanc contraste peu, et une version 50 % plus foncée.
+    /// lequel le texte blanc contraste peu, et une version plus foncée.
     /// La bascule ne concerne que le MODE CLAIR — en mode sombre le fond est
     /// déjà un marron foncé, où le blanc passe bien.
     static var fondSelectionSidebarMac: Color {
@@ -143,9 +143,12 @@ extension Color {
 
     /// Une nuance précise du fond de sélection, indépendamment du réglage —
     /// pour que la pastille du bouton puisse montrer l'autre nuance.
-    /// Mode clair : (209, 187, 167) éclairci, ou sa moitié (105, 94, 84).
+    ///
+    /// Mode clair : le marron éclairci (209, 187, 167), ou sa variante foncée
+    /// (142, 134, 127) — obtenue en remontant de 25 % vers le blanc depuis le
+    /// (105, 94, 84) précédent, jugé trop sombre.
     static func nuanceSelectionSidebar(foncee: Bool) -> Color {
-        let clair: RVBPublic = foncee ? (105, 94, 84) : (209, 187, 167)
+        let clair: RVBPublic = foncee ? (142, 134, 127) : (209, 187, 167)
         return couleurTheme(
             cremeClair: clair, cremeSombre: (89, 67, 47),
             grisClair:  clair, grisSombre:  (89, 67, 47),
