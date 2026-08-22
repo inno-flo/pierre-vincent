@@ -20,8 +20,6 @@ enum ThemeApp {
 
 /// Triplet RVB (0-255).
 private typealias RVB = (CGFloat, CGFloat, CGFloat)
-/// Même chose, utilisable depuis une méthode non privée.
-typealias RVBPublic = (CGFloat, CGFloat, CGFloat)
 
 /// Construit une couleur adaptative selon le thème actif ET le mode clair/sombre.
 /// Chaque thème fournit sa valeur claire et sombre. Pour le thème crème, une
@@ -131,28 +129,16 @@ extension Color {
     /// remplacement du bleu de sélection système. Le libellé est en BLANC dans
     /// les deux modes (`texteSelectionSidebarMac`).
     ///
-    /// Deux nuances sont proposées à la comparaison, via le bouton en pied de
-    /// sidebar (réglage `selectionFoncee`) : le marron clair d'origine, sur
-    /// lequel le texte blanc contraste peu, et une version plus foncée.
-    /// La bascule ne concerne que le MODE CLAIR — en mode sombre le fond est
-    /// déjà un marron foncé, où le blanc passe bien.
+    /// Mode clair : (142, 134, 127), la plus foncée des deux nuances qui ont
+    /// été comparées à l'écran — le texte blanc contrastait mal sur la claire
+    /// (209, 187, 167). Le choix est arrêté : le bouton de comparaison en pied
+    /// de sidebar et son réglage `selectionFoncee` ont été retirés.
+    /// Le mode sombre garde son propre marron, où le blanc passe déjà bien.
     static var fondSelectionSidebarMac: Color {
-        nuanceSelectionSidebar(
-            foncee: UserDefaults.standard.bool(forKey: "selectionFoncee"))
-    }
-
-    /// Une nuance précise du fond de sélection, indépendamment du réglage —
-    /// pour que la pastille du bouton puisse montrer l'autre nuance.
-    ///
-    /// Mode clair : le marron éclairci (209, 187, 167), ou sa variante foncée
-    /// (142, 134, 127) — obtenue en remontant de 25 % vers le blanc depuis le
-    /// (105, 94, 84) précédent, jugé trop sombre.
-    static func nuanceSelectionSidebar(foncee: Bool) -> Color {
-        let clair: RVBPublic = foncee ? (142, 134, 127) : (209, 187, 167)
-        return couleurTheme(
-            cremeClair: clair, cremeSombre: (89, 67, 47),
-            grisClair:  clair, grisSombre:  (89, 67, 47),
-            vertClair:  clair, vertSombre:  (89, 67, 47))
+        couleurTheme(
+            cremeClair: (142, 134, 127), cremeSombre: (89, 67, 47),
+            grisClair:  (142, 134, 127), grisSombre:  (89, 67, 47),
+            vertClair:  (142, 134, 127), vertSombre:  (89, 67, 47))
     }
 
     /// Libellé et icône de la rubrique sélectionnée dans la sidebar macOS :

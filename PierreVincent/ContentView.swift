@@ -217,11 +217,6 @@ struct ContentView: View {
     // œuvres encore détenues. Nouveau drapeau obligatoire — les précédents
     // sont consommés et ne se redéclenchent jamais.
     @AppStorage("feuilleReserveRemplie") private var feuilleReserveRemplie = false
-    // TEMPORAIRE — nuance du fond de sélection de la sidebar : marron clair
-    // (par défaut) ou 50 % plus foncé. Piloté par le bouton en pied de sidebar.
-    #if os(macOS)
-    @AppStorage("selectionFoncee") private var selectionFoncee = false
-    #endif
     // Ouverture/fermeture des blocs de la sidebar, mémorisée entre les sessions
     // (comportement des sidebars système).
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
@@ -333,14 +328,18 @@ struct ContentView: View {
                 #endif
 
                 // --- Zone du bas de la sidebar ---
-                // Accueille des boutons temporaires de test. A successivement
-                // porté les pastilles de choix de thème, puis le bouton « G ».
-                // macOS UNIQUEMENT : son seul occupant règle la couleur de
-                // sélection de la sidebar Mac, qui n'existe pas sur iPhone.
-                #if os(macOS)
-                Divider()
-                barreOutilsBas
-                #endif
+                // VIDE. A successivement porté les pastilles de choix de
+                // thème, le bouton « G » de mise en gras des en-têtes, puis la
+                // pastille de comparaison des deux marrons de sélection — tous
+                // retirés une fois leur question tranchée.
+                // Gardé en commentaire pour y reposer au besoin un bouton
+                // temporaire de test : réactiver demande de décommenter LES
+                // DEUX blocs, celui-ci et la propriété `barreOutilsBas` près de
+                // `lien()`, sinon la compilation échoue.
+                // #if os(macOS)
+                // Divider()
+                // barreOutilsBas
+                // #endif
             }
             #if os(iOS)
             // Fond de toute la colonne.
@@ -605,41 +604,27 @@ struct ContentView: View {
         }
     }
 
-    // MARK: Barre de sélection du thème (bas de la sidebar)
-
     // MARK: Zone du bas de la sidebar
 
-    /// Conteneur de boutons temporaires, en pied de barre latérale.
-    /// macOS uniquement : voir la remarque au point d'appel.
-    #if os(macOS)
-    private var barreOutilsBas: some View {
-        HStack(spacing: 10) {
-            boutonNuanceSelection
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-    }
-
-    /// TEMPORAIRE — bascule la nuance du fond de sélection de la sidebar entre
-    /// le marron clair actuel et une version 50 % plus foncée, pour comparer
-    /// les deux à l'œil. La pastille montre la nuance qui s'appliquera si on
-    /// clique (donc l'autre que celle en cours).
-    private var boutonNuanceSelection: some View {
-        Button {
-            selectionFoncee.toggle()
-        } label: {
-            Circle()
-                .fill(Color.nuanceSelectionSidebar(foncee: !selectionFoncee))
-                .frame(width: 22, height: 22)
-                .overlay(Circle().strokeBorder(Color.gray.opacity(0.35), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .help(selectionFoncee
-              ? "Revenir au marron clair"
-              : "Passer au marron foncé")
-    }
-    #endif
+    // VIDE. Le squelette est gardé en commentaire pour y reposer un bouton
+    // temporaire de test — c'est ce qu'a porté cette zone à chaque fois :
+    // pastilles de choix de thème, bouton « G » de mise en gras des en-têtes,
+    // puis pastille de comparaison des deux marrons de sélection. Chacun a été
+    // retiré une fois sa question tranchée.
+    //
+    // Le réactiver demande de décommenter LES DEUX blocs : celui-ci et l'appel
+    // dans la VStack de la sidebar (`Divider()` + `barreOutilsBas`).
+    //
+    // #if os(macOS)
+    // private var barreOutilsBas: some View {
+    //     HStack(spacing: 10) {
+    //         // …le bouton du moment…
+    //         Spacer()
+    //     }
+    //     .padding(.horizontal, 20)
+    //     .padding(.vertical, 10)
+    // }
+    // #endif
 
     // MARK: Lien de catégorie (barre latérale)
 
