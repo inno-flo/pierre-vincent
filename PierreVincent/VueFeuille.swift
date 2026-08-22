@@ -338,9 +338,31 @@ struct VueFeuille: View {
         lectureSeule ? .leading : .center
     }
 
+    /// Identité de la rubrique affichée, déduite des paramètres reçus.
+    ///
+    /// Sert à repartir d'un état propre quand on change de rubrique, SANS
+    /// changer l'identité de la vue (voir la remarque sur `.id(cat)` dans
+    /// `ContentView`). Le titre seul ne suffirait pas : « Catalogue » désigne
+    /// deux rubriques distinctes, une par section de la sidebar.
+    private var cleRubrique: String {
+        [titre, feuille?.rawValue ?? "",
+         statuts.joined(separator: ","),
+         types.joined(separator: ","),
+         modesVente.joined(separator: ",")].joined(separator: "|")
+    }
+
     var body: some View {
         contenu
         .navigationTitle("")
+        // Changement de rubrique : on remet à zéro ce qui n'a plus de sens
+        // ailleurs — la sélection (des UUID absents de la nouvelle liste) et
+        // le filtre par vendeur. Le reste est soit persistant et voulu tel
+        // (mode d'affichage, tri, inspecteur), soit transitoire.
+        .onChange(of: cleRubrique) { _, _ in
+            selection = []
+            vendeurRetenu = nil
+            editionEntree = nil
+        }
         // Panneau Inspecteur à droite (mode galerie uniquement) : affiche les
         // détails de la vignette sélectionnée, ou rien si 0 ou plusieurs.
         .inspector(isPresented: $inspecteurVisible) {

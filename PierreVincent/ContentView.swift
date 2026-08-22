@@ -381,7 +381,13 @@ struct ContentView: View {
                                types: cat.types,
                                filtreParVendeur: cat.filtreParVendeur,
                                nbSelection: $nbSelection)
-                    .id(cat)
+                    // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
+                    // toute la vue à chaque changement de rubrique, donc aussi
+                    // sa `.toolbar` — et la NSToolbar reconstruite réanimait le
+                    // bouton de masquage de la sidebar, qu'on voyait clignoter
+                    // (deux icônes superposées) pendant la navigation ↑↓.
+                    // La remise à zéro qu'il assurait est faite par
+                    // `VueFeuille` elle-même, sur `cleRubrique`.
                     #else
                     // Interface iPhone/iPad de consultation (lecture seule).
                     // La vue « Œuvres » a une présentation structurée
@@ -475,13 +481,43 @@ struct ContentView: View {
     // MARK: Navigation clavier de la sidebar (macOS)
 
     /// Ordre d'affichage des rubriques, pour la navigation ↑↓.
+    ///
+    /// **Reflet exact de la sidebar, et non une liste figée.** La version
+    /// précédente était écrite en dur et datait d'une organisation antérieure :
+    /// les flèches sautaient les modes de vente et tout le bloc Réserve, qui
+    /// n'y figuraient pas.
+    ///
+    /// Deux conséquences à préserver :
+    /// - les modes de vente sont **déduits des données** (`modesDeVentePresents`),
+    ///   donc un mode inédit entre dans la navigation en même temps qu'il
+    ///   apparaît dans la sidebar ;
+    /// - un bloc **replié** ne fournit aucune rubrique, sinon les flèches
+    ///   mèneraient à une ligne invisible à l'écran.
     private var categoriesSidebar: [Categorie] {
-        [.oeuvres, .synthese,
-         .tableauxVendus, .dessinsVendus, .tapisVendus, .oeuvresDonnees,
-         .ventesRealisees]
+        var liste: [Categorie] = []
+        if blocVentesOuvert {
+            liste += [.oeuvres, .ventesRealisees, .oeuvresDonnees, .synthese]
+            if sousBlocModesVenteOuvert {
+                liste += modesDeVentePresents.map { Categorie.modeVente($0) }
+            }
+            if sousBlocCategoriesOuvert {
+                liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
+            }
+        }
+        if blocStockOuvert {
+            liste.append(.reserveInventaire)
+            if sousBlocReserveCategoriesOuvert {
+                liste.append(.reserveDessins)
+            }
+        }
+        return liste
     }
 
     /// Déplace la rubrique sélectionnée de `delta` (−1 = ↑, +1 = ↓).
+    ///
+    /// Si la rubrique courante ne figure pas dans la liste — rien de
+    /// sélectionné, ou son bloc vient d'être replié — on entre par le bord
+    /// correspondant au sens de la flèche.
     private func naviguerSidebar(delta: Int) {
         guard let courante = categorie,
               let idx = categoriesSidebar.firstIndex(of: courante) else {
