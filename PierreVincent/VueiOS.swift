@@ -13,17 +13,20 @@ struct VueiOS: View {
     let filtreParVendeur: Bool     // filtre par vendeur au lieu du menu de tri
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
+    let themes: [String]           // filtre sur le champ Thème (vide = aucun)
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
          filtreParVendeur: Bool = false,
          statuts: [String] = Array(statutsVentesEtDons),
-         types: [String] = []) {
+         types: [String] = [],
+         themes: [String] = []) {
         self.feuille = feuille
         self.titre = titre
         self.modesVente = modesVente
         self.filtreParVendeur = filtreParVendeur
         self.statuts = statuts
         self.types = types
+        self.themes = themes
     }
 
     @Query private var toutes: [Oeuvre]
@@ -62,8 +65,10 @@ struct VueiOS: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
-        // Filtres propres à la rubrique : statut, et éventuellement type.
-        return base.filter { correspond($0, statuts: statuts, types: types) }
+        // Filtres propres à la rubrique : statut, type, thème.
+        return base.filter {
+            correspond($0, statuts: statuts, types: types, themes: themes)
+        }
     }
 
     /// Vendeurs réellement présents dans la rubrique, par ordre alphabétique.

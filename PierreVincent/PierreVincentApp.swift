@@ -54,6 +54,7 @@ struct PierreVincentApp: App {
         reglages.set(true,  forKey: "sousBlocCategoriesOuvert")
         reglages.set(false, forKey: "sousBlocModesVenteOuvert")
         reglages.set(false, forKey: "sousBlocReserveCategoriesOuvert")
+        reglages.set(true,  forKey: "sousBlocReserveThemesOuvert")
     }
 
     /// Conteneur SwiftData : la base de données locale des œuvres.

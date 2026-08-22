@@ -18,6 +18,10 @@ enum Categorie: Hashable, Identifiable {
     case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
     case reserveInventaire // Réserve : toutes les œuvres encore détenues
     case reserveDessins   // Réserve : dessins encore disponibles
+    /// Sous-catégorie de la Réserve : un thème précis. Même principe que
+    /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
+    /// variable de rubriques déduites des données (voir `themesPresents`).
+    case reserveTheme(String)
     /// Sous-catégorie de Ventes : un mode de vente précis. La valeur est
     /// portée par le cas lui-même, ce qui permet un nombre variable de
     /// sous-catégories, déduites des données (voir `modesDeVentePresents`).
@@ -36,6 +40,7 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return "Ventes"
         case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
+        case .reserveTheme(let t): return t
         case .synthese:         return "Synthèse"
         // Forme d'affichage du mode : la rubrique regroupe PLUSIEURS ventes,
         // d'où le pluriel, alors que la valeur stockée sur une œuvre reste au
@@ -60,6 +65,7 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return "person.crop.circle.fill"
         case .reserveInventaire: return "square.grid.2x2"
         case .reserveDessins:   return "pencil.and.outline"
+        case .reserveTheme:     return "paintbrush"
         case .synthese:         return "chart.bar.doc.horizontal"
         case .modeVente:        return "tag"
         }
@@ -78,6 +84,9 @@ enum Categorie: Hashable, Identifiable {
         // rapportent, et c'est le TYPE qui distingue Dessins du Catalogue.
         case .reserveInventaire: return .reserve
         case .reserveDessins:   return .reserve
+        // Même feuille que le reste de la Réserve : c'est le THÈME qui
+        // restreint, pas la feuille.
+        case .reserveTheme:     return .reserve
         case .synthese:         return nil
         // Vue agrégée, comme Ventes : le filtre porte sur le mode, pas la feuille.
         case .modeVente:        return nil
@@ -108,7 +117,7 @@ enum Categorie: Hashable, Identifiable {
     /// encore détenues.
     var statuts: [String] {
         switch self {
-        case .reserveInventaire, .reserveDessins:
+        case .reserveInventaire, .reserveDessins, .reserveTheme:
             return statutsReserve
         // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
         // dons ont leur propre rubrique.
@@ -116,6 +125,14 @@ enum Categorie: Hashable, Identifiable {
             return ["Vendu"]
         default:
             return Array(statutsVentesEtDons)
+        }
+    }
+
+    /// Filtre sur le champ Thème (vide = aucun filtre).
+    var themes: [String] {
+        switch self {
+        case .reserveTheme(let t): return [t]
+        default:                   return []
         }
     }
 
@@ -136,7 +153,10 @@ enum Categorie: Hashable, Identifiable {
     /// Vrai si la rubrique propose un bandeau de pastilles filtrant par TYPE
     /// d'œuvre (Tableaux / Dessins). Réservé aux Dons, qui mêlent les deux
     /// sans que la feuille les distingue.
-    var filtreParType: Bool { self == .oeuvresDonnees }
+    var filtreParType: Bool {
+        if case .reserveTheme = self { return true }
+        return self == .oeuvresDonnees
+    }
 
     /// Modes de vente dont la vignette de galerie n'affiche PAS de ligne de
     /// nom : l'acheteur n'y renseigne pas, seuls le prix et les dimensions
@@ -232,6 +252,7 @@ struct ContentView: View {
     @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
     @AppStorage("sousBlocModesVenteOuvert") private var sousBlocModesVenteOuvert = false
     @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = false
+    @AppStorage("sousBlocReserveThemesOuvert") private var sousBlocReserveThemesOuvert = true
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -407,6 +428,7 @@ struct ContentView: View {
                                modesVente: cat.modesVente,
                                statuts: cat.statuts,
                                types: cat.types,
+                               themes: cat.themes,
                                filtreParVendeur: cat.filtreParVendeur,
                                filtreParType: cat.filtreParType,
                                nomEnGalerie: cat.nomEnGalerie,
@@ -440,7 +462,8 @@ struct ContentView: View {
                                modesVente: cat.modesVente,
                                filtreParVendeur: cat.filtreParVendeur,
                                statuts: cat.statuts,
-                               types: cat.types)
+                               types: cat.types,
+                               themes: cat.themes)
                             .id(cat)
                     }
                     #endif
@@ -549,6 +572,9 @@ struct ContentView: View {
             if sousBlocReserveCategoriesOuvert {
                 liste.append(.reserveDessins)
             }
+            if sousBlocReserveThemesOuvert {
+                liste += themesPresents.map { Categorie.reserveTheme($0) }
+            }
         }
         return liste
     }
@@ -572,7 +598,8 @@ struct ContentView: View {
 
     /// Raccourci : l'œuvre relève-t-elle de cette rubrique (statut + type) ?
     private func correspond(_ o: Oeuvre, a cat: Categorie) -> Bool {
-        PierreVincent.correspond(o, statuts: cat.statuts, types: cat.types)
+        PierreVincent.correspond(o, statuts: cat.statuts, types: cat.types,
+                                 themes: cat.themes)
     }
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
@@ -596,7 +623,7 @@ struct ContentView: View {
         // Ventes, ses sous-catégories et la Réserve ont leurs propres statuts :
         // on repart de `toutes`, pas de `recensees`.
         case .ventesRealisees, .modeVente,
-             .reserveInventaire, .reserveDessins:
+             .reserveInventaire, .reserveDessins, .reserveTheme:
             return toutes.filter { o in
                 // La FEUILLE aussi, sinon la pastille annonce des œuvres que
                 // la vue ne montre pas : c'est précisément ce qui affichait
@@ -754,6 +781,36 @@ struct ContentView: View {
         } label: {
             Text("Catégories").fontWeight(.semibold)
         }
+        // Sous-groupe des thèmes, construit d'après les données.
+        DisclosureGroup(isExpanded: $sousBlocReserveThemesOuvert) {
+            ForEach(themesPresents, id: \.self) { theme in
+                lien(.reserveTheme(theme))
+            }
+        } label: {
+            Text("Thèmes").fontWeight(.semibold)
+        }
+    }
+
+    /// Thèmes réellement présents dans la Réserve, par ordre alphabétique.
+    ///
+    /// **Déduits des données, aucune liste en dur** — même principe que
+    /// `modesDeVentePresents` : un thème inédit obtient sa rubrique dès qu'une
+    /// œuvre le porte, et elle disparaît quand plus aucune ne l'a.
+    ///
+    /// Ne balaie que les œuvres de la Réserve : un thème qui n'existerait que
+    /// sur une œuvre vendue n'a pas de rubrique ici, où elle serait vide.
+    /// Les valeurs vides et « Inconnu » sont écartées.
+    private var themesPresents: [String] {
+        var vus: [String: String] = [:]
+        for o in toutes where o.feuille == .reserve && estEnReserve(o) {
+            let brut = o.theme.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cle = brut.lowercased()
+            guard !brut.isEmpty,
+                  brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
+                  vus[cle] == nil else { continue }
+            vus[cle] = brut
+        }
+        return vus.values.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     /// Un lien de navigation vers une catégorie, avec son icône.
