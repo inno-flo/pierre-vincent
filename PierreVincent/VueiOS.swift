@@ -242,8 +242,11 @@ struct VueiOS: View {
                     } label: {
                         Image(systemName: iconeMenu)
                     }
-                } else {
+                } else if feuille != .reserve {
                     // Mode tri standard : Prix, Acheteur, Dimensions.
+                    // Absent de la Réserve : ces œuvres n'ont ni prix ni
+                    // acheteur, et le menu n'y proposerait que Dimensions.
+                    // Le bouton de sens du tri, lui, reste.
                     Menu {
                         if !rubriqueSansPrix {
                             Button {

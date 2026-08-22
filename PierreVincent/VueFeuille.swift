@@ -86,6 +86,10 @@ struct VueFeuille: View {
     // États remontés vers le menu « Édition » pour griser « Ouvrir l'éditeur ».
     @AppStorage("uneSelectionExiste") private var uneSelectionExiste = false
     @AppStorage("editeurOuvert") private var editeurOuvert = false
+    // Rubrique sans prix à l'écran (Dons ou Réserve) ? Lu par le menu
+    // « Présentation » pour y griser « Masquer les prix ». Nom distinct de la
+    // propriété calculée `rubriqueSansPrix`, dont il n'est que le report.
+    @AppStorage("rubriqueSansPrix") private var signalSansPrix = false
     // Message affiché après un import (déplacé ici pour grouper le set Import).
     @State private var messageImport: String?
     // Message éphémère « Prix masqués / affichés », affiché brièvement lors
@@ -404,6 +408,11 @@ struct VueFeuille: View {
         // ailleurs — la sélection (des UUID absents de la nouvelle liste) et
         // le filtre par vendeur. Le reste est soit persistant et voulu tel
         // (mode d'affichage, tri, inspecteur), soit transitoire.
+        .task(id: cleRubrique) {
+            // Écrit hors du calcul de `body` : y toucher à un @AppStorage
+            // relancerait le rendu en boucle.
+            signalSansPrix = rubriqueSansPrix
+        }
         .onChange(of: cleRubrique) { _, _ in
             selection = []
             vendeurRetenu = nil
@@ -591,14 +600,19 @@ struct VueFeuille: View {
                 }
             }
         }
-        ToolbarSpacer(.fixed)
-        ToolbarItem {
-            Button {
-                prixMasques.toggle()
-            } label: {
-                Image(systemName: prixMasques ? "eye.slash" : "eye")
+        // Masquage des prix : sans objet là où les œuvres n'en ont pas —
+        // Dons et Réserve. Le menu « Présentation » grise la commande au même
+        // moment, via `signalSansPrix`.
+        if !rubriqueSansPrix {
+            ToolbarSpacer(.fixed)
+            ToolbarItem {
+                Button {
+                    prixMasques.toggle()
+                } label: {
+                    Image(systemName: prixMasques ? "eye.slash" : "eye")
+                }
+                .help(prixMasques ? "Afficher les prix" : "Masquer les prix")
             }
-            .help(prixMasques ? "Afficher les prix" : "Masquer les prix")
         }
         ToolbarSpacer(.fixed)
         ToolbarItem {
@@ -618,7 +632,12 @@ struct VueFeuille: View {
         if modeAffichage == "icone" {
             ToolbarSpacer(.fixed)
             ToolbarItemGroup {
-                menuTri
+                // Menu de critère : sans objet dans la Réserve, dont les
+                // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
+                // le tri par dimensions y gardant du sens.
+                if feuille != .reserve {
+                    menuTri
+                }
                 Button {
                     triCroissant.toggle()
                 } label: {

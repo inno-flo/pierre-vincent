@@ -20,6 +20,9 @@ struct PierreVincentApp: App {
     // est-il ouvert ? Sert à griser « Ouvrir l'éditeur » au bon moment.
     @AppStorage("uneSelectionExiste") private var uneSelectionExiste = false
     @AppStorage("editeurOuvert") private var editeurOuvert = false
+    // Remonté par la vue : la rubrique affichée est-elle sans prix (Dons ou
+    // Réserve) ? Sert à griser « Masquer les prix ».
+    @AppStorage("rubriqueSansPrix") private var rubriqueSansPrix = false
     // Pilotage des actions import/export depuis le menu « Fichier ».
     @AppStorage("actionFichier") private var actionFichier = ""
     @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
@@ -157,12 +160,16 @@ struct PierreVincentApp: App {
                 }
 
                 // Masquer / afficher les prix partout dans l'application.
+                // Grisé dans les Dons et la Réserve : ces œuvres n'ont pas de
+                // prix, et le bouton correspondant est absent de la toolbar.
                 if prixMasques {
                     Button("Afficher les prix") { prixMasques = false }
                         .keyboardShortcut("p", modifiers: [.command, .shift])
+                        .disabled(rubriqueSansPrix)
                 } else {
                     Button("Masquer les prix") { prixMasques = true }
                         .keyboardShortcut("p", modifiers: [.command, .shift])
+                        .disabled(rubriqueSansPrix)
                 }
             }
         }
