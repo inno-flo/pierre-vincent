@@ -22,13 +22,13 @@ enum Categorie: Hashable, CaseIterable, Identifiable {
 
     var titre: String {
         switch self {
-        case .oeuvres:          return "Inventaire"
+        case .oeuvres:          return "Catalogue"
         case .tableauxVendus:   return "Tableaux"
         case .dessinsVendus:    return "Dessins"
         case .tapisVendus:      return "Tapis"
         case .oeuvresDonnees:   return "Dons"
         case .ventesRealisees:  return "Ventes"
-        case .reserveInventaire: return "Inventaire"
+        case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
         case .synthese:         return "Synthèse"
         }
@@ -156,7 +156,6 @@ struct ContentView: View {
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
     @AppStorage("blocStockOuvert") private var blocStockOuvert = true
     @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
-    @AppStorage("sousBlocExpositionsOuvert") private var sousBlocExpositionsOuvert = true
     @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = true
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
@@ -273,10 +272,10 @@ struct ContentView: View {
             #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
-            // Pas d'intitulé pour la vue principale (liste des catégories) sur
-            // iPhone : le mode grand format est conservé (chaîne vide) pour
-            // garder le même espace de mise en page que les autres vues.
-            .navigationTitle("")
+            // Titre général de la colonne sidebar — vue racine de la pile de
+            // navigation sur iPhone, le split view s'y repliant en largeur
+            // compacte. En grand format, comme le « Feeds » de NetNewsWire.
+            .navigationTitle("Inventaire")
             .navigationBarTitleDisplayMode(.large)
             // Bouton d'import de la base (fichier .pvbase reçu du Mac).
             .toolbar {
@@ -548,22 +547,20 @@ struct ContentView: View {
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
+        // Ventes et Dons sont au premier niveau, avec Catalogue et Synthèse :
+        // ce sont des vues d'ensemble, pas des catégories d'œuvres.
         lien(.oeuvres)
+        lien(.ventesRealisees)
+        lien(.oeuvresDonnees)
         lien(.synthese)
-        // Sous-groupes repliables. `DisclosureGroup` et non `Section` : une
-        // `List` n'accepte pas de Section imbriquée dans une Section.
+        // Sous-groupe repliable des catégories d'œuvres. `DisclosureGroup` et
+        // non `Section` : une `List` n'accepte pas de Section dans une Section.
         DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
             lien(.tableauxVendus)
             lien(.dessinsVendus)
             lien(.tapisVendus)
-            lien(.oeuvresDonnees)
         } label: {
             Text("Catégories").fontWeight(.semibold)
-        }
-        DisclosureGroup(isExpanded: $sousBlocExpositionsOuvert) {
-            lien(.ventesRealisees)
-        } label: {
-            Text("Expositions et enchères").fontWeight(.semibold)
         }
     }
 

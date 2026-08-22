@@ -148,7 +148,7 @@ struct VueOeuvresStructuree: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle(estModeVentes ? "Ventes" : "Inventaire")
+        .navigationTitle(estModeVentes ? "Ventes" : "Catalogue")
         .toolbar {
             // Un seul set de contrôles, compact : Liste, Galerie, tri, sens.
             // Regroupés dans un HStack pour maîtriser l'espacement.
