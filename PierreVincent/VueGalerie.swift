@@ -152,7 +152,16 @@ struct VueGalerie: View {
             VStack(alignment: .leading, spacing: 5) {
                 // En gras : le nom de l'acheteur (pour la feuille « données »,
                 // le destinataire, qui joue le même rôle).
-                if nomEnGalerie {
+                if o.feuille == .reserve {
+                    // Réserve : l'intitulé du champ d'abord, en gris, puis sa
+                    // valeur — l'inverse se lisait mal, la valeur seule
+                    // (« Natures mortes carton 2 ») ne disant pas de quoi il
+                    // s'agit tant qu'on n'a pas lu la ligne suivante.
+                    Text("Emplacement")
+                        .font(policeLegende)
+                        .foregroundStyle(Color.texteLegende.opacity(0.6))
+                        .lineLimit(1)
+                } else if nomEnGalerie {
                     Text(ligneGras(o).isEmpty ? " " : ligneGras(o))
                         .font(.headline)
                         .foregroundStyle(Color.texteLegende)
@@ -170,12 +179,10 @@ struct VueGalerie: View {
                         PrixText(o.prix)
                             .foregroundStyle(Color.orangeInternational)
                     } else if o.feuille == .reserve {
-                        // La Réserve n'a pas de prix : c'est l'emplacement qui
-                        // renseigne le plus, puisqu'il dit où trouver l'œuvre.
-                        // Le nom du champ est affiché avec sa valeur, celle-ci
-                        // n'étant pas devinable (« Natures mortes carton 2 »).
-                        Text("Emplacement")
-                            .foregroundStyle(Color.texteLegende.opacity(0.6))
+                        // La valeur, sous son intitulé.
+                        Text(afficher(o.emplacement))
+                            .foregroundStyle(Color.texteLegende)
+                            .lineLimit(1)
                     }
                     Spacer()
                     Text(o.dimensions)
@@ -222,9 +229,6 @@ struct VueGalerie: View {
     /// Texte de la ligne en gras : le nom de l'acheteur s'il existe, sinon le
     /// destinataire (utile dans la vue « Œuvres » qui compile ventes ET dons).
     private func ligneGras(_ o: Oeuvre) -> String {
-        // Réserve : ni acheteur ni destinataire, l'œuvre n'est pas sortie du
-        // fonds. C'est l'emplacement qui tient la ligne de tête.
-        if o.feuille == .reserve { return afficher(o.emplacement) }
         if !o.acheteur.isEmpty { return o.acheteur }
         if !o.destinataire.isEmpty { return o.destinataire }
         return ""

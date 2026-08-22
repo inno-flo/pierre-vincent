@@ -335,15 +335,16 @@ struct VueiOS: View {
                                         }
                                     } else if o.feuille == .reserve {
                                         // Réserve : l'emplacement remplace le
-                                        // couple acheteur / prix. Le nom du
-                                        // champ accompagne la valeur, qui n'est
-                                        // pas devinable seule.
-                                        Text(afficher(o.emplacement))
-                                            .font(.headline).lineLimit(1)
+                                        // couple acheteur / prix. L'intitulé
+                                        // vient EN PREMIER, en gris, la valeur
+                                        // ensuite — seule, elle ne dit pas de
+                                        // quel champ elle relève.
                                         Text("Emplacement")
                                             .font(.subheadline)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
+                                        Text(afficher(o.emplacement))
+                                            .font(.headline).lineLimit(1)
                                     } else if !o.destinataire.isEmpty {
                                         Text(o.destinataire)
                                             .font(.headline).lineLimit(1)

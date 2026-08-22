@@ -407,9 +407,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   voie réellement à l'intérieur d'un `ScrollView`), animation 0,25 s.
 - **Sidebar — zone du bas, conservée en commentaire** (`ContentView.swift`,
   les deux plateformes) : le bas de la barre latérale est **vide**. Il a
-  successivement porté les pastilles de choix de thème, puis le bouton « G »
-  (mise en gras des en-têtes de section), tous deux supprimés — les en-têtes
-  sont désormais en graisse normale et il n'y a plus de sélecteur de thème.
+  successivement porté les pastilles de choix de thème, le bouton « G »
+  (mise en gras des en-têtes de section), puis la pastille de comparaison des
+  deux marrons de sélection — tous retirés une fois leur question tranchée :
+  les en-têtes sont en graisse normale, il n'y a plus de sélecteur de thème, et
+  le marron de sélection est arrêté.
   L'emplacement est **gardé en commentaire** pour y poser au besoin des boutons
   temporaires de test : deux blocs qui se renvoient l'un à l'autre, l'appel
   dans la `VStack` de la sidebar (`Divider()` + `barreOutilsBas`) et la
@@ -450,11 +452,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   le prix et les dimensions. Deux vignettes distinctes à modifier de front —
   celle de `VueGalerie` (partagée Mac/iPhone) et celle écrite sur place dans
   `VueOeuvresStructuree`.
-- **Réserve : la ligne de nom porte l'EMPLACEMENT.** Elle cherchait un acheteur
-  ou un destinataire, qu'une œuvre en réserve n'a ni l'un ni l'autre, et
-  restait donc vide. Le libellé « Emplacement » prend la place du prix. Même
-  chose dans la liste iPhone ; le mode liste macOS a sa colonne dans
-  `tableReserve`.
+- **Réserve : la vignette porte l'EMPLACEMENT.** La ligne de nom cherchait un
+  acheteur ou un destinataire, qu'une œuvre en réserve n'a ni l'un ni l'autre,
+  et restait donc vide. **Ordre : l'intitulé « Emplacement » d'abord, en gris,
+  puis sa valeur** — l'inverse se lisait mal, « Natures mortes carton 2 » seul
+  ne disant pas de quel champ il relève. Même chose dans la liste iPhone ; le
+  mode liste macOS a sa colonne dans `tableReserve`.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
@@ -552,14 +555,21 @@ JavaScript, inexploitables par extraction) :
     étant partagé, iOS conserve `.subheadline` (15 pt) : y écrire 13 pt
     rapetisserait le texte au lieu de l'agrandir.
 - **macOS — sidebar, couleur de sélection** (`ContentView.swift`,
-  `Couleurs.swift`) : marron clair `Color.fondSelectionSidebarMac`
-  (209, 187, 167 en mode clair) au lieu du bleu système.
+  `Couleurs.swift`) : `Color.fondSelectionSidebarMac`, marron
+  **(142, 134, 127)** en mode clair et (89, 67, 47) en mode sombre, au lieu du
+  bleu système. Le libellé est en blanc dans les deux modes.
+  Deux nuances claires ont été comparées à l'écran via une pastille temporaire
+  en pied de sidebar ; la plus foncée l'a emporté, le texte blanc contrastant
+  mal sur (209, 187, 167). **Le choix est arrêté** : la pastille, le réglage
+  `selectionFoncee` et la fonction `nuanceSelectionSidebar(foncee:)` ont été
+  supprimés, ainsi que le typealias `RVBPublic` qui n'existait que pour cette
+  signature.
   **`.tint()` n'a aucun effet** sur la surbrillance d'une `List` en style
   sidebar (essayé, sans résultat). La méthode qui marche : désactiver la
   surbrillance système avec `selectionHighlightStyle = .none` sur le
   `NSOutlineView` (helper `DesactiveSurbrillanceSidebar`), puis peindre le
   fond soi-même via `.listRowBackground` (rectangle arrondi, rayon 6,
-  marges latérales 4 px). La valeur du mode sombre reste à ajuster.
+  marges latérales 4 px).
 - **macOS — toolbar de la vue principale** (`VueFeuille.swift`) : tous les
   `ToolbarItem` et `ToolbarSpacer` sont sans `placement:` explicite pour
   que les boutons restent exclusivement au-dessus du panneau de contenu
