@@ -36,7 +36,10 @@ struct EditeurEntree: View {
     @State private var confirmationNavigation = false
     @State private var navigationEnAttente = 0   // +1 suivant, -1 précédent
 
-    private var estVente: Bool { feuille != .oeuvresDonnees }
+    private var estVente: Bool { feuille != .oeuvresDonnees && feuille != .reserve }
+
+    /// Œuvre encore détenue : ni prix, ni transaction, ni date à saisir.
+    private var estReserve: Bool { feuille == .reserve }
 
     // Champs pour la navigation au clavier (Tab).
     private enum Champ: Hashable {
@@ -112,10 +115,14 @@ struct EditeurEntree: View {
                             }
                             // Cellule Statut + Thème + Emplacement.
                             celluleEditeur { blocSuivi }
-                            // Cellule Destinataire + Mode de vente.
-                            celluleEditeur {
-                                champTexte("Destinataire", $destinataire, champ: .destinataire)
-                                champTexte("Mode de vente", $modeVente, champ: .modeVente)
+                            // Cellule Destinataire + Mode de vente — pour les
+                            // dons seulement : une œuvre en réserve n'a fait
+                            // l'objet d'aucune transaction.
+                            if !estReserve {
+                                celluleEditeur {
+                                    champTexte("Destinataire", $destinataire, champ: .destinataire)
+                                    champTexte("Mode de vente", $modeVente, champ: .modeVente)
+                                }
                             }
                         }
                         // Cellule Remarques.

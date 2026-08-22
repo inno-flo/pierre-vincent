@@ -93,8 +93,9 @@ struct VueFeuille: View {
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
         } else if !modesVente.isEmpty {
-            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
-            base = toutes.filter { $0.feuille != .oeuvresDonnees }
+            // Filtre modeVente actif : on se restreint aux feuilles vendues
+            // (tableaux, dessins, tapis) — ni dons, ni réserve.
+            base = toutes.filter { !feuillesSansPrix.contains($0.feuille) }
         } else {
             base = toutes
         }
@@ -149,7 +150,7 @@ struct VueFeuille: View {
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.
         var critere = triGalerie
-        if estFeuilleDon, critere == "prix" { critere = "dimensions" }
+        if rubriqueSansPrix, critere == "prix" { critere = "dimensions" }
         if feuille == .tapisVendus, critere == "dimensions" { critere = "prix" }
 
         // Tri de base toujours calculé en ordre croissant, puis inversé au besoin.
@@ -177,6 +178,14 @@ struct VueFeuille: View {
 
     private var estFeuilleDon: Bool { feuille == .oeuvresDonnees }
 
+    /// Vrai si la rubrique affichée n'a pas de prix à montrer : les dons et la
+    /// Réserve. Distinct de `estFeuilleDon`, qui commande ce qui est propre aux
+    /// dons (colonne Destinataire, tableau dédié).
+    private var rubriqueSansPrix: Bool {
+        guard let f = feuille else { return false }
+        return feuillesSansPrix.contains(f)
+    }
+
     // MARK: Contenu de l'Inspecteur (mode galerie)
 
     /// Œuvre à inspecter : uniquement si EXACTEMENT une vignette est sélectionnée.
@@ -196,6 +205,9 @@ struct VueFeuille: View {
             // pour une œuvre donnée — alors que l'éditeur, lui, se fonde déjà
             // sur o.feuille. Les deux vues divergeaient sur les mêmes données.
             let estDon = o.feuille == .oeuvresDonnees
+            // Une œuvre en réserve n'a ni prix, ni vendeur, ni acheteur, ni
+            // date : elle n'est pas encore sortie du fonds.
+            let estReserve = o.feuille == .reserve
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     // Grande image en tête.
@@ -205,8 +217,8 @@ struct VueFeuille: View {
                             .cornerRadius(10)
                     }
 
-                    // Cellule 1 : Prix (sauf dons).
-                    if !estDon {
+                    // Cellule 1 : Prix (ni pour les dons, ni pour la réserve).
+                    if aUnPrix(o) {
                         celluleInspecteur {
                             ligneInspecteur("Prix", formaterEuros(o.prix),
                                             couleur: Color.orangeInternational, estPrix: true)
@@ -231,20 +243,23 @@ struct VueFeuille: View {
                         ligneInspecteur("Emplacement", o.emplacement)
                     }
 
-                    // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
-                    celluleInspecteur {
-                        if estDon {
-                            ligneInspecteur("Destinataire", o.destinataire)
-                            ligneInspecteur("Mode de vente", o.modeVente)
-                        } else {
-                            ligneInspecteur("Vendeur", o.vendeur)
-                            ligneInspecteur("Acheteur", o.acheteur)
-                            ligneInspecteur("Mode de vente", o.modeVente)
+                    // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de
+                    // vente. Rien pour la réserve : aucune transaction.
+                    if !estReserve {
+                        celluleInspecteur {
+                            if estDon {
+                                ligneInspecteur("Destinataire", o.destinataire)
+                                ligneInspecteur("Mode de vente", o.modeVente)
+                            } else {
+                                ligneInspecteur("Vendeur", o.vendeur)
+                                ligneInspecteur("Acheteur", o.acheteur)
+                                ligneInspecteur("Mode de vente", o.modeVente)
+                            }
                         }
                     }
 
-                    // Cellule 6 : Date (sauf dons, qui n'en ont pas).
-                    if !estDon {
+                    // Cellule 6 : Date (ni dons, ni réserve).
+                    if !estDon && !estReserve {
                         celluleInspecteur {
                             ligneInspecteur("Date", o.date)
                         }
@@ -263,7 +278,7 @@ struct VueFeuille: View {
                 }
                 .padding()
             }
-        } else if selection.count > 1 && !estFeuilleDon {
+        } else if selection.count > 1 && !rubriqueSansPrix {
             // Plusieurs œuvres sélectionnées (hors dons) : total des prix.
             let selectionnees = oeuvres.filter { selection.contains($0.id) }
             let total = selectionnees.reduce(0.0) { $0 + $1.prix }
@@ -594,7 +609,7 @@ struct VueFeuille: View {
 
     /// Icône du bouton de menu de tri selon le critère actif (comme sur iOS).
     private var iconeMenuTri: String {
-        if estFeuilleDon {
+        if rubriqueSansPrix {
             return triGalerie == "acheteur" ? "person" : "ruler"
         }
         switch triGalerie {
@@ -607,7 +622,7 @@ struct VueFeuille: View {
     /// Menu de choix du critère de tri (galerie).
     private var menuTri: some View {
         Menu {
-            if !estFeuilleDon {
+            if !rubriqueSansPrix {
                 Button {
                     triGalerie = "prix"
                 } label: {
@@ -876,8 +891,56 @@ struct VueFeuille: View {
     private var tableau: some View {
         if estFeuilleDon {
             tableDon
+        } else if feuille == .reserve {
+            tableReserve
         } else {
             tableVente
+        }
+    }
+
+    /// Tableau de la Réserve : les colonnes de transaction (Prix, Vendeur,
+    /// Acheteur, Mode de vente, Date) n'ont pas lieu d'être, et il n'y a pas
+    /// non plus de destinataire. Huit colonnes, sous la limite de dix.
+    private var tableReserve: some View {
+        Table(oeuvres, selection: $selection, sortOrder: $tri) {
+            TableColumn("Photo") { (o: Oeuvre) in
+                Color.clear.frame(width: 1, height: hauteurContenu)
+                    .overlay(alignment: .leading) { vignette(o) }
+            }
+            .width(96)
+            TableColumn("Type", value: \Oeuvre.type) { o in
+                Text(o.type)
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Dimensions", value: \Oeuvre.dimensions) { o in
+                Text(o.dimensions)
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Format", value: \Oeuvre.format) { o in
+                Text(o.format)
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Statut", value: \Oeuvre.statut) { o in
+                Text(afficher(o.statut))
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Thème", value: \Oeuvre.theme) { o in
+                Text(afficher(o.theme))
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Emplacement", value: \Oeuvre.emplacement) { o in
+                Text(afficher(o.emplacement))
+                    .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
+            }
+            TableColumn("Remarques", value: \Oeuvre.remarques) { o in
+                Text(o.remarques)
+                    .frame(minHeight: hauteurContenu, alignment: .leading)
+            }
+        }
+        .contextMenu(forSelectionType: UUID.self) { _ in
+            menuContextuel
+        } primaryAction: { ids in
+            ouvrirDepuisDoubleClic(ids)
         }
     }
 

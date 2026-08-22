@@ -350,7 +350,7 @@ struct VueOeuvresStructuree: View {
                     .foregroundStyle(Color.texteLegende)
                     .lineLimit(1)
                 HStack {
-                    if o.feuille != .oeuvresDonnees {
+                    if aUnPrix(o) {
                         PrixText(o.prix)
                             .foregroundStyle(Color.orangeInternational)
                     }
@@ -391,7 +391,7 @@ struct VueOeuvresStructuree: View {
                     HStack(spacing: 14) {
                         VignetteCachee(nom: o.photoNom, cote: 76)
                         VStack(alignment: .leading, spacing: 3) {
-                            if o.feuille != .oeuvresDonnees {
+                            if aUnPrix(o) {
                                 // Acheteur en premier, puis prix.
                                 Text(o.acheteur.isEmpty ? "—" : o.acheteur)
                                     .font(.headline)

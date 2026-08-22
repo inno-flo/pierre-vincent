@@ -130,9 +130,23 @@ enum SchemaFeuille {
         Colonne(titre: "Remarques",    cle: .remarques),
     ]
 
+    /// Colonnes de la Réserve : ni prix, ni vendeur, ni acheteur, ni date —
+    /// l'œuvre n'a pas été vendue. Ni destinataire, contrairement aux dons.
+    static let colonnesReserve: [Colonne] = [
+        Colonne(titre: "Photo",        cle: .photo),
+        Colonne(titre: "Type",         cle: .type),
+        Colonne(titre: "Dimensions",   cle: .dimensions),
+        Colonne(titre: "Format",       cle: .format),
+        Colonne(titre: "Statut",       cle: .statut),
+        Colonne(titre: "Thème",        cle: .theme),
+        Colonne(titre: "Emplacement",  cle: .emplacement),
+        Colonne(titre: "Remarques",    cle: .remarques),
+    ]
+
     static func colonnes(pour feuille: Feuille) -> [Colonne] {
         switch feuille {
         case .oeuvresDonnees: return colonnesDon
+        case .reserve:        return colonnesReserve
         default:              return colonnesVente
         }
     }

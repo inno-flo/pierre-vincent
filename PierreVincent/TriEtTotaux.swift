@@ -44,6 +44,30 @@ func correspondAuCanal(_ o: Oeuvre, canal: String) -> Bool {
     return egal(o.vendeur, canal) || egal(o.modeVente, canal)
 }
 
+/// Statuts recensés par la section « Réserve » : les œuvres encore détenues.
+/// Défini ici, et non dans `Categorie`, pour que les rubriques de la sidebar
+/// et la reprise de données `remplirFeuilleReserve` s'accordent toujours.
+let statutsReserve: [String] = ["Disponible", "À garder"]
+
+/// Vrai si l'œuvre est encore détenue, d'après son seul statut.
+func estEnReserve(_ o: Oeuvre) -> Bool {
+    statutsReserve.contains { $0.caseInsensitiveCompare(o.statut) == .orderedSame }
+}
+
+/// Feuilles dont les œuvres n'ont pas de prix à montrer : les dons, par
+/// principe, et la Réserve, dont les œuvres n'ont pas encore été vendues.
+let feuillesSansPrix: Set<Feuille> = [.oeuvresDonnees, .reserve]
+
+/// Vrai si l'œuvre a un prix à afficher.
+///
+/// **Se lit sur l'ŒUVRE, jamais sur la rubrique affichée** : dans les vues
+/// agrégées (Catalogue, Ventes) la feuille de la rubrique vaut `nil`. Sans ce
+/// test, une œuvre sans prix affiche « 0 € » sous sa vignette — le bug déjà
+/// rencontré sur les dons, que la Réserve rejouerait à l'identique.
+func aUnPrix(_ o: Oeuvre) -> Bool {
+    !feuillesSansPrix.contains(o.feuille)
+}
+
 /// Vrai si l'œuvre relève de la section « Ventes et dons ».
 func estVenduOuDonne(_ o: Oeuvre) -> Bool {
     statutsVentesEtDons.contains(o.statut)

@@ -74,17 +74,10 @@ enum Categorie: Hashable, Identifiable {
         case .tapisVendus:      return .tapisVendus
         case .oeuvresDonnees:   return .oeuvresDonnees
         case .ventesRealisees:  return nil
-        // Vue agrégée, comme l'Inventaire de Ventes et dons : toutes feuilles.
-        case .reserveInventaire: return nil
-        // nil, comme les autres vues agrégées : **la Réserve se discrimine par
-        // le TYPE, pas par la feuille** (voir `types`). Les feuilles sont un
-        // héritage du CSV et s'appellent toutes « … vendus » : une œuvre encore
-        // détenue n'appartient légitimement à aucune. Renvoyer `.dessinsVendus`
-        // ici ajoutait un filtre sur la feuille que le compteur de la sidebar,
-        // lui, n'appliquait pas — d'où une pastille à 9 au-dessus d'une vue
-        // vide, les œuvres importées par photo portant la feuille de repli
-        // `.tableauxVendus`.
-        case .reserveDessins:   return nil
+        // La Réserve a désormais sa propre feuille : les deux rubriques s'y
+        // rapportent, et c'est le TYPE qui distingue Dessins du Catalogue.
+        case .reserveInventaire: return .reserve
+        case .reserveDessins:   return .reserve
         case .synthese:         return nil
         // Vue agrégée, comme Ventes : le filtre porte sur le mode, pas la feuille.
         case .modeVente:        return nil
@@ -127,7 +120,7 @@ enum Categorie: Hashable, Identifiable {
     var statuts: [String] {
         switch self {
         case .reserveInventaire, .reserveDessins:
-            return ["Disponible", "À garder"]
+            return statutsReserve
         // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
         // dons ont leur propre rubrique.
         case .ventesRealisees, .modeVente:
@@ -208,6 +201,10 @@ struct ContentView: View {
     @AppStorage("modeVenteDonRempli") private var modeVenteDonRempli = false
     // `champsVidesRemplis` : quatrième passe, « Inconnu » partout où c'est vide.
     @AppStorage("champsVidesRemplis") private var champsVidesRemplis = false
+    // `feuilleReserveRemplie` : cinquième passe, feuille « Réserve » sur les
+    // œuvres encore détenues. Nouveau drapeau obligatoire — les précédents
+    // sont consommés et ne se redéclenchent jamais.
+    @AppStorage("feuilleReserveRemplie") private var feuilleReserveRemplie = false
     // TEMPORAIRE — nuance du fond de sélection de la sidebar : marron clair
     // (par défaut) ou 50 % plus foncé. Piloté par le bouton en pied de sidebar.
     #if os(macOS)
@@ -470,6 +467,15 @@ struct ContentView: View {
                 RepriseDonnees.remplirChampsVides(context: context)
                 champsVidesRemplis = true
             }
+
+            // Reprise ponctuelle : feuille « Réserve » sur les œuvres encore
+            // détenues. APRÈS les reprises de statut, dont elle se sert pour
+            // décider — sinon elle ne trouverait pas les statuts sur lesquels
+            // s'appuyer.
+            if !feuilleReserveRemplie {
+                RepriseDonnees.remplirFeuilleReserve(context: context)
+                feuilleReserveRemplie = true
+            }
         }
         #if os(iOS)
         .detecteSecoussePourPrix()
@@ -570,6 +576,10 @@ struct ContentView: View {
         case .ventesRealisees, .modeVente,
              .reserveInventaire, .reserveDessins:
             return toutes.filter { o in
+                // La FEUILLE aussi, sinon la pastille annonce des œuvres que
+                // la vue ne montre pas : c'est précisément ce qui affichait
+                // « 9 » au-dessus d'une rubrique Dessins vide.
+                if let f = cat.feuille, o.feuille != f { return false }
                 guard correspond(o, a: cat) else { return false }
                 let modes = cat.modesVente
                 return modes.isEmpty || modes.contains(where: {

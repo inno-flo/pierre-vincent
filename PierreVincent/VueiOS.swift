@@ -43,14 +43,19 @@ struct VueiOS: View {
     // Filtre vendeur actif (uniquement quand filtresVendeur est non vide).
     @State private var vendeurFiltre: String = "Tout"
 
-    /// Œuvres de cette catégorie (ou compilation des 4), avec filtres modeVente et vendeur si définis.
-    private var oeuvres: [Oeuvre] {
+    /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
+    /// AVANT le filtre par vendeur et avant tri.
+    ///
+    /// Mis en commun pour que `vendeursPresents` se calcule sur la rubrique
+    /// entière : après le filtre, retenir un vendeur ferait disparaître tous
+    /// les autres du menu, sans retour possible.
+    private var baseRubrique: [Oeuvre] {
         var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
         } else if !modesVente.isEmpty {
-            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
-            base = toutes.filter { $0.feuille != .oeuvresDonnees }
+            // Filtre modeVente actif : ni dons, ni réserve.
+            base = toutes.filter { !feuillesSansPrix.contains($0.feuille) }
         } else {
             base = toutes
         }
@@ -58,39 +63,57 @@ struct VueiOS: View {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
         // Filtres propres à la rubrique : statut, et éventuellement type.
-        base = base.filter { correspond($0, statuts: statuts, types: types) }
-        if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
-            base = base.filter { correspondAuCanal($0, canal: vendeurFiltre) }
+        return base.filter { correspond($0, statuts: statuts, types: types) }
+    }
+
+    /// Vendeurs réellement présents dans la rubrique, par ordre alphabétique.
+    ///
+    /// **Déduits des données, aucune liste en dur.** Le menu proposait quatre
+    /// entrées figées, dont « RempART » et « Vente privée », qui n'ont rien
+    /// vendu aux enchères : elles filtraient donc vers une liste vide. Un lieu
+    /// inédit obtient au contraire son entrée dès qu'une œuvre le porte.
+    /// Les valeurs vides et « Inconnu » sont écartées.
+    private var vendeursPresents: [String] {
+        var vus: [String: String] = [:]
+        for o in baseRubrique {
+            let brut = o.vendeur.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cle = brut.lowercased()
+            guard !brut.isEmpty,
+                  brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
+                  vus[cle] == nil else { continue }
+            vus[cle] = brut
         }
-        return base.sorted(using: tri)
+        return vus.values.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    /// Applique le filtre par vendeur. La comparaison porte sur le seul champ
+    /// Vendeur : les entrées du menu en sont issues.
+    private func appliquerFiltreVendeur(_ liste: [Oeuvre]) -> [Oeuvre] {
+        guard !filtresVendeur.isEmpty, vendeurFiltre != "Tout" else { return liste }
+        return liste.filter { $0.vendeur.caseInsensitiveCompare(vendeurFiltre) == .orderedSame }
+    }
+
+    /// Œuvres de cette catégorie, filtrées et triées.
+    private var oeuvres: [Oeuvre] {
+        appliquerFiltreVendeur(baseRubrique).sorted(using: tri)
     }
 
     private var estFeuilleDon: Bool { feuille == .oeuvresDonnees }
 
+    /// Vrai si la rubrique n'a pas de prix à montrer : dons et Réserve.
+    private var rubriqueSansPrix: Bool {
+        guard let f = feuille else { return false }
+        return feuillesSansPrix.contains(f)
+    }
+
     /// Œuvres triées pour la galerie, selon le critère choisi (prix ou acheteur).
     private var oeuvresGalerie: [Oeuvre] {
-        var base: [Oeuvre]
-        if let f = feuille {
-            base = toutes.filter { $0.feuille == f }
-        } else if !modesVente.isEmpty {
-            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
-            base = toutes.filter { $0.feuille != .oeuvresDonnees }
-        } else {
-            base = toutes
-        }
-        if !modesVente.isEmpty {
-            base = base.filter { modesVente.contains($0.modeVente) }
-        }
-        // Filtres propres à la rubrique : statut, et éventuellement type.
-        base = base.filter { correspond($0, statuts: statuts, types: types) }
-        if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
-            base = base.filter { correspondAuCanal($0, canal: vendeurFiltre) }
-        }
+        let base = appliquerFiltreVendeur(baseRubrique)
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille (ex. prix dans les dons,
         // dimensions dans les tapis).
         var critere = triGalerie
-        if estFeuilleDon, critere == "prix" { critere = "dimensions" }
+        if rubriqueSansPrix, critere == "prix" { critere = "dimensions" }
         if feuille == .tapisVendus, critere == "dimensions" { critere = "prix" }
 
         // Tri de base, toujours calculé en ordre CROISSANT
@@ -209,7 +232,7 @@ struct VueiOS: View {
                             Label(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout",
                                   systemImage: "tray.full")
                         }
-                        ForEach(filtresVendeur, id: \.self) { vendeur in
+                        ForEach(vendeursPresents, id: \.self) { vendeur in
                             Button {
                                 vendeurFiltre = vendeur
                             } label: {
@@ -222,7 +245,7 @@ struct VueiOS: View {
                 } else {
                     // Mode tri standard : Prix, Acheteur, Dimensions.
                     Menu {
-                        if !estFeuilleDon {
+                        if !rubriqueSansPrix {
                             Button {
                                 triGalerie = "prix"
                             } label: {
@@ -297,7 +320,7 @@ struct VueiOS: View {
                             HStack(spacing: 14) {
                                 VignetteCachee(nom: o.photoNom, cote: 76)
                                 VStack(alignment: .leading, spacing: 3) {
-                                    if !estFeuilleDon {
+                                    if aUnPrix(o) {
                                         // Acheteur en premier (mis en avant), puis prix.
                                         Text(o.acheteur.isEmpty ? "—" : o.acheteur)
                                             .font(.headline)
@@ -310,6 +333,17 @@ struct VueiOS: View {
                                                 .font(.body).foregroundStyle(.secondary)
                                                 .lineLimit(1)
                                         }
+                                    } else if o.feuille == .reserve {
+                                        // Réserve : l'emplacement remplace le
+                                        // couple acheteur / prix. Le nom du
+                                        // champ accompagne la valeur, qui n'est
+                                        // pas devinable seule.
+                                        Text(afficher(o.emplacement))
+                                            .font(.headline).lineLimit(1)
+                                        Text("Emplacement")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
                                     } else if !o.destinataire.isEmpty {
                                         Text(o.destinataire)
                                             .font(.headline).lineLimit(1)
@@ -494,8 +528,10 @@ struct DetailiOS: View {
                 .frame(height: 200)
             }
 
-            // Cellule 1 : Prix (sauf dons).
-            if !estFeuilleDon {
+            // Cellule 1 : Prix (ni dons, ni réserve). Le test porte sur
+            // l'ŒUVRE et non sur la rubrique : dans les vues agrégées, la
+            // feuille de la rubrique ne dit rien de l'œuvre affichée.
+            if aUnPrix(oeuvre) {
                 cellule {
                     ligne("Prix", formaterEuros(oeuvre.prix),
                           couleur: Color.orangeInternational, estPrix: true)
@@ -521,19 +557,22 @@ struct DetailiOS: View {
             }
 
             // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
-            cellule {
-                if estFeuilleDon {
-                    ligne("Destinataire", oeuvre.destinataire)
-                    ligne("Mode de vente", oeuvre.modeVente)
-                } else {
-                    ligne("Vendeur", oeuvre.vendeur)
-                    ligne("Acheteur", oeuvre.acheteur)
-                    ligne("Mode de vente", oeuvre.modeVente)
+            // Rien pour la réserve : aucune transaction n'a eu lieu.
+            if oeuvre.feuille != .reserve {
+                cellule {
+                    if estFeuilleDon {
+                        ligne("Destinataire", oeuvre.destinataire)
+                        ligne("Mode de vente", oeuvre.modeVente)
+                    } else {
+                        ligne("Vendeur", oeuvre.vendeur)
+                        ligne("Acheteur", oeuvre.acheteur)
+                        ligne("Mode de vente", oeuvre.modeVente)
+                    }
                 }
             }
 
-            // Cellule 6 : Date (sauf dons).
-            if !estFeuilleDon {
+            // Cellule 6 : Date (ni dons, ni réserve).
+            if !estFeuilleDon && oeuvre.feuille != .reserve {
                 cellule {
                     ligne("Date", oeuvre.date)
                 }

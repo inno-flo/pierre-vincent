@@ -137,6 +137,16 @@ enum EchangeBase {
             o.theme        = e.theme ?? ""
             o.emplacement  = e.emplacement ?? ""
 
+            // Filet : le statut fait foi sur l'appartenance à la Réserve.
+            // La feuille voyage en TEXTE et se relit avec un repli sur
+            // « Tableaux vendus » (voir plus haut) : un fichier écrit avant
+            // l'existence de la feuille « Réserve », ou lu par une version qui
+            // ne la connaît pas encore, ferait atterrir les œuvres détenues
+            // parmi les tableaux vendus — silencieusement. Le rattrapage ne
+            // peut pas venir de `RepriseDonnees` : ses passes tournent au
+            // lancement, donc AVANT l'import, et leur drapeau est déjà consommé.
+            if estEnReserve(o) { o.feuille = .reserve }
+
             // Image : on écrit DIRECTEMENT les octets décodés du base64, sans
             // les transformer en image en mémoire (bien plus léger et rapide).
             if !e.imageBase64.isEmpty,

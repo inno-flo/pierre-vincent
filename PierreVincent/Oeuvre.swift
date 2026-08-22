@@ -8,6 +8,12 @@ enum Feuille: String, Codable, CaseIterable {
     case dessinsVendus  = "Dessins vendus"
     case tapisVendus    = "Tapis vendus"
     case oeuvresDonnees = "Œuvres données"
+    /// Œuvres encore détenues. Les quatre feuilles ci-dessus viennent des
+    /// onglets du tableur d'origine et disent DEUX choses à la fois : le genre
+    /// d'objet et son sort (« Tableaux vendus »). Aucune ne convient donc à une
+    /// œuvre qui n'a jamais quitté l'atelier — d'où cette cinquième, qui ne
+    /// dit que le sort. Le genre, lui, se lit sur le champ `type`.
+    case reserve = "Réserve"
 }
 
 /// Une œuvre = une ligne dans une feuille.
@@ -114,6 +120,26 @@ enum RepriseDonnees {
                 modifiee = true
             }
             if modifiee { compte += 1 }
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
+    /// Bascule sur la feuille « Réserve » les œuvres encore détenues.
+    ///
+    /// À la différence des reprises ci-dessus, celle-ci **écrase** une valeur
+    /// existante : `feuille` n'est jamais vide, elle vaut par défaut
+    /// « Tableaux vendus ». Elle reste sans danger et rejouable, le statut
+    /// suffisant à décider — une œuvre disponible n'a par définition été ni
+    /// vendue ni donnée.
+    @discardableResult
+    @MainActor
+    static func remplirFeuilleReserve(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes where estEnReserve(o) && o.feuille != .reserve {
+            o.feuille = .reserve
+            compte += 1
         }
         if compte > 0 { try? context.save() }
         return compte
