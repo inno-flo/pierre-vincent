@@ -632,6 +632,21 @@ JavaScript, inexploitables par extraction) :
 - **Filets de sélection orange : 3 px** dans toutes les vues (galerie
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à
   1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
+- **Sidebar — DÉROGATION assumée : aucune mémoire entre les sessions.**
+  Une sidebar système mémorise ses blocs repliés ; celle-ci non.
+  `PierreVincentApp.arrangerSidebar()` **réécrit** les cinq clés à chaque
+  lancement — tout déplié, sauf « Modes de vente » et le sous-groupe
+  « Catégories » de la Réserve. Les replis faits à la main ne valent donc que
+  pour la session.
+  - **Ce n'est pas un oubli, ne pas « réparer »** en remettant la
+    mémorisation. Décision prise le 22 août 2026.
+  - Réécrire, et non poser des valeurs par défaut sur `@AppStorage` : un
+    défaut ne s'applique qu'à une clé **absente**, or ces clés existent déjà
+    sur toute installation ayant servi. Les défauts déclarés dans
+    `ContentView` suivent le même arrangement, mais ne sont qu'un garde-fou.
+  - L'`init` de `PierreVincentApp` a dû sortir du bloc `#if os(macOS)` pour
+    servir aux deux plateformes ; la ligne AppKit (`allowsAutomaticWindowTabbing`)
+    reste gardée à l'intérieur.
 - **Structure de la sidebar** (`ContentView.swift`, enum `Categorie`),
   identique sur les deux plateformes :
 
