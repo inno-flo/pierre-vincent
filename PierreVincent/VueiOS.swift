@@ -143,6 +143,11 @@ struct VueiOS: View {
     }
 
     /// Cellule récapitulative affichée en haut de la vue (nombre d'œuvres correspondant aux filtres actifs).
+    /// Le récapitulatif compte des VENTES : sans objet dans la Réserve, dont
+    /// les œuvres n'ont par définition pas encore été vendues. Retiré des deux
+    /// présentations, galerie et liste.
+    private var recapVisible: Bool { feuille != .reserve }
+
     private var recapCell: some View {
         HStack {
             Text("Nombre de ventes")
@@ -186,7 +191,7 @@ struct VueiOS: View {
                     oeuvres: oeuvresGalerie,
                     selection: $selection,
                     onOuvrir: { o in selection = [o.id]; detail = o },
-                    entete: AnyView(recapCell)
+                    entete: recapVisible ? AnyView(recapCell) : nil
                 )
             } else {
                 liste
@@ -317,7 +322,15 @@ struct VueiOS: View {
     private var liste: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                recapCell
+                if recapVisible {
+                    recapCell
+                } else {
+                    // Sans récapitulatif, la première ligne se collerait au
+                    // haut de la zone de défilement : on rend la marge que la
+                    // cellule apportait (voir le piège des marges portées par
+                    // un voisin, dans CLAUDE.md).
+                    Color.clear.frame(height: 8)
+                }
                 // Lazy : ne construit que les lignes visibles à l'écran.
                 LazyVStack(spacing: 8) {
                     ForEach(oeuvresGalerie) { o in
