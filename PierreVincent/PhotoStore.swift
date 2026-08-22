@@ -38,19 +38,6 @@ enum PhotoStore {
         return dossier
     }
 
-    /// Importe un fichier image (jpeg/png/heic).
-    /// Convertit tout en PNG pour une compatibilité maximale, et renvoie
-    /// le nom de fichier stocké (à sauvegarder dans l'entrée Oeuvre).
-    static func importerImage(depuis url: URL) -> String? {
-        #if os(macOS)
-        guard let image = NSImage(contentsOf: url) else { return nil }
-        #else
-        guard let data = try? Data(contentsOf: url),
-              let image = UIImage(data: data) else { return nil }
-        #endif
-        return enregistrer(image: image)
-    }
-
     /// Enregistre une image en PNG dans le dossier Photos.
     static func enregistrer(image: ImagePlateforme) -> String? {
         guard let png = pngData(de: image) else { return nil }
@@ -151,6 +138,14 @@ enum PhotoStore {
     /// Sortie en HEIC : à définition égale il permet une qualité nettement plus
     /// élevée que le JPEG pour le même poids, et l'app est 100 % Apple.
     static func importerImageCompressee(depuis url: URL) -> String? {
+        // Fichier déjà sous le seuil : on le recopie TEL QUEL, octet pour
+        // octet. Le ré-encoder ne ferait que dégrader l'image — et, en PNG,
+        // l'alourdir considérablement — sans rien gagner en poids.
+        if let donnees = try? Data(contentsOf: url), donnees.count <= poidsMaxImport {
+            let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
+            return enregistrerDonnees(donnees, extension: ext)
+        }
+
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
 
         // Réduction : `CGImageSourceCreateThumbnailAtIndex` décode directement
@@ -190,6 +185,29 @@ enum PhotoStore {
             [kCGImageDestinationLossyCompressionQuality: qualite] as CFDictionary)
         guard CGImageDestinationFinalize(dest) else { return nil }
         return donnees as Data
+    }
+
+    /// Décrit la photo stockée : poids, définition, puis nom du fichier.
+    /// Sert au champ « Image » de l'inspecteur et de l'éditeur, et permet de
+    /// vérifier d'un coup d'œil que la compression a tenu ses 450 Ko.
+    static func infosImage(nom: String) -> String {
+        guard !nom.isEmpty,
+              let url = urlPhoto(nom: nom),
+              let attributs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let octets = attributs[.size] as? Int else { return "Aucune photo" }
+
+        let formateur = ByteCountFormatter()
+        formateur.countStyle = .file
+        var texte = formateur.string(fromByteCount: Int64(octets))
+
+        // Définition lue dans l'en-tête, sans décoder l'image.
+        if let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+           let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+           let largeur = props[kCGImagePropertyPixelWidth] as? Int,
+           let hauteur = props[kCGImagePropertyPixelHeight] as? Int {
+            texte += " · \(largeur) × \(hauteur) px"
+        }
+        return texte + "\n" + nom
     }
 
     /// Mots-clés IPTC d'un fichier image (vide si absents).

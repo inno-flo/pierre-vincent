@@ -120,6 +120,14 @@ struct EditeurEntree: View {
                         }
                         // Cellule Remarques.
                         celluleEditeur { champRemarques() }
+                        // Cellule Image : information seule, non modifiable —
+                        // poids, définition et nom du fichier stocké. Fondée
+                        // sur `photoNom` LOCAL, donc à jour même si la photo
+                        // vient d'être remplacée sans enregistrement.
+                        celluleEditeur {
+                            champLectureSeule("Image",
+                                              PhotoStore.infosImage(nom: photoNom))
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -359,6 +367,16 @@ struct EditeurEntree: View {
         champTexte("Statut", $statut, champ: .statut)
         champTexte("Thème", $theme, champ: .theme)
         champTexte("Emplacement", $emplacement, champ: .emplacement)
+    }
+
+    /// Ligne d'information non modifiable, dans le style des titres de champs.
+    private func champLectureSeule(_ titre: String, _ valeur: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(titre).font(.body).fontWeight(.bold).foregroundStyle(.secondary)
+            Text(valeur).font(.body).foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func champTexte(_ titre: String, _ liaison: Binding<String>, champ: Champ) -> some View {

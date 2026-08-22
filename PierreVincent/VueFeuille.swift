@@ -15,6 +15,7 @@ struct VueFeuille: View {
     let modesVente: [String]       // filtre supplémentaire sur modeVente (vide = aucun)
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
+    let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
@@ -22,6 +23,7 @@ struct VueFeuille: View {
          modesVente: [String] = [],
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
+         filtreParVendeur: Bool = false,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
         self.lectureSeule = lectureSeule
@@ -29,6 +31,7 @@ struct VueFeuille: View {
         self.modesVente = modesVente
         self.statuts = statuts
         self.types = types
+        self.filtreParVendeur = filtreParVendeur
         self._nbSelection = nbSelection
     }
 
@@ -39,6 +42,9 @@ struct VueFeuille: View {
         KeyPathComparator(\Oeuvre.type)
     ]
     @State private var selection: Set<UUID> = []
+    // Vendeur retenu par le bandeau de pastilles (nil = tous). Non persisté :
+    // c'est un filtre de consultation, pas un réglage.
+    @State private var vendeurRetenu: String?
     @State private var editionEntree: Oeuvre?
     @State private var editionNouvelle = false
     @State private var messageExport: String?
@@ -80,8 +86,9 @@ struct VueFeuille: View {
     @State private var messagePrix: String?
     @State private var tacheMessagePrix: Task<Void, Never>?
 
-    /// Œuvres de cette feuille (ou compilation des 4), triées par le composant.
-    private var oeuvres: [Oeuvre] {
+    /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
+    /// AVANT le filtre par vendeur et avant tri.
+    private var baseRubrique: [Oeuvre] {
         var base: [Oeuvre]
         if let f = feuille {
             base = toutes.filter { $0.feuille == f }
@@ -98,7 +105,36 @@ struct VueFeuille: View {
         // « Ventes et dons » recense les œuvres sorties du fonds ; la Réserve
         // celles encore détenues (voir `Categorie.statuts`).
         base = base.filter { correspond($0, statuts: statuts, types: types) }
-        return base.sorted(using: tri)
+        return base
+    }
+
+    /// Œuvres de cette feuille, triées par le composant.
+    private var oeuvres: [Oeuvre] {
+        appliquerFiltreVendeur(baseRubrique).sorted(using: tri)
+    }
+
+    /// Retire les œuvres d'un autre vendeur quand une pastille est retenue.
+    private func appliquerFiltreVendeur(_ liste: [Oeuvre]) -> [Oeuvre] {
+        guard let v = vendeurRetenu else { return liste }
+        return liste.filter { $0.vendeur.caseInsensitiveCompare(v) == .orderedSame }
+    }
+
+    /// Vendeurs présents dans la rubrique, pour construire les pastilles.
+    ///
+    /// Calculés sur `baseRubrique`, AVANT le filtre par vendeur : sinon
+    /// sélectionner une pastille ferait disparaître toutes les autres, et on
+    /// ne pourrait plus revenir en arrière.
+    private var vendeursPresents: [String] {
+        var vus: [String: String] = [:]
+        for o in baseRubrique {
+            let brut = o.vendeur.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cle = brut.lowercased()
+            guard !brut.isEmpty,
+                  brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
+                  vus[cle] == nil else { continue }
+            vus[cle] = brut
+        }
+        return vus.values.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     /// Liste dans l'ordre actuellement affiché (galerie ou liste) : sert de base
@@ -109,22 +145,7 @@ struct VueFeuille: View {
 
     /// Œuvres triées pour la galerie, selon le critère et le sens choisis.
     private var oeuvresGalerie: [Oeuvre] {
-        var base: [Oeuvre]
-        if let f = feuille {
-            base = toutes.filter { $0.feuille == f }
-        } else if !modesVente.isEmpty {
-            // Filtre modeVente actif : on se restreint aux feuilles vendues (tableaux, dessins, tapis)
-            base = toutes.filter { $0.feuille != .oeuvresDonnees }
-        } else {
-            base = toutes
-        }
-        if !modesVente.isEmpty {
-            base = base.filter { modesVente.contains($0.modeVente) }
-        }
-        // Filtres propres à la rubrique : statut, et éventuellement type.
-        // « Ventes et dons » recense les œuvres sorties du fonds ; la Réserve
-        // celles encore détenues (voir `Categorie.statuts`).
-        base = base.filter { correspond($0, statuts: statuts, types: types) }
+        let base = appliquerFiltreVendeur(baseRubrique)
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.
         var critere = triGalerie
@@ -232,6 +253,12 @@ struct VueFeuille: View {
                     // Cellule 7 : Remarques.
                     celluleInspecteur {
                         ligneInspecteur("Remarques", o.remarques)
+                    }
+
+                    // Cellule 8 : la photo stockée — poids, définition, nom
+                    // de fichier. Permet de vérifier la compression.
+                    celluleInspecteur {
+                        ligneInspecteur("Image", PhotoStore.infosImage(nom: o.photoNom))
                     }
                 }
                 .padding()
@@ -423,6 +450,8 @@ struct VueFeuille: View {
                     confirmerSuppression = true
                 }
             }))
+        // Le filtre par vendeur ne survit pas au changement de rubrique : la
+        // vue est recréée (`.id(cat)`), donc l'état repart à nil de lui-même.
         .onAppear {
             nbSelection = selection.count
             uneSelectionExiste = !selection.isEmpty
@@ -677,6 +706,96 @@ struct VueFeuille: View {
     /// Contenu principal : galerie (par icône) ou tableau (par liste).
     @ViewBuilder
     private var contenu: some View {
+        // `safeAreaInset` et NON un VStack : le contenu continue de défiler
+        // SOUS le bandeau et sous la toolbar, condition pour que l'un et
+        // l'autre gardent leur translucidité. Empilé dans un VStack, le
+        // bandeau opaque coupait la zone de défilement et les deux barres
+        // devenaient pleines.
+        contenuPrincipal
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if filtreParVendeur {
+                    bandeauVendeurs
+                }
+            }
+    }
+
+    /// Bandeau de pastilles filtrant par vendeur, en haut du panneau.
+    ///
+    /// Construit d'après les vendeurs réellement présents : aucune liste en
+    /// dur, un vendeur ou un lieu inédit obtient sa pastille d'elle-même.
+    ///
+    /// Le bandeau s'affiche dès que la rubrique le déclare, même sans aucun
+    /// vendeur : le compteur, lui, a toujours du sens. Les pastilles de
+    /// vendeur apparaîtront d'elles-mêmes à mesure que les valeurs arrivent.
+    private var bandeauVendeurs: some View {
+        HStack(spacing: 8) {
+            // Les pastilles de vendeur défilent si elles débordent…
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(vendeursPresents, id: \.self) { vendeur in
+                        pastilleVendeur(vendeur)
+                    }
+                }
+            }
+            // …tandis que le compteur reste ancré à droite, hors du défilement.
+            pastilleCompteur
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        // AUCUN fond : la toolbar applique déjà son propre effet de verre, et
+        // un matériau ici s'y ajoutait — deux couches de flou superposées, d'où
+        // une barre visiblement plus opaque que dans les rubriques sans
+        // pastilles. Les pastilles flottent donc directement sur le contenu.
+        .background(.clear)
+    }
+
+    /// Compteur des œuvres affichées, à droite du bandeau. Il suit le filtre :
+    /// retenir un vendeur met à jour le nombre. Non interactif — c'est une
+    /// indication, pas un bouton.
+    private var pastilleCompteur: some View {
+        Text("\(listeAffichee.count)")
+            .font(.system(size: 13))
+            .foregroundStyle(Color.textePrincipal)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background {
+                Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+            }
+            .help("Nombre d'œuvres affichées")
+    }
+
+    /// Une pastille : contour orange et texte sombre au repos, fond orange et
+    /// texte blanc une fois retenue. Même corps que les pastilles de comptage
+    /// de la sidebar (11 pt semi-gras, capsule).
+    private func pastilleVendeur(_ vendeur: String) -> some View {
+        let retenu = vendeurRetenu?.caseInsensitiveCompare(vendeur) == .orderedSame
+        return Button {
+            // Un second clic sur la pastille retenue lève le filtre.
+            vendeurRetenu = retenu ? nil : vendeur
+        } label: {
+            Text(vendeur)
+                // Même corps que les libellés de rubrique de la sidebar :
+                // 13 pt, en gras une fois retenu — et non le 11 pt des
+                // pastilles de comptage.
+                .font(.system(size: 13))
+                .fontWeight(retenu ? .bold : .regular)
+                .foregroundStyle(retenu ? Color.white : Color.textePrincipal)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background {
+                    if retenu {
+                        Capsule().fill(Color.orangeInternational)
+                    } else {
+                        Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .help(retenu ? "Afficher tous les vendeurs" : "N'afficher que « \(vendeur) »")
+    }
+
+    @ViewBuilder
+    private var contenuPrincipal: some View {
         if modeAffichage == "icone" {
             VueGalerie(
                 oeuvres: oeuvresGalerie,
@@ -913,7 +1032,7 @@ struct VueFeuille: View {
             DispatchQueue.main.async {
                 // Retire l'ancienne photo si présente, puis importe la nouvelle.
                 if !o.photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: o.photoNom) }
-                if let nom = PhotoStore.importerImage(depuis: fichier) {
+                if let nom = PhotoStore.importerImageCompressee(depuis: fichier) {
                     o.photoNom = nom
                     try? context.save()
                 }

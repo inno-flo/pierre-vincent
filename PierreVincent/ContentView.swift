@@ -145,6 +145,21 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
+    /// Modes de vente dont la rubrique propose un bandeau de pastilles
+    /// filtrant par vendeur : plusieurs maisons ou lieux s'y partagent les
+    /// œuvres. Les pastilles elles-mêmes sont déduites des données, aucune
+    /// liste de vendeurs n'est écrite en dur.
+    static let modesAvecFiltreVendeur = ["Vente aux enchères", "Exposition"]
+
+    /// Vrai si la rubrique propose ce bandeau. L'étendre à un autre mode se
+    /// résume à l'ajouter dans `modesAvecFiltreVendeur`.
+    var filtreParVendeur: Bool {
+        guard case .modeVente(let m) = self else { return false }
+        return Categorie.modesAvecFiltreVendeur.contains {
+            $0.caseInsensitiveCompare(m) == .orderedSame
+        }
+    }
+
     /// Vrai pour la rubrique Ventes ET ses sous-catégories par mode : elles
     /// partagent la même vue. Un test d'égalité `== .ventesRealisees` ne
     /// couvrirait pas le cas à valeur associée.
@@ -364,6 +379,7 @@ struct ContentView: View {
                                modesVente: cat.modesVente,
                                statuts: cat.statuts,
                                types: cat.types,
+                               filtreParVendeur: cat.filtreParVendeur,
                                nbSelection: $nbSelection)
                     .id(cat)
                     #else
@@ -698,12 +714,27 @@ struct ContentView: View {
                                      : Color.textePrincipal)
                 if let n = compteurPourCategorie(cat) {
                     Spacer()
+                    // Même traitement que les pastilles de filtre du panneau :
+                    // contour orange et fond transparent au repos, fond orange
+                    // et texte blanc quand la rubrique est sélectionnée.
+                    // `Color.textePrincipal` vaut blanc en mode sombre : le
+                    // texte y est donc blanc dans les deux états.
                     Text("\(n)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
+                        // Même règle de graisse que le libellé de rubrique :
+                        // normale au repos, grasse quand la rubrique est
+                        // sélectionnée.
+                        .font(.system(size: 11))
+                        .fontWeight(categorie == cat ? .bold : .regular)
+                        .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.orangeInternational, in: Capsule())
+                        .background {
+                            if categorie == cat {
+                                Capsule().fill(Color.orangeInternational)
+                            } else {
+                                Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                            }
+                        }
                 }
             }
             #else

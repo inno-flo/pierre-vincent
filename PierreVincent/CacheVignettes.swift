@@ -173,8 +173,11 @@ struct VignetteCacheeFlexible: View {
                 }
             }
         }
-        .onAppear {
-            guard image == nil, !nom.isEmpty else { return }
+        // Même correctif que sur `VignetteCachee` : recharger quand le nom de
+        // fichier change alors que la vue est déjà à l'écran.
+        .task(id: nom) {
+            image = nil
+            guard !nom.isEmpty else { return }
             CacheVignettes.shared.demanderVignette(nom: nom, cote: coteSource,
                                                    preserverRatio: preserverRatio) { v in
                 image = v
@@ -208,8 +211,14 @@ struct VignetteCachee: View {
                             .foregroundStyle(.tertiary))
             }
         }
-        .onAppear {
-            guard image == nil, !nom.isEmpty else { return }
+        // `.task(id: nom)` et NON `.onAppear` : la vue doit recharger quand le
+        // nom de fichier change alors qu'elle est DÉJÀ à l'écran — remplacement
+        // d'une photo depuis l'éditeur ou par glisser-déposer. Avec onAppear,
+        // rien ne se redéclenchait et l'ancienne vignette restait affichée
+        // jusqu'à ce qu'on quitte la vue et y revienne.
+        .task(id: nom) {
+            image = nil
+            guard !nom.isEmpty else { return }
             CacheVignettes.shared.demanderVignette(nom: nom, cote: cote) { v in
                 image = v
             }

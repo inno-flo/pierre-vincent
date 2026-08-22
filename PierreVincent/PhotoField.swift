@@ -83,7 +83,7 @@ struct PhotoField: View {
 
             DispatchQueue.main.async {
                 if !photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: photoNom) }
-                if let nom = PhotoStore.importerImage(depuis: fichier) {
+                if let nom = PhotoStore.importerImageCompressee(depuis: fichier) {
                     photoNom = nom
                 }
             }
@@ -97,7 +97,7 @@ struct PhotoField: View {
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
             if !photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: photoNom) }
-            if let nom = PhotoStore.importerImage(depuis: url) {
+            if let nom = PhotoStore.importerImageCompressee(depuis: url) {
                 photoNom = nom
             }
         }
