@@ -168,7 +168,7 @@ struct VueDonsStructuree: View {
 
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            ligneRecap(titre: "Dons", nombre: dessinsDonnes.count) {
+            ligneRecap(titre: "Nombre de dons", nombre: dessinsDonnes.count) {
                 withAnimation { proxy.scrollTo(ancreDessins, anchor: .top) }
             }
         }
