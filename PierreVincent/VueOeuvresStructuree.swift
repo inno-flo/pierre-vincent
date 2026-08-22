@@ -16,16 +16,21 @@ import SwiftData
 struct VueOeuvresStructuree: View {
     /// Quand non vide, filtre les ventes sur ce mode de vente (ex. vue « Ventes »).
     let modesVente: [String]
-    /// Quand non vide, remplace le menu de tri par un filtre par vendeur.
-    let filtresVendeur: [String]
+    /// Remplace le menu de tri par un filtre par vendeur (enchères, expositions).
+    let filtreParVendeur: Bool
     let estModeVentes: Bool
+    /// Ligne de nom en tête de légende de vignette (fausse pour les enchères
+    /// et les expositions, où l'acheteur ne renseigne pas).
+    let nomEnGalerie: Bool
 
-    init(modesVente: [String] = [], filtresVendeur: [String] = [],
-         estModeVentes: Bool = false, titre: String = "Catalogue") {
+    init(modesVente: [String] = [], filtreParVendeur: Bool = false,
+         estModeVentes: Bool = false, titre: String = "Catalogue",
+         nomEnGalerie: Bool = true) {
         self.modesVente = modesVente
-        self.filtresVendeur = filtresVendeur
+        self.filtreParVendeur = filtreParVendeur
         self.estModeVentes = estModeVentes
         self.titre = titre
+        self.nomEnGalerie = nomEnGalerie
     }
 
     @Query private var toutes: [Oeuvre]
@@ -58,7 +63,7 @@ struct VueOeuvresStructuree: View {
 
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
-        if !filtresVendeur.isEmpty {
+        if filtreParVendeur {
             return vendeurFiltre == "Tout" ? "person.3" : "person.fill"
         }
         switch triGalerie {
@@ -68,8 +73,12 @@ struct VueOeuvresStructuree: View {
         }
     }
 
-    /// Œuvres vendues (tableaux + dessins + tapis), filtrées si besoin, triées.
-    private var ventes: [Oeuvre] {
+    /// Œuvres vendues de la rubrique, AVANT le filtre par vendeur.
+    ///
+    /// Les vendeurs du menu s'en déduisent : les calculer après le filtre
+    /// ferait disparaître toutes les autres entrées dès qu'on en retient une,
+    /// sans moyen de revenir.
+    private var baseVentes: [Oeuvre] {
         var base = toutes.filter {
             $0.feuille == .tableauxVendus
             || $0.feuille == .dessinsVendus
@@ -81,8 +90,37 @@ struct VueOeuvresStructuree: View {
         if !modesVente.isEmpty {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
-        if !filtresVendeur.isEmpty && vendeurFiltre != "Tout" {
-            base = base.filter { correspondAuCanal($0, canal: vendeurFiltre) }
+        return base
+    }
+
+    /// Vendeurs réellement présents dans la rubrique, par ordre alphabétique.
+    ///
+    /// **Déduits des données, aucune liste en dur.** Le menu proposait quatre
+    /// entrées figées, dont certaines n'ont rien vendu par ce canal : elles
+    /// filtraient vers une liste vide. Un lieu inédit obtient son entrée dès
+    /// qu'une œuvre le porte. Vides et « Inconnu » écartés.
+    private var vendeursPresents: [String] {
+        var vus: [String: String] = [:]
+        for o in baseVentes {
+            let brut = o.vendeur.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cle = brut.lowercased()
+            guard !brut.isEmpty,
+                  brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
+                  vus[cle] == nil else { continue }
+            vus[cle] = brut
+        }
+        return vus.values.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    /// Œuvres vendues (tableaux + dessins + tapis), filtrées si besoin, triées.
+    private var ventes: [Oeuvre] {
+        var base = baseVentes
+        if filtreParVendeur && vendeurFiltre != "Tout" {
+            // Comparaison sur le seul champ Vendeur : les entrées du menu en
+            // sont issues.
+            base = base.filter {
+                $0.vendeur.caseInsensitiveCompare(vendeurFiltre) == .orderedSame
+            }
         }
         return trier(base)
     }
@@ -193,12 +231,12 @@ struct VueOeuvresStructuree: View {
                 .buttonStyle(.plain)
 
                 // 3. Filtre vendeur (vue Ventes) ou critère de tri standard.
-                if !filtresVendeur.isEmpty {
+                if filtreParVendeur {
                     Menu {
                         Button { vendeurFiltre = "Tout" } label: {
                             Text(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout")
                         }
-                        ForEach(filtresVendeur, id: \.self) { vendeur in
+                        ForEach(vendeursPresents, id: \.self) { vendeur in
                             Button { vendeurFiltre = vendeur } label: {
                                 Text(vendeurFiltre == vendeur ? "✓ \(vendeur)" : vendeur)
                             }
@@ -345,10 +383,12 @@ struct VueOeuvresStructuree: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(ligneNom(o).isEmpty ? " " : ligneNom(o))
-                    .font(.headline)
-                    .foregroundStyle(Color.texteLegende)
-                    .lineLimit(1)
+                if nomEnGalerie {
+                    Text(ligneNom(o).isEmpty ? " " : ligneNom(o))
+                        .font(.headline)
+                        .foregroundStyle(Color.texteLegende)
+                        .lineLimit(1)
+                }
                 HStack {
                     if aUnPrix(o) {
                         PrixText(o.prix)

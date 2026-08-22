@@ -10,18 +10,18 @@ struct VueiOS: View {
     let feuille: Feuille?
     let titre: String
     let modesVente: [String]
-    let filtresVendeur: [String]   // liste de vendeurs pour le filtre rapide (vide = menu de tri standard)
+    let filtreParVendeur: Bool     // filtre par vendeur au lieu du menu de tri
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
-         filtresVendeur: [String] = [],
+         filtreParVendeur: Bool = false,
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = []) {
         self.feuille = feuille
         self.titre = titre
         self.modesVente = modesVente
-        self.filtresVendeur = filtresVendeur
+        self.filtreParVendeur = filtreParVendeur
         self.statuts = statuts
         self.types = types
     }
@@ -40,7 +40,7 @@ struct VueiOS: View {
     @State private var detail: Oeuvre?
     // Œuvre vers laquelle défiler à la fermeture de la fiche Détails.
     @State private var oeuvreADefiler: UUID?
-    // Filtre vendeur actif (uniquement quand filtresVendeur est non vide).
+    // Filtre vendeur actif (uniquement quand filtreParVendeur est vrai).
     @State private var vendeurFiltre: String = "Tout"
 
     /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
@@ -89,7 +89,7 @@ struct VueiOS: View {
     /// Applique le filtre par vendeur. La comparaison porte sur le seul champ
     /// Vendeur : les entrées du menu en sont issues.
     private func appliquerFiltreVendeur(_ liste: [Oeuvre]) -> [Oeuvre] {
-        guard !filtresVendeur.isEmpty, vendeurFiltre != "Tout" else { return liste }
+        guard filtreParVendeur, vendeurFiltre != "Tout" else { return liste }
         return liste.filter { $0.vendeur.caseInsensitiveCompare(vendeurFiltre) == .orderedSame }
     }
 
@@ -159,7 +159,7 @@ struct VueiOS: View {
 
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
-        if !filtresVendeur.isEmpty {
+        if filtreParVendeur {
             return vendeurFiltre == "Tout" ? "person.3" : "person.fill"
         }
         switch triGalerie {
@@ -223,7 +223,7 @@ struct VueiOS: View {
                 .buttonStyle(.plain)
 
                 // 3. Filtre vendeur (Ventes réalisées) ou critère de tri standard.
-                if !filtresVendeur.isEmpty {
+                if filtreParVendeur {
                     // Mode filtre par vendeur : Tout + chaque vendeur de la liste.
                     Menu {
                         Button {

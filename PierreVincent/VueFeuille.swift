@@ -16,6 +16,7 @@ struct VueFeuille: View {
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
+    let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
@@ -24,6 +25,7 @@ struct VueFeuille: View {
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          filtreParVendeur: Bool = false,
+         nomEnGalerie: Bool = true,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
         self.lectureSeule = lectureSeule
@@ -32,6 +34,7 @@ struct VueFeuille: View {
         self.statuts = statuts
         self.types = types
         self.filtreParVendeur = filtreParVendeur
+        self.nomEnGalerie = nomEnGalerie
         self._nbSelection = nbSelection
     }
 
@@ -839,7 +842,8 @@ struct VueFeuille: View {
                 selection: $selection,
                 onOuvrir: { o in
                     if !lectureSeule { editionNouvelle = false; editionEntree = o }
-                }
+                },
+                nomEnGalerie: nomEnGalerie
             )
         } else {
             // Navigation clavier : capteur NSEvent au niveau fenêtre, actif

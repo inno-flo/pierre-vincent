@@ -101,17 +101,6 @@ enum Categorie: Hashable, Identifiable {
     /// trouvés dans les données mais absents d'ici s'ajoutent à leur suite.
     static let modesDeVenteReference = ["Exposition", "Vente aux enchères", "Vente privée"]
 
-    /// Canaux proposés par le filtre rapide (vide = menu de tri standard).
-    /// Trois vendeurs, plus un mode de vente : « Vente privée » n'est pas un
-    /// vendeur, d'où le test sur les deux champs dans `correspondAuCanal`.
-    var filtresVendeur: [String] {
-        switch self {
-        case .ventesRealisees, .modeVente:
-            return ["Artenchères", "Drôme Enchères", "RempART", "Vente privée"]
-        default:               return []
-        }
-    }
-
     /// Statuts recensés par la rubrique.
     ///
     /// Par défaut, ceux de « Ventes et dons » — les œuvres sorties du fonds.
@@ -144,14 +133,37 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
+    /// Modes de vente dont la vignette de galerie n'affiche PAS de ligne de
+    /// nom : l'acheteur n'y renseigne pas, seuls le prix et les dimensions
+    /// comptent. Ne reste que la maison ou le lieu, porté par le Vendeur.
+    ///
+    /// Liste distincte de `modesAvecFiltreVendeur` bien qu'elles coïncident
+    /// aujourd'hui : l'une décide d'un filtre, l'autre d'un affichage. Les
+    /// confondre ferait qu'ajouter un mode à l'une le changerait dans l'autre.
+    static let modesSansNomEnGalerie = ["Vente aux enchères", "Exposition"]
+
+    /// Vrai si la vignette de galerie porte une ligne de nom (acheteur,
+    /// destinataire ou emplacement selon l'œuvre).
+    var nomEnGalerie: Bool {
+        guard case .modeVente(let m) = self else { return true }
+        return !Categorie.modesSansNomEnGalerie.contains {
+            $0.caseInsensitiveCompare(m) == .orderedSame
+        }
+    }
+
     /// Modes de vente dont la rubrique propose un bandeau de pastilles
     /// filtrant par vendeur : plusieurs maisons ou lieux s'y partagent les
     /// œuvres. Les pastilles elles-mêmes sont déduites des données, aucune
     /// liste de vendeurs n'est écrite en dur.
     static let modesAvecFiltreVendeur = ["Vente aux enchères", "Exposition"]
 
-    /// Vrai si la rubrique propose ce bandeau. L'étendre à un autre mode se
-    /// résume à l'ajouter dans `modesAvecFiltreVendeur`.
+    /// Vrai si la rubrique propose un filtre par vendeur — le bandeau de
+    /// pastilles sur Mac, le menu de la barre d'outils sur iPhone. L'étendre à
+    /// un autre mode se résume à l'ajouter dans `modesAvecFiltreVendeur`.
+    ///
+    /// Seul réglage restant : les VENDEURS eux-mêmes sont déduits des données
+    /// sur les deux plateformes. La liste `filtresVendeur`, qui les nommait en
+    /// dur, a disparu — elle proposait des entrées ne filtrant vers rien.
     var filtreParVendeur: Bool {
         guard case .modeVente(let m) = self else { return false }
         return Categorie.modesAvecFiltreVendeur.contains {
@@ -389,6 +401,7 @@ struct ContentView: View {
                                statuts: cat.statuts,
                                types: cat.types,
                                filtreParVendeur: cat.filtreParVendeur,
+                               nomEnGalerie: cat.nomEnGalerie,
                                nbSelection: $nbSelection)
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
                     // toute la vue à chaque changement de rubrique, donc aussi
@@ -406,9 +419,10 @@ struct ContentView: View {
                             .id(cat)
                     } else if cat.estVenteRealisee {
                         VueOeuvresStructuree(modesVente: cat.modesVente,
-                                             filtresVendeur: cat.filtresVendeur,
+                                             filtreParVendeur: cat.filtreParVendeur,
                                              estModeVentes: true,
-                                             titre: cat.titre)
+                                             titre: cat.titre,
+                                             nomEnGalerie: cat.nomEnGalerie)
                             .id(cat)
                     } else if cat == .oeuvresDonnees {
                         VueDonsStructuree()
@@ -416,7 +430,7 @@ struct ContentView: View {
                     } else {
                         VueiOS(feuille: cat.feuille, titre: cat.titre,
                                modesVente: cat.modesVente,
-                               filtresVendeur: cat.filtresVendeur,
+                               filtreParVendeur: cat.filtreParVendeur,
                                statuts: cat.statuts,
                                types: cat.types)
                             .id(cat)

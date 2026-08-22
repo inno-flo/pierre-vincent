@@ -11,6 +11,10 @@ struct VueGalerie: View {
     @Binding var selection: Set<UUID>
     /// Double-clic sur une carte : ouvre la fiche d'édition.
     var onOuvrir: (Oeuvre) -> Void
+    /// Affiche la ligne de nom en tête de légende (acheteur, destinataire ou
+    /// emplacement). Fausse pour les enchères et les expositions, où seuls le
+    /// prix et les dimensions renseignent.
+    var nomEnGalerie: Bool = true
     /// En-tête facultatif, placé DANS la zone de défilement : il défile donc
     /// avec les vignettes. Sert au récapitulatif des vues iOS ; nul sur Mac.
     var entete: AnyView? = nil
@@ -148,10 +152,12 @@ struct VueGalerie: View {
             VStack(alignment: .leading, spacing: 5) {
                 // En gras : le nom de l'acheteur (pour la feuille « données »,
                 // le destinataire, qui joue le même rôle).
-                Text(ligneGras(o).isEmpty ? " " : ligneGras(o))
-                    .font(.headline)
-                    .foregroundStyle(Color.texteLegende)
-                    .lineLimit(1)
+                if nomEnGalerie {
+                    Text(ligneGras(o).isEmpty ? " " : ligneGras(o))
+                        .font(.headline)
+                        .foregroundStyle(Color.texteLegende)
+                        .lineLimit(1)
+                }
 
                 // En dessous : prix à gauche, dimensions à droite.
                 // Le test porte sur l'ŒUVRE et non sur la rubrique affichée :
