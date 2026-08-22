@@ -4,14 +4,15 @@ import SwiftData
 
 /// Vue « Œuvres données » structurée pour iPhone.
 ///
-/// Sur le modèle de la vue « Inventaire » :
-///  1. un bloc récapitulatif : « Tableaux donnés » et « Dessins donnés » avec
-///     leur quantité (en orange), tapables pour défiler jusqu'à la section ;
-///  2. une section « Tableaux » listant les tableaux donnés ;
-///  3. une section « Dessins » listant les dessins donnés.
+/// Un bloc récapitulatif — « Nombre de dons » et sa quantité en orange —
+/// au-dessus de la liste de TOUS les dons.
 ///
-/// La répartition tableaux/dessins se fait sur le champ « type »
-/// (qui contient « tableau » ou « dessin »), comme dans la Synthèse.
+/// **Pas de découpage par type.** La vue séparait « Tableaux » et « Dessins »
+/// en cherchant ces mots dans le champ `type`. Une œuvre dont le type disait
+/// autre chose — une technique, « Inconnu » — n'entrait dans aucune des deux
+/// sections et disparaissait purement et simplement : 9 dons affichés sur 53.
+/// Un découpage par test d'appartenance doit toujours prévoir le reste, ou
+/// n'exister qu'une fois le champ garanti fermé (voir `typesOeuvre`).
 struct VueDonsStructuree: View {
     @Query private var toutes: [Oeuvre]
 
@@ -25,24 +26,13 @@ struct VueDonsStructuree: View {
     // navigation faite dans la fiche de détail (même mécanisme que VueiOS).
     @State private var oeuvreADefiler: UUID?
 
-    private let ancreTableaux = "ancre-tableaux-donnes"
-    private let ancreDessins  = "ancre-dessins-donnes"
+    private let ancreDons = "ancre-dons"
 
-    /// Tous les dons.
+    /// Tous les dons, triés.
     private var dons: [Oeuvre] {
         // Ne recense que les œuvres sorties du fonds (voir `estVenduOuDonne`) :
         // celles encore disponibles relèvent de la section « Réserve ».
-        toutes.filter { $0.feuille == .oeuvresDonnees }.filter(estVenduOuDonne)
-    }
-
-    /// Tableaux donnés (type contenant « tableau »).
-    private var tableauxDonnes: [Oeuvre] {
-        trier(dons.filter { $0.type.localizedCaseInsensitiveContains("tableau") })
-    }
-
-    /// Dessins donnés (type contenant « dessin »).
-    private var dessinsDonnes: [Oeuvre] {
-        trier(dons.filter { $0.type.localizedCaseInsensitiveContains("dessin") })
+        trier(toutes.filter { $0.feuille == .oeuvresDonnees }.filter(estVenduOuDonne))
     }
 
     /// Icône du bouton de menu selon le critère actif.
@@ -75,15 +65,16 @@ struct VueDonsStructuree: View {
                     // --- 1. Bloc récapitulatif ---
                     recapitulatif(proxy: proxy)
 
-                    // --- 2. Section Tableaux ---
-                    titreSection("Tableaux")
-                        .id(ancreTableaux)
-                    contenuSection(tableauxDonnes)
-
-                    // --- 3. Section Dessins ---
-                    titreSection("Dessins")
-                        .id(ancreDessins)
-                    contenuSection(dessinsDonnes)
+                    // --- 2. La liste, sans découpage ---
+                    // Marge haute portée ICI : elle l'était par le titre de
+                    // section (`padding(.top, 24)`), disparu avec le découpage
+                    // par type, et le récapitulatif s'est retrouvé collé à la
+                    // première rangée. Avec les 8 pt du récapitulatif, on
+                    // retrouve les 24 pt de `VueiOS`, où la grille apporte les
+                    // siens depuis `VueGalerie`.
+                    contenuSection(dons)
+                        .padding(.top, 16)
+                        .id(ancreDons)
                 }
                 .padding(.bottom, 30)
             }
@@ -150,7 +141,7 @@ struct VueDonsStructuree: View {
         }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: true,
-                      listeNavigation: tableauxDonnes + dessinsDonnes,
+                      listeNavigation: dons,
                       onFermeture: { derniere in
                           selection = [derniere.id]
                           oeuvreADefiler = derniere.id
@@ -168,14 +159,17 @@ struct VueDonsStructuree: View {
 
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            ligneRecap(titre: "Nombre de dons", nombre: dessinsDonnes.count) {
-                withAnimation { proxy.scrollTo(ancreDessins, anchor: .top) }
+            ligneRecap(titre: "Nombre de dons", nombre: dons.count) {
+                withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
             }
         }
         .background(Color.fondLegende)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        // Même marge basse que `recapCell` dans `VueiOS` : le récapitulatif
+        // doit respirer, quoi qu'il y ait dessous.
+        .padding(.bottom, 8)
     }
 
     private func ligneRecap(titre: String, nombre: Int,
@@ -198,16 +192,6 @@ struct VueDonsStructuree: View {
     }
 
     // MARK: Sections
-
-    private func titreSection(_ texte: String) -> some View {
-        Text(texte)
-            .font(.title2)
-            .fontWeight(.semibold)
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
 
     @ViewBuilder
     private func contenuSection(_ liste: [Oeuvre]) -> some View {
@@ -248,9 +232,9 @@ struct VueDonsStructuree: View {
                     .foregroundStyle(Color.texteLegende)
                     .lineLimit(1)
                 HStack {
-                    Spacer()
                     Text(o.dimensions)
                         .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    Spacer()
                 }
                 .font(.subheadline)
             }
@@ -286,8 +270,11 @@ struct VueDonsStructuree: View {
                             Text(o.destinataire.isEmpty ? "—" : o.destinataire)
                                 .font(.headline).lineLimit(1)
                             if !o.dimensions.isEmpty {
+                                // Même corps qu'en galerie (.subheadline) :
+                                // c'est la même donnée, elle ne doit pas
+                                // rapetisser en changeant de présentation.
                                 Text(o.dimensions)
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.subheadline).foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
                         }

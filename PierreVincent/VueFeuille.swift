@@ -16,6 +16,7 @@ struct VueFeuille: View {
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
+    let filtreParType: Bool        // bandeau de pastilles filtrant par type
     let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
@@ -25,6 +26,7 @@ struct VueFeuille: View {
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          filtreParVendeur: Bool = false,
+         filtreParType: Bool = false,
          nomEnGalerie: Bool = true,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
@@ -34,6 +36,7 @@ struct VueFeuille: View {
         self.statuts = statuts
         self.types = types
         self.filtreParVendeur = filtreParVendeur
+        self.filtreParType = filtreParType
         self.nomEnGalerie = nomEnGalerie
         self._nbSelection = nbSelection
     }
@@ -48,6 +51,8 @@ struct VueFeuille: View {
     // Vendeur retenu par le bandeau de pastilles (nil = tous). Non persisté :
     // c'est un filtre de consultation, pas un réglage.
     @State private var vendeurRetenu: String?
+    // Type retenu par le bandeau des Dons (nil = tous). Non persisté non plus.
+    @State private var typeRetenu: String?
     @State private var editionEntree: Oeuvre?
     @State private var editionNouvelle = false
     @State private var messageExport: String?
@@ -114,13 +119,36 @@ struct VueFeuille: View {
 
     /// Œuvres de cette feuille, triées par le composant.
     private var oeuvres: [Oeuvre] {
-        appliquerFiltreVendeur(baseRubrique).sorted(using: tri)
+        appliquerFiltres(baseRubrique).sorted(using: tri)
+    }
+
+    /// Les deux filtres du bandeau, enchaînés. Une rubrique n'en propose
+    /// jamais qu'un seul, mais les composer évite de le supposer ici.
+    private func appliquerFiltres(_ liste: [Oeuvre]) -> [Oeuvre] {
+        appliquerFiltreType(appliquerFiltreVendeur(liste))
     }
 
     /// Retire les œuvres d'un autre vendeur quand une pastille est retenue.
     private func appliquerFiltreVendeur(_ liste: [Oeuvre]) -> [Oeuvre] {
         guard let v = vendeurRetenu else { return liste }
         return liste.filter { $0.vendeur.caseInsensitiveCompare(v) == .orderedSame }
+    }
+
+    /// Retire les œuvres d'un autre type quand une pastille est retenue.
+    ///
+    /// Test par **inclusion** et non par égalité : le champ `type` porte
+    /// encore, sur les données anciennes, des libellés composés du genre
+    /// « Tableau — huile sur toile ». Corollaire à connaître : une œuvre dont
+    /// le type ne nomme ni l'un ni l'autre n'est retenue par AUCUNE des deux
+    /// pastilles. Sans filtre, elle reste visible — c'est l'état par défaut.
+    private func appliquerFiltreType(_ liste: [Oeuvre]) -> [Oeuvre] {
+        guard let t = typeRetenu else { return liste }
+        return liste.filter { $0.type.localizedCaseInsensitiveContains(t) }
+    }
+
+    /// Les deux pastilles de type des Dons : libellé affiché, mot cherché.
+    private var typesFiltrables: [(libelle: String, mot: String)] {
+        [("Tableaux", "tableau"), ("Dessins", "dessin")]
     }
 
     /// Vendeurs présents dans la rubrique, pour construire les pastilles.
@@ -149,7 +177,7 @@ struct VueFeuille: View {
 
     /// Œuvres triées pour la galerie, selon le critère et le sens choisis.
     private var oeuvresGalerie: [Oeuvre] {
-        let base = appliquerFiltreVendeur(baseRubrique)
+        let base = appliquerFiltres(baseRubrique)
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille.
         var critere = triGalerie
@@ -379,6 +407,7 @@ struct VueFeuille: View {
         .onChange(of: cleRubrique) { _, _ in
             selection = []
             vendeurRetenu = nil
+            typeRetenu = nil
             editionEntree = nil
         }
         // Panneau Inspecteur à droite (mode galerie uniquement) : affiche les
@@ -753,27 +782,39 @@ struct VueFeuille: View {
         // devenaient pleines.
         contenuPrincipal
             .safeAreaInset(edge: .top, spacing: 0) {
-                if filtreParVendeur {
-                    bandeauVendeurs
+                if filtreParVendeur || filtreParType {
+                    bandeauFiltres
                 }
             }
     }
 
-    /// Bandeau de pastilles filtrant par vendeur, en haut du panneau.
+    /// Bandeau de pastilles filtrant le panneau, en haut de celui-ci.
     ///
-    /// Construit d'après les vendeurs réellement présents : aucune liste en
-    /// dur, un vendeur ou un lieu inédit obtient sa pastille d'elle-même.
+    /// Deux sortes selon la rubrique, jamais les deux à la fois :
+    /// - **par vendeur** (enchères, expositions) : construit d'après les
+    ///   vendeurs réellement présents, aucune liste en dur, un lieu inédit
+    ///   obtient sa pastille de lui-même ;
+    /// - **par type** (Dons) : deux pastilles fixes, Tableaux et Dessins. Fixes
+    ///   et non déduites, parce que le champ `type` porte encore des libellés
+    ///   composés : les valeurs distinctes ne feraient pas deux pastilles mais
+    ///   des dizaines.
     ///
-    /// Le bandeau s'affiche dès que la rubrique le déclare, même sans aucun
-    /// vendeur : le compteur, lui, a toujours du sens. Les pastilles de
-    /// vendeur apparaîtront d'elles-mêmes à mesure que les valeurs arrivent.
-    private var bandeauVendeurs: some View {
+    /// Le bandeau s'affiche dès que la rubrique le déclare, même sans aucune
+    /// pastille : le compteur, lui, a toujours du sens.
+    private var bandeauFiltres: some View {
         HStack(spacing: 8) {
-            // Les pastilles de vendeur défilent si elles débordent…
+            // Les pastilles défilent si elles débordent…
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(vendeursPresents, id: \.self) { vendeur in
-                        pastilleVendeur(vendeur)
+                    if filtreParVendeur {
+                        ForEach(vendeursPresents, id: \.self) { vendeur in
+                            pastilleVendeur(vendeur)
+                        }
+                    }
+                    if filtreParType {
+                        ForEach(typesFiltrables, id: \.mot) { t in
+                            pastilleType(libelle: t.libelle, mot: t.mot)
+                        }
                     }
                 }
             }
@@ -832,6 +873,31 @@ struct VueFeuille: View {
         }
         .buttonStyle(.plain)
         .help(retenu ? "Afficher tous les vendeurs" : "N'afficher que « \(vendeur) »")
+    }
+
+    /// Pastille de type des Dons — même apparence que celle de vendeur.
+    private func pastilleType(libelle: String, mot: String) -> some View {
+        let retenu = typeRetenu?.caseInsensitiveCompare(mot) == .orderedSame
+        return Button {
+            // Un second clic sur la pastille retenue lève le filtre.
+            typeRetenu = retenu ? nil : mot
+        } label: {
+            Text(libelle)
+                .font(.system(size: 13))
+                .fontWeight(retenu ? .bold : .regular)
+                .foregroundStyle(retenu ? Color.white : Color.textePrincipal)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background {
+                    if retenu {
+                        Capsule().fill(Color.orangeInternational)
+                    } else {
+                        Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .help(retenu ? "Afficher tous les types" : "N'afficher que « \(libelle) »")
     }
 
     @ViewBuilder

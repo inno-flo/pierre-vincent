@@ -154,7 +154,12 @@ struct VueOeuvresStructuree: View {
 
     /// Nom affiché en gras : acheteur si présent, sinon destinataire.
     private func ligneNom(_ o: Oeuvre) -> String {
-        !o.acheteur.isEmpty ? o.acheteur : o.destinataire
+        // Le champ se choisit sur la FEUILLE, jamais sur le vide : depuis la
+        // reprise « Inconnu », `acheteur` n'est plus jamais vide sur un don —
+        // il contient ce mot — et un test d'emptiness affichait donc
+        // « Inconnu » à la place du destinataire.
+        if o.feuille == .oeuvresDonnees { return afficher(o.destinataire) }
+        return afficher(o.acheteur)
     }
 
     var body: some View {
@@ -393,10 +398,16 @@ struct VueOeuvresStructuree: View {
                     if aUnPrix(o) {
                         PrixText(o.prix)
                             .foregroundStyle(Color.orangeInternational)
+                        Spacer()
+                        Text(o.dimensions)
+                            .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    } else {
+                        // Dons : les dimensions prennent la place du prix,
+                        // alignées à gauche comme le destinataire au-dessus.
+                        Text(o.dimensions)
+                            .foregroundStyle(Color.texteLegende.opacity(0.6))
+                        Spacer()
                     }
-                    Spacer()
-                    Text(o.dimensions)
-                        .foregroundStyle(Color.texteLegende.opacity(0.6))
                 }
                 .font(.subheadline)
             }

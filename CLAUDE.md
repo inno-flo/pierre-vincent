@@ -57,9 +57,15 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   cette fonction, et une future feuille sans prix s'ajoutera à un seul endroit.
 - **`typesOeuvre`** (`TriEtTotaux.swift`) : Dessin, Tableau, Tapis. Le champ
   `type` ne contient QUE ces valeurs, jamais une technique — c'est sur cette
-  règle que repose le filtre de Réserve › Dessins. L'éditeur propose un menu
-  fermé ; une valeur hors liste s'y ajoute telle quelle, pour signaler les
-  œuvres restant à corriger au lieu de les écraser en silence.
+  règle que reposent le filtre de Réserve › Dessins et les pastilles des Dons.
+  L'éditeur propose un menu fermé ; une valeur hors liste s'y ajoute telle
+  quelle, pour signaler les œuvres restant à corriger au lieu de les écraser
+  en silence.
+  **Le menu ne propose PAS « Inconnu »** : ce serait entériner l'état qu'on
+  cherche à corriger. Une œuvre encore dans cet état ouvre un menu sans
+  sélection — c'est le signe qu'un choix reste à faire.
+  **Les données ne respectent pas encore la règle.** Sur 53 dons, 9 seulement
+  ont un type nommant leur catégorie ; les 44 autres restent à reprendre.
 - Photos stockées **hors base**, sur disque, via `PhotoStore` (dossier « Photos »
   dans Application Support). La base ne contient que le nom de fichier.
 - **Champs de suivi** ajoutés à `Oeuvre` : `statut`, `theme`, `emplacement`
@@ -255,6 +261,25 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   colonnes de `Colonnes.swift` servent aux EXPORTS ; le tableau de la vue a ses
   `TableColumn` en dur (`tableVente`, `tableDon`, `tableReserve`). Une nouvelle
   feuille demande donc les deux.
+- **Marge portée par un élément VOISIN plutôt que par celui qui en a besoin.**
+  Rencontré plusieurs fois, dernièrement dans `VueDonsStructuree` : le
+  récapitulatif s'est retrouvé collé à la première rangée de vignettes après
+  la suppression du découpage par type, car c'était le titre de section
+  (`padding(.top, 24)`) qui tenait l'espace — pas le récapitulatif. **Toute
+  cellule doit porter sa propre marge**, indépendamment de ce qui l'entoure.
+  Barème du projet : 8 pt sous le récapitulatif, 16 pt au-dessus du contenu,
+  soit les 24 pt de `VueiOS` (où les 16 viennent du `padding(16)` de
+  `VueGalerie`).
+- **Un découpage par test d'appartenance doit prévoir LE RESTE.**
+  `VueDonsStructuree` séparait « Tableaux » et « Dessins » en cherchant ces
+  mots dans le champ `type` : une œuvre au type disant autre chose — une
+  technique, « Inconnu » — n'entrait dans aucune section et **disparaissait**,
+  9 dons affichés sur 53. Ne découper ainsi qu'une fois le champ garanti
+  fermé (voir `typesOeuvre`), ou prévoir explicitement le reliquat.
+- **Choisir un champ sur son VIDE ne marche plus** depuis la reprise
+  « Inconnu » : `acheteur` n'est jamais vide sur un don, il contient ce mot.
+  Les vignettes affichaient donc « Inconnu » à la place du destinataire
+  (`ligneGras`, `ligneNom`). Le champ à lire se décide sur `o.feuille`.
 - **Vue d'image chargée dans `.onAppear` avec un garde `image == nil`** :
   une vue DÉJÀ à l'écran ne rechargeait jamais. Après remplacement d'une photo
   (éditeur ou glisser-déposer), l'ancienne vignette restait affichée jusqu'à ce
@@ -458,6 +483,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   puis sa valeur** — l'inverse se lisait mal, « Natures mortes carton 2 » seul
   ne disant pas de quel champ il relève. Même chose dans la liste iPhone ; le
   mode liste macOS a sa colonne dans `tableReserve`.
+- **macOS — bandeau de pastilles filtrant par TYPE, dans Dons**
+  (`Categorie.filtreParType`) : deux pastilles, Tableaux et Dessins, plus le
+  compteur. Même apparence et même `safeAreaInset` que le bandeau des
+  vendeurs, avec lequel il partage `bandeauFiltres`.
+  - **Fixes, et non déduites des données** — contrairement aux pastilles de
+    vendeur. Le champ `type` porte encore des libellés composés
+    (« Tableau — huile sur toile ») : collecter les valeurs distinctes
+    donnerait des dizaines de pastilles, pas deux.
+  - Filtrage par **inclusion** du mot. Corollaire : une œuvre dont le type ne
+    nomme ni l'un ni l'autre n'est retenue par AUCUNE pastille — les deux
+    comptes ne feront pas le total tant que les types ne sont pas normalisés.
+    Sans filtre elle reste visible, ce qui est l'état par défaut.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu

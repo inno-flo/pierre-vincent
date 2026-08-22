@@ -178,15 +178,25 @@ struct VueGalerie: View {
                     if aUnPrix(o) {
                         PrixText(o.prix)
                             .foregroundStyle(Color.orangeInternational)
+                        Spacer()
+                        Text(o.dimensions)
+                            .foregroundStyle(Color.texteLegende.opacity(0.6))
                     } else if o.feuille == .reserve {
                         // La valeur, sous son intitulé.
                         Text(afficher(o.emplacement))
                             .foregroundStyle(Color.texteLegende)
                             .lineLimit(1)
+                        Spacer()
+                        Text(o.dimensions)
+                            .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    } else {
+                        // Dons : rien à gauche, les dimensions y viennent —
+                        // sinon elles restaient plaquées à droite, seules,
+                        // désalignées du destinataire juste au-dessus.
+                        Text(o.dimensions)
+                            .foregroundStyle(Color.texteLegende.opacity(0.6))
+                        Spacer()
                     }
-                    Spacer()
-                    Text(o.dimensions)
-                        .foregroundStyle(Color.texteLegende.opacity(0.6))
                 }
                 .font(policeLegende)
             }
@@ -229,9 +239,12 @@ struct VueGalerie: View {
     /// Texte de la ligne en gras : le nom de l'acheteur s'il existe, sinon le
     /// destinataire (utile dans la vue « Œuvres » qui compile ventes ET dons).
     private func ligneGras(_ o: Oeuvre) -> String {
-        if !o.acheteur.isEmpty { return o.acheteur }
-        if !o.destinataire.isEmpty { return o.destinataire }
-        return ""
+        // Le champ se choisit sur la FEUILLE, jamais sur le vide : depuis la
+        // reprise « Inconnu », `acheteur` n'est plus jamais vide sur un don —
+        // il contient ce mot — et un test d'emptiness affichait donc
+        // « Inconnu » à la place du destinataire.
+        if o.feuille == .oeuvresDonnees { return afficher(o.destinataire) }
+        return afficher(o.acheteur)
     }
 
     /// Gère le clic selon les touches enfoncées, comme dans la vue liste :

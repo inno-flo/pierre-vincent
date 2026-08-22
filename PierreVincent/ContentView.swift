@@ -133,6 +133,11 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
+    /// Vrai si la rubrique propose un bandeau de pastilles filtrant par TYPE
+    /// d'œuvre (Tableaux / Dessins). Réservé aux Dons, qui mêlent les deux
+    /// sans que la feuille les distingue.
+    var filtreParType: Bool { self == .oeuvresDonnees }
+
     /// Modes de vente dont la vignette de galerie n'affiche PAS de ligne de
     /// nom : l'acheteur n'y renseigne pas, seuls le prix et les dimensions
     /// comptent. Ne reste que la maison ou le lieu, porté par le Vendeur.
@@ -400,6 +405,7 @@ struct ContentView: View {
                                statuts: cat.statuts,
                                types: cat.types,
                                filtreParVendeur: cat.filtreParVendeur,
+                               filtreParType: cat.filtreParType,
                                nomEnGalerie: cat.nomEnGalerie,
                                nbSelection: $nbSelection)
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait

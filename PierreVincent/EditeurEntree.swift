@@ -386,16 +386,20 @@ struct EditeurEntree: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Valeurs proposées par le menu Type : « Inconnu » (la valeur vide, selon
-    /// la convention de la base), puis les trois types.
+    /// Valeurs proposées par le menu Type : les trois types, et rien d'autre.
+    ///
+    /// **Pas d'entrée « Inconnu ».** Le champ doit finir par porter une des
+    /// trois catégories ; proposer le contraire reviendrait à entériner l'état
+    /// qu'on cherche à corriger. Une œuvre encore à « Inconnu » ouvre donc un
+    /// menu sans sélection : c'est le signe qu'il reste un choix à faire.
     ///
     /// Si l'œuvre porte autre chose — une technique héritée de l'ancien champ
     /// libre, ou une variante de casse — cette valeur est ajoutée au menu
     /// telle quelle. Sans ça, le menu s'afficherait vide et le premier
     /// enregistrement remplacerait la donnée en silence.
     private var choixType: [String] {
-        var choix = [""] + typesOeuvre
-        if !type.isEmpty, !choix.contains(type) { choix.insert(type, at: 1) }
+        var choix = typesOeuvre
+        if !type.isEmpty, !choix.contains(type) { choix.insert(type, at: 0) }
         return choix
     }
 
@@ -406,7 +410,7 @@ struct EditeurEntree: View {
             Text("Type").font(.body).fontWeight(.bold).foregroundStyle(.secondary)
             Picker("", selection: $type) {
                 ForEach(choixType, id: \.self) { valeur in
-                    Text(valeur.isEmpty ? valeurInconnue : valeur).tag(valeur)
+                    Text(valeur).tag(valeur)
                 }
             }
             .labelsHidden()
