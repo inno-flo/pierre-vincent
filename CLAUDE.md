@@ -358,9 +358,10 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   propriété `barreOutilsBas` près de `lien()`. Les réactiver demande de
   décommenter **les deux**, sinon la compilation échoue.
 - **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
-  sous-rubrique (Inventaire, Tableaux, Dessins, Tapis, Œuvres données,
-  Ventes) affiche une pastille arrondie (fond orange, texte blanc) avec le
-  nombre d'œuvres correspondant (Inventaire = total de `toutes`).
+  rubrique affiche une pastille arrondie (fond orange, texte blanc) avec le
+  nombre d'œuvres correspondant. Le compte applique **les mêmes filtres que
+  la vue** (statut, et type pour la Réserve) : sans quoi la pastille
+  annoncerait un nombre introuvable à l'écran.
   Implémenté via `HStack` + `Spacer()` dans la fonction `lien()`, calculé
   par `compteurPourCategorie(_ cat:)`.
 - **macOS — sidebar, typographie** (`ContentView.swift`) : tailles relevées
@@ -475,16 +476,32 @@ JavaScript, inexploitables par extraction) :
 - **Filets de sélection orange : 3 px** dans toutes les vues (galerie
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à
   1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
-- **iOS — sidebar Inventaire, libellés et regroupement** (`ContentView.swift`,
-  enum `Categorie`) : intitulé de page « Inventaire » supprimé (titre vide,
-  grand format conservé pour ne pas décaler la mise en page) ; rubrique
-  « Œuvres » renommée en **« Inventaire »**, rubrique « Dons » renommée en
-  **« Œuvres données »** (`.titre` de `Categorie`, qui pilote aussi le titre
-  de la fiche associée) ; les 4 rubriques Tableaux/Dessins/Tapis vendus +
-  Œuvres données sont regroupées dans un même bloc, sous un en-tête de
-  section **« Ventes et dons »** (3 `Section` au lieu de 4). Par cohérence,
-  les titres et libellés internes de `VueOeuvresStructuree` (page + section
-  « Dons » → « Œuvres données ») et `VueDonsStructuree` (titre de page
-  « Dons » → « Œuvres données ») ont été alignés sur ces nouveaux noms.
-  La carte « Œuvres » de la vue Synthèse (bloc statistique, concept
-  différent) n'a pas été touchée.
+- **Structure de la sidebar** (`ContentView.swift`, enum `Categorie`),
+  identique sur les deux plateformes :
+
+  ```
+  ▼ VENTES ET DONS          ▼ RÉSERVE
+       Catalogue                 Catalogue
+       Ventes                  ▼ Catégories
+       Dons                         Dessins
+       Synthèse
+     ▼ Catégories
+          Tableaux · Dessins · Tapis
+  ```
+
+  - Deux grands blocs **repliables**, plus un sous-groupe « Catégories » dans
+    chacun. Le premier niveau réunit les **vues d'ensemble**, le sous-groupe
+    les **types d'œuvres** — d'où Dons au premier niveau, qui désigne un mode
+    de sortie et non un type.
+  - `Categorie.titre` pilote à la fois le libellé de sidebar ET le titre de la
+    page associée : renommer une rubrique se fait à un seul endroit. Attention
+    aux titres codés en dur ailleurs (`VueOeuvresStructuree` en avait un).
+  - **iOS** : la colonne sidebar porte le titre général « **Inventaire** » en
+    grand format. C'est la vue racine de la pile de navigation en largeur
+    compacte, le `NavigationSplitView` s'y repliant.
+  - Les deux rubriques agrégées s'appellent « **Catalogue** » (une par
+    section), pour ne pas se confondre avec ce titre de page.
+  - La section « Expositions et enchères » a été supprimée : son unique
+    rubrique, Ventes, est remontée au premier niveau.
+  - La carte « Œuvres » de la vue Synthèse (bloc statistique, concept
+    différent) n'a jamais été concernée par ces renommages.
