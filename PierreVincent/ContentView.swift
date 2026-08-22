@@ -222,13 +222,16 @@ struct ContentView: View {
     // œuvres encore détenues. Nouveau drapeau obligatoire — les précédents
     // sont consommés et ne se redéclenchent jamais.
     @AppStorage("feuilleReserveRemplie") private var feuilleReserveRemplie = false
-    // Ouverture/fermeture des blocs de la sidebar, mémorisée entre les sessions
-    // (comportement des sidebars système).
+    // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
+    // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
+    // clés à chaque lancement — tout déplié, sauf « Modes de vente » et les
+    // « Catégories » de la Réserve. Les valeurs ci-dessous ne servent donc que
+    // de garde-fou, et suivent le même arrangement.
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
     @AppStorage("blocStockOuvert") private var blocStockOuvert = true
     @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
-    @AppStorage("sousBlocModesVenteOuvert") private var sousBlocModesVenteOuvert = true
-    @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = true
+    @AppStorage("sousBlocModesVenteOuvert") private var sousBlocModesVenteOuvert = false
+    @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false

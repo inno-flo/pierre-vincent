@@ -27,12 +27,34 @@ struct PierreVincentApp: App {
     @AppStorage("actionFichier") private var actionFichier = ""
     @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
 
+    #endif
+
     init() {
+        #if os(macOS)
         // Désactive les onglets de fenêtre : retire du menu « Présentation »
         // les commandes « Afficher la barre d'onglets / tous les onglets ».
         NSWindow.allowsAutomaticWindowTabbing = false
+        #endif
+        Self.arrangerSidebar()
     }
-    #endif
+
+    /// Arrangement de la barre latérale au lancement, identique sur les deux
+    /// plateformes : tout est déplié, sauf « Modes de vente » et le sous-groupe
+    /// « Catégories » de la Réserve.
+    ///
+    /// Écrit à CHAQUE lancement, et non posé comme simple valeur par défaut de
+    /// `@AppStorage` : ces clés existent déjà chez qui a utilisé l'app, et une
+    /// valeur par défaut ne s'applique qu'à une clé absente — l'arrangement ne
+    /// serait donc jamais appliqué. Conséquence assumée : les replis faits à la
+    /// main ne survivent plus à la fermeture de l'app.
+    private static func arrangerSidebar() {
+        let reglages = UserDefaults.standard
+        reglages.set(true,  forKey: "blocVentesOuvert")
+        reglages.set(true,  forKey: "blocStockOuvert")
+        reglages.set(true,  forKey: "sousBlocCategoriesOuvert")
+        reglages.set(false, forKey: "sousBlocModesVenteOuvert")
+        reglages.set(false, forKey: "sousBlocReserveCategoriesOuvert")
+    }
 
     /// Conteneur SwiftData : la base de données locale des œuvres.
     /// Le fichier est stocké dans Application Support/Pierre-Vincent.
