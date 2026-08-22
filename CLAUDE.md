@@ -40,8 +40,26 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
 - `@Model final class Oeuvre` : tous les champs possibles sont stockés sur le même
   modèle. Les feuilles de **vente** utilisent prix / vendeur / acheteur / date ;
   la feuille **données** utilise `destinataire`. Champs inutilisés = vides.
-- Enum `Feuille` : `tableauxVendus`, `dessinsVendus`, `tapisVendus`, `oeuvresDonnees`.
-  Le `rawValue` sert de clé d'import CSV (ex. « Œuvres données », « Dessins vendus »).
+- Enum `Feuille` : `tableauxVendus`, `dessinsVendus`, `tapisVendus`,
+  `oeuvresDonnees`, `reserve`. Le `rawValue` sert de clé d'import CSV
+  (ex. « Œuvres données », « Dessins vendus »).
+- **Pourquoi une feuille « Réserve ».** Les quatre premières viennent des
+  onglets du tableur d'origine et disent DEUX choses à la fois : le genre
+  d'objet ET son sort (« Tableaux vendus »). Aucune ne convient donc à une
+  œuvre jamais sortie de l'atelier. La cinquième ne dit que le sort ; le genre
+  se lit sur `type`. Les deux rubriques de la Réserve s'y rapportent, et c'est
+  le **type** qui distingue Dessins du Catalogue.
+- **`feuillesSansPrix` et `aUnPrix(_:)`** (`TriEtTotaux.swift`) : dons et
+  réserve n'ont pas de prix à montrer. Le test se lit sur l'**ŒUVRE**, jamais
+  sur la rubrique — dans les vues agrégées la feuille de la rubrique vaut
+  `nil`. Quatre endroits testaient « ce n'est pas un don, donc affiche le
+  prix » et auraient affiché « 0 € » sur la réserve : ils passent tous par
+  cette fonction, et une future feuille sans prix s'ajoutera à un seul endroit.
+- **`typesOeuvre`** (`TriEtTotaux.swift`) : Dessin, Tableau, Tapis. Le champ
+  `type` ne contient QUE ces valeurs, jamais une technique — c'est sur cette
+  règle que repose le filtre de Réserve › Dessins. L'éditeur propose un menu
+  fermé ; une valeur hors liste s'y ajoute telle quelle, pour signaler les
+  œuvres restant à corriger au lieu de les écraser en silence.
 - Photos stockées **hors base**, sur disque, via `PhotoStore` (dossier « Photos »
   dans Application Support). La base ne contient que le nom de fichier.
 - **Champs de suivi** ajoutés à `Oeuvre` : `statut`, `theme`, `emplacement`
@@ -64,16 +82,34 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   **une passe déjà consommée ne se redéclenche pas**, il faut un nouveau
   drapeau pour toute reprise supplémentaire.
   Faites à ce jour, **dans cet ordre** : statut « Vendu » hors dons et
-  « Donné » pour les dons ; mode de vente « Don » pour les dons ; puis
-  « Inconnu » dans tous les champs texte encore vides.
-  **L'ordre compte** : la dernière passe ne remplit que les champs vides, donc
-  toute reprise qui en dépend doit s'exécuter AVANT elle, sinon elle ne trouve
-  plus rien à remplir.
+  « Donné » pour les dons ; mode de vente « Don » pour les dons ;
+  « Inconnu » dans tous les champs texte encore vides ; puis feuille
+  « Réserve » sur les œuvres encore détenues.
+  **L'ordre compte** : la passe « Inconnu » ne remplit que les champs vides,
+  donc toute reprise qui en dépend doit s'exécuter AVANT elle, sinon elle ne
+  trouve plus rien à remplir.
+  **`remplirFeuilleReserve` est l'exception** : contrairement aux autres, elle
+  ÉCRASE une valeur existante — `feuille` n'est jamais vide, elle vaut
+  « Tableaux vendus » par défaut. Elle reste rejouable sans danger, le seul
+  statut suffisant à décider : une œuvre disponible n'a été ni vendue ni
+  donnée. Elle passe après les reprises de statut, dont elle se sert.
 - **Format d'échange `.pvbase`** (`EchangeBase.swift`) : tout champ ajouté au
   modèle doit y être ajouté aussi, **en optionnel**, sinon un transfert
   Mac → iPhone le perd silencieusement. Optionnel car un `Codable` synthétisé
   **n'applique pas les valeurs par défaut aux clés absentes** : un fichier
   exporté avant l'ajout deviendrait illisible.
+  - **Une nouvelle VALEUR d'enum se perd tout aussi silencieusement.** La
+    feuille voyage en texte et se relit avec un repli
+    (`Feuille(rawValue:) ?? .tableauxVendus`) : une version qui ignore
+    « Réserve » range les œuvres détenues parmi les tableaux vendus, sans le
+    moindre message. **Les deux appareils doivent passer à la même version
+    avant tout transfert.**
+  - Filet posé à l'import : le **statut fait foi**, une œuvre disponible reçoit
+    la feuille Réserve quoi qu'ait dit le fichier. Ce rattrapage ne pouvait pas
+    être une passe de `RepriseDonnees` — elles tournent au lancement, donc
+    AVANT l'import, et leur drapeau est déjà consommé quand le fichier arrive.
+  - L'export part de `toutes`, la requête complète, et non de la rubrique
+    affichée : la Réserve y est.
 
 ## Import de photos (macOS)
 
@@ -207,6 +243,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   **Leçon générale** : sur ce projet, le seul mécanisme clavier fiable est le
   moniteur `NSEvent` local avec un état applicatif explicite. Ne pas essayer
   de déduire « qui a le focus » — le décider.
+- **Pastille de comptage et vue qui divergent.** La rubrique Dessins de la
+  Réserve annonçait 9 œuvres au-dessus d'une vue vide : `compteurPourCategorie`
+  passait par `correspond(_:statuts:types:)`, qui teste statut et type, tandis
+  que `baseRubrique` testait **en plus la feuille**. Le compteur applique
+  désormais le filtre de feuille lui aussi. **Règle** : toute pastille doit
+  appliquer EXACTEMENT les filtres de la vue qu'elle annonce — un écart ne se
+  voit pas à la lecture du code, seulement à l'écran, et se lit comme une
+  disparition d'œuvres.
+- **`Table` macOS écrit à la main, pas dérivé de `SchemaFeuille`.** Les
+  colonnes de `Colonnes.swift` servent aux EXPORTS ; le tableau de la vue a ses
+  `TableColumn` en dur (`tableVente`, `tableDon`, `tableReserve`). Une nouvelle
+  feuille demande donc les deux.
 - **Vue d'image chargée dans `.onAppear` avec un garde `image == nil`** :
   une vue DÉJÀ à l'écran ne rechargeait jamais. Après remplacement d'une photo
   (éditeur ou glisser-déposer), l'ancienne vignette restait affichée jusqu'à ce
@@ -380,9 +428,35 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   annoncerait un nombre introuvable à l'écran.
   Implémenté via `HStack` + `Spacer()` dans la fonction `lien()`, calculé
   par `compteurPourCategorie(_ cat:)`.
+- **Filtre par vendeur — les DEUX plateformes.** `Categorie.filtreParVendeur`
+  (booléen, adossé à `modesAvecFiltreVendeur`) dit où le filtre apparaît :
+  bandeau de pastilles sur Mac, menu de barre d'outils sur iPhone. Les
+  **vendeurs eux-mêmes sont déduits des données partout**.
+  - L'ancienne `Categorie.filtresVendeur` nommait quatre vendeurs en dur, dont
+    deux n'avaient rien vendu aux enchères : les choisir menait à une liste
+    vide. Supprimée, avec `correspondAuCanal` qui testait deux champs pour ce
+    menu mêlant vendeurs et modes de vente. **Ne pas les réintroduire.**
+  - Conséquence voulue sur iPhone : Ventes et Vente privée n'ont plus le
+    filtre et retrouvent le menu de tri standard, comme sur Mac.
+  - Sur iPhone, `.modeVente` est servi par **`VueOeuvresStructuree`**, pas par
+    `VueiOS` — cette dernière ne sert que les rubriques par type et la Réserve.
+    Les deux vues ont leur propre menu à tenir à jour.
+- **`modesSansNomEnGalerie` est une liste SÉPARÉE de `modesAvecFiltreVendeur`**,
+  bien qu'elles contiennent aujourd'hui les mêmes deux valeurs. L'une décide
+  d'un filtre, l'autre d'un affichage. Les fusionner ferait qu'ajouter une
+  rubrique au filtre lui retirerait aussi l'acheteur de ses vignettes, sans
+  que rien ne le laisse prévoir.
+- **Vignettes des enchères et des expositions** : pas de ligne de nom, seuls
+  le prix et les dimensions. Deux vignettes distinctes à modifier de front —
+  celle de `VueGalerie` (partagée Mac/iPhone) et celle écrite sur place dans
+  `VueOeuvresStructuree`.
+- **Réserve : la ligne de nom porte l'EMPLACEMENT.** Elle cherchait un acheteur
+  ou un destinataire, qu'une œuvre en réserve n'a ni l'un ni l'autre, et
+  restait donc vide. Le libellé « Emplacement » prend la place du prix. Même
+  chose dans la liste iPhone ; le mode liste macOS a sa colonne dans
+  `tableReserve`.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
-  en haut du panneau des rubriques listées dans
-  `Categorie.modesAvecFiltreVendeur` (Ventes aux enchères, Expositions). Une
+  en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
   inédit obtient la sienne d'elle-même — plus un **compteur** des œuvres
   affichées, ancré à droite hors du défilement horizontal. Un clic filtre, un
