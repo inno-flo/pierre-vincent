@@ -855,11 +855,15 @@ struct VueFeuille: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        // AUCUN fond : la toolbar applique déjà son propre effet de verre, et
-        // un matériau ici s'y ajoutait — deux couches de flou superposées, d'où
-        // une barre visiblement plus opaque que dans les rubriques sans
-        // pastilles. Les pastilles flottent donc directement sur le contenu.
-        .background(.clear)
+        // Matériau le PLUS FIN du catalogue, pour prolonger l'effet de verre
+        // de la toolbar sans l'épaissir : le contenu qui défile dessous doit
+        // être flouté comme il l'est sous la barre, et non passer net derrière
+        // les pastilles.
+        //
+        // Un essai précédent sans aucun fond laissait justement le contenu
+        // net ; un matériau plus épais (`regularMaterial`) faisait au
+        // contraire lire les deux barres comme un seul bandeau lourd.
+        .background(.ultraThinMaterial)
     }
 
     /// Compteur des œuvres affichées, à droite du bandeau. Il suit le filtre :

@@ -528,9 +528,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     continuer de défiler SOUS le bandeau et sous la toolbar, condition de leur
     translucidité. Empilé, le bandeau coupe la zone de défilement et les deux
     barres deviennent pleines.
-  - **Aucun fond sur le bandeau** : la toolbar applique déjà son effet de
-    verre ; un matériau ici s'y ajoute et donne deux couches de flou, donc une
-    barre visiblement plus opaque qu'ailleurs.
+  - **Fond du bandeau : `.ultraThinMaterial`, et rien d'autre.** Réglé par
+    tâtonnement, les deux excès ayant été observés à l'écran :
+    - **aucun fond** — le contenu qui défile passe NET derrière les pastilles,
+      alors qu'il est flouté sous la toolbar juste au-dessus ;
+    - **un matériau plus épais** (`regularMaterial`) — la toolbar et le
+      bandeau se lisent comme une seule barre lourde, visiblement plus opaque
+      que dans les rubriques sans pastilles.
+    Le matériau le plus fin prolonge le verre de la toolbar sans l'épaissir.
+    En dessous, le catalogue n'offre plus rien : il faudrait une couleur
+    semi-transparente, réglable finement mais qui ne floute pas.
+    **Vérifier tout changement sur Ventes aux enchères**, la vue où le défaut
+    d'opacité s'était manifesté, et pas seulement sur Dons.
   - `oeuvres` et `oeuvresGalerie` dérivent d'un `baseRubrique` commun. Les
     vendeurs présents s'y calculent **avant** le filtre : après, retenir une
     pastille ferait disparaître toutes les autres, sans retour possible.
