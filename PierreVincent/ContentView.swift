@@ -161,6 +161,11 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
+    /// ESSAI limité à Réserve › Catalogue : la barre d'espace y ouvre la
+    /// visionneuse intégrée (`VisionneusePanneau`) au lieu de Quick Look.
+    /// Ailleurs, Quick Look reste seul en place.
+    var visionneuseIntegree: Bool { self == .reserveInventaire }
+
     /// Vrai si la rubrique propose un bandeau de pastilles filtrant par TYPE
     /// d'œuvre (Tableaux / Dessins). Réservé aux Dons, qui mêlent les deux
     /// sans que la feuille les distingue.
@@ -447,6 +452,7 @@ struct ContentView: View {
                                filtreParVendeur: cat.filtreParVendeur,
                                filtreParType: cat.filtreParType,
                                nomEnGalerie: cat.nomEnGalerie,
+                               visionneuseIntegree: cat.visionneuseIntegree,
                                nbSelection: $nbSelection)
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
                     // toute la vue à chaque changement de rubrique, donc aussi

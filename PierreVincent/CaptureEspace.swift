@@ -120,6 +120,103 @@ struct CaptureCommandeA: NSViewRepresentable {
 }
 
 
+/// Capte la touche Échap au niveau de la fenêtre, même patron que
+/// `CaptureEspace`. Monté seulement tant qu'il y a quelque chose à fermer.
+///
+/// Moniteur `NSEvent` et non `.onKeyPress(.escape)` : sur ce projet, les
+/// mécanismes clavier de SwiftUI se sont montrés dépendants d'un focus qu'on
+/// ne maîtrise pas (voir CLAUDE.md, et le cas de ⌘A).
+struct CaptureEchap: NSViewRepresentable {
+    let action: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let vue = VueCapteur()
+        vue.action = action
+        return vue
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? VueCapteur)?.action = action
+    }
+
+    final class VueCapteur: NSView {
+        var action: (() -> Void)?
+        private var moniteur: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let m = moniteur { NSEvent.removeMonitor(m); moniteur = nil }
+            guard window != nil else { return }
+
+            moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self else { return event }
+                guard event.keyCode == 53 else { return event }   // Échap
+                self.action?()
+                return nil
+            }
+        }
+
+        deinit {
+            if let m = moniteur { NSEvent.removeMonitor(m) }
+        }
+    }
+}
+
+
+/// Capte les flèches ← et → au niveau de la fenêtre, et les CONSOMME.
+///
+/// Monté seulement pendant l'affichage de la visionneuse. C'est ce qui empêche
+/// la galerie en arrière-plan de les recevoir : elle porte ses propres
+/// `.onKeyPress(.leftArrow/.rightArrow)`, et sans interception on naviguait
+/// dans le panneau au lieu des images — visible dans l'inspecteur.
+///
+/// Un moniteur local est appelé AVANT la chaîne de répondants, donc avant
+/// `.onKeyPress` : renvoyer `nil` suffit à couper court.
+struct CaptureFlechesLaterales: NSViewRepresentable {
+    let onGauche: () -> Void
+    let onDroite: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let vue = VueCapteur()
+        vue.onGauche = onGauche
+        vue.onDroite = onDroite
+        return vue
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let vue = nsView as? VueCapteur else { return }
+        vue.onGauche = onGauche
+        vue.onDroite = onDroite
+    }
+
+    final class VueCapteur: NSView {
+        var onGauche: (() -> Void)?
+        var onDroite: (() -> Void)?
+        private var moniteur: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let m = moniteur { NSEvent.removeMonitor(m); moniteur = nil }
+            guard window != nil else { return }
+
+            moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self else { return event }
+                switch event.keyCode {
+                case 123: self.onGauche?()   // ←
+                case 124: self.onDroite?()   // →
+                default:  return event
+                }
+                return nil
+            }
+        }
+
+        deinit {
+            if let m = moniteur { NSEvent.removeMonitor(m) }
+        }
+    }
+}
+
+
 /// Zone de l'interface qui reçoit les flèches ↑↓, pilotée explicitement par
 /// l'application (et non par le focus SwiftUI ni par le premier répondant
 /// AppKit, qui se sont tous deux révélés non fiables ici : le panneau qui

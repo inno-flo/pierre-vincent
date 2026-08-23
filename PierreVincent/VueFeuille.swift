@@ -19,6 +19,7 @@ struct VueFeuille: View {
     let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
     let filtreParType: Bool        // bandeau de pastilles filtrant par type
     let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
+    let visionneuseIntegree: Bool  // barre d'espace : visionneuse maison au lieu de Quick Look
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
@@ -30,6 +31,7 @@ struct VueFeuille: View {
          filtreParVendeur: Bool = false,
          filtreParType: Bool = false,
          nomEnGalerie: Bool = true,
+         visionneuseIntegree: Bool = false,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
         self.lectureSeule = lectureSeule
@@ -41,6 +43,7 @@ struct VueFeuille: View {
         self.filtreParVendeur = filtreParVendeur
         self.filtreParType = filtreParType
         self.nomEnGalerie = nomEnGalerie
+        self.visionneuseIntegree = visionneuseIntegree
         self._nbSelection = nbSelection
     }
 
@@ -67,6 +70,8 @@ struct VueFeuille: View {
     @State private var confirmerSuppression = false
     // URL de l'image à prévisualiser via Quick Look (barre d'espace).
     @State private var apercuURL: URL?
+    // Position courante dans la visionneuse intégrée (nil = fermée).
+    @State private var indexVisionneuse: Int?
     // Affichage du panneau Inspecteur (mode galerie uniquement).
     // En @AppStorage pour être piloté aussi depuis le menu système « Présentation ».
     @AppStorage("inspecteurVisible") private var inspecteurVisible = false
@@ -424,6 +429,7 @@ struct VueFeuille: View {
             vendeurRetenu = nil
             typeRetenu = nil
             editionEntree = nil
+            indexVisionneuse = nil
         }
         // Panneau Inspecteur à droite (mode galerie uniquement) : affiche les
         // détails de la vignette sélectionnée, ou rien si 0 ou plusieurs.
@@ -777,9 +783,27 @@ struct VueFeuille: View {
         }
     }
 
-    /// Ouvre Quick Look sur la photo de la ligne sélectionnée (barre d'espace).
-    /// Si l'aperçu est déjà ouvert, un nouvel appui le referme (comme le Finder).
+    /// Œuvres de la rubrique qui ont réellement une photo — ce que parcourt
+    /// la visionneuse intégrée.
+    private var oeuvresAvecPhoto: [Oeuvre] {
+        listeAffichee.filter { !$0.photoNom.isEmpty }
+    }
+
+    /// Ouvre l'aperçu de la ligne sélectionnée (barre d'espace).
+    /// Un nouvel appui le referme, comme dans le Finder.
+    ///
+    /// Deux chemins : la **visionneuse intégrée** dans les rubriques qui la
+    /// déclarent (essai en cours, Réserve › Catalogue), **Quick Look** partout
+    /// ailleurs. Le second n'a pas été touché.
     private func declencherApercu() {
+        if visionneuseIntegree {
+            if indexVisionneuse != nil { indexVisionneuse = nil; return }
+            guard let id = selection.first,
+                  let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == id })
+            else { return }
+            indexVisionneuse = i
+            return
+        }
         if QuickLookController.shared.estVisible {
             QuickLookController.shared.fermer()
             return
@@ -819,6 +843,27 @@ struct VueFeuille: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 if filtreParVendeur || filtreParType {
                     bandeauFiltres
+                }
+            }
+            // Visionneuse intégrée : en `overlay` sur le panneau, donc bornée
+            // à celui-ci. Une `.sheet` couvrirait toute la fenêtre, sidebar et
+            // barre d'outils comprises.
+            .overlay {
+                if let i = indexVisionneuse, !oeuvresAvecPhoto.isEmpty {
+                    VisionneusePanneau(
+                        oeuvres: oeuvresAvecPhoto,
+                        index: Binding(
+                            get: { min(i, oeuvresAvecPhoto.count - 1) },
+                            set: { nouveau in
+                                indexVisionneuse = nouveau
+                                // Garde la sélection du panneau en phase, pour
+                                // que fermer la visionneuse laisse l'œuvre
+                                // consultée sélectionnée dessous.
+                                if oeuvresAvecPhoto.indices.contains(nouveau) {
+                                    selection = [oeuvresAvecPhoto[nouveau].id]
+                                }
+                            }),
+                        onFermer: { indexVisionneuse = nil })
                 }
             }
     }
