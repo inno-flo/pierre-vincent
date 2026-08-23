@@ -396,10 +396,29 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   toutes les colonnes tiennent, il n'y a rien à faire défiler
   horizontalement et le bug est invisible. Pour ne défiler que
   verticalement, passer par AppKit : `NSTableView.scrollRowToVisible(_:)`
-  (helper `DefilementTableau` dans `VueFeuille.swift`). Attention en
-  cherchant le `NSTableView` dans la hiérarchie : la sidebar est un
-  `NSOutlineView`, qui **hérite** de `NSTableView` et serait trouvé en
-  premier — l'exclure explicitement.
+  (helper `DefilementTableau` dans `VueFeuille.swift`).
+- **Chercher une vue AppKit par sa CLASSE depuis la racine de la fenêtre : à
+  ne plus jamais faire.** Cette consigne a longtemps figuré ici sous la forme
+  « la sidebar est un `NSOutlineView`, l'exclure explicitement » — et c'est
+  elle qui a fini par tout casser.
+  - Le `Table` de SwiftUI peut lui aussi être adossé à un `NSOutlineView`
+    selon la version de macOS. `DefilementTableau`, qui excluait cette classe,
+    ne trouvait alors plus le tableau du panneau : **plus AUCUNE liste de
+    l'app ne défilait**. Et `DesactiveSurbrillanceSidebar`, qui prenait le
+    premier `NSOutlineView` venu, coupait la surbrillance DU TABLEAU au lieu
+    de celle de la sidebar — les lignes paraissaient non sélectionnables au
+    lancement, et le défaut se « réparait » en changeant de rubrique.
+  - **Remonter DE PROCHE EN PROCHE depuis la vue du représentable**, posée en
+    `.background` de la vue visée, donc juste à côté d'elle
+    (`tableauProche(de:)`, `outlineViewProche(de:)`). Le voisinage est un
+    critère stable ; la classe ne l'est pas.
+  - Symptôme trompeur au passage : la panne touchait TOUTE l'app alors qu'elle
+    a été signalée sur une seule rubrique. Une fonction partagée qui lâche se
+    remarque d'abord là où l'on travaille.
+- **Sélection bleue ou grise dans un `Table` : ce n'est pas un réglage.**
+  AppKit dessine la sélection en bleu quand le tableau a le focus clavier, en
+  gris sinon — comportement système. La surbrillance neutralisée par
+  `DesactiveSurbrillanceSidebar` ne concerne QUE la barre latérale.
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
