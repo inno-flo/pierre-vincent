@@ -161,16 +161,14 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
-    /// ESSAI en cours sur **toute la section Réserve** : la visionneuse
-    /// intégrée y remplace Quick Look — barre d'espace sur Mac, appui prolongé
-    /// sur iPhone, en liste comme en galerie. « Ventes et dons » garde Quick
-    /// Look, le temps de valider l'essai.
-    var visionneuseIntegree: Bool {
-        switch self {
-        case .reserveInventaire, .reserveDessins, .reserveTheme: return true
-        default:                                                 return false
-        }
-    }
+    /// La visionneuse intégrée remplace Quick Look **PARTOUT** : barre
+    /// d'espace sur Mac, appui prolongé sur iPhone, en liste comme en galerie,
+    /// dans toutes les rubriques. L'essai mené sur la Réserve est concluant.
+    ///
+    /// Le drapeau est conservé plutôt que supprimé : le code de Quick Look
+    /// reste en place derrière lui, et il suffit de renvoyer `false` pour y
+    /// revenir sur tout ou partie des rubriques.
+    var visionneuseIntegree: Bool { true }
 
     /// Vrai si la rubrique propose un bandeau de pastilles filtrant par TYPE
     /// d'œuvre (Tableaux / Dessins). Réservé aux Dons, qui mêlent les deux
@@ -1121,11 +1119,24 @@ struct DesactiveSurbrillanceSidebar: NSViewRepresentable {
     }
 
     private static func outlineView(dans vue: NSView) -> NSOutlineView? {
-        if let o = vue as? NSOutlineView { return o }
+        if let o = vue as? NSOutlineView, estLaSidebar(o) { return o }
         for sous in vue.subviews {
             if let o = outlineView(dans: sous) { return o }
         }
         return nil
+    }
+
+    /// Distingue la barre latérale du `Table` du panneau, qui peut être adossé
+    /// à un `NSOutlineView` lui aussi.
+    ///
+    /// **Critère : le nombre de COLONNES.** La sidebar n'en a qu'une ; les
+    /// tableaux du panneau en comptent huit à treize. Se fier à la classe
+    /// seule faisait poser `selectionHighlightStyle = .none` sur le tableau du
+    /// contenu — sa sélection passait au gris, et le réglage y RESTAIT : depuis
+    /// le retrait du `.id(cat)`, la vue n'est plus recréée en changeant de
+    /// rubrique, donc le même tableau sert partout.
+    private static func estLaSidebar(_ o: NSOutlineView) -> Bool {
+        o.numberOfColumns <= 1
     }
 }
 #endif

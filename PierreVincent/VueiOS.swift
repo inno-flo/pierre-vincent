@@ -50,10 +50,6 @@ struct VueiOS: View {
     @State private var vendeurFiltre: String = "Tout"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
-    // Moteur haptique conservé entre les gestes et préparé dès le contact :
-    // un générateur neuf déclenche à froid, ce qui se ressent comme un choc
-    // mou. Même patron que dans `VueGalerie`.
-    @State private var retourHaptique = UIImpactFeedbackGenerator(style: .heavy)
 
     /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
     /// AVANT le filtre par vendeur et avant tri.
@@ -458,13 +454,12 @@ struct VueiOS: View {
                         // Appui prolongé : la visionneuse, comme sur une
                         // vignette de galerie. Le tap du bouton continue
                         // d'ouvrir la fiche de détail.
-                        .onLongPressGesture(minimumDuration: 0.5) {
-                            guard visionneuseIntegree else { return }
-                            retourHaptique.impactOccurred(intensity: 1.0)
-                            ouvrirVisionneuse(o)
-                        } onPressingChanged: { enCours in
-                            if enCours { retourHaptique.prepare() }
-                        }
+                        // PAS d'appui prolongé sur les lignes de liste. Deux
+                        // tentatives ont échoué : `.onLongPressGesture` n'aboutit
+                        // jamais, le `Button` de la ligne captant le geste ; et
+                        // `simultaneousGesture` a causé de nouveaux problèmes. La
+                        // visionneuse s'ouvre donc depuis les VIGNETTES de galerie,
+                        // qui ne sont pas des boutons. À reprendre autrement.
                         .id(o.id)
                     }
                 }

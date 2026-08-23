@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Vue « Œuvres données » structurée pour iPhone.
 ///
@@ -21,6 +22,11 @@ struct VueDonsStructuree: View {
     @AppStorage("triCroissant") private var triCroissant: Bool = false
 
     @State private var detail: Oeuvre?
+    // Visionneuse plein écran : position courante (nil = fermée), et moteur
+    // haptique conservé puis préparé au contact — un générateur neuf déclenche
+    // à froid, ce qui se ressent comme un choc mou. Même patron que `VueiOS`.
+    @State private var indexVisionneuse: Int?
+
     @State private var selection: Set<UUID> = []
     // Œuvre vers laquelle faire défiler la vue de fond, pour qu'elle suive la
     // navigation faite dans la fiche de détail (même mécanisme que VueiOS).
@@ -139,6 +145,7 @@ struct VueDonsStructuree: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: true,
                       listeNavigation: dons,
@@ -206,6 +213,42 @@ struct VueDonsStructuree: View {
         }
     }
 
+
+    // MARK: Visionneuse
+
+    /// Œuvres affichées ayant réellement une photo — ce que parcourt la
+    /// visionneuse. Une œuvre sans photo n'y mènerait qu'à un écran vide.
+    private var oeuvresAvecPhoto: [Oeuvre] {
+        dons.filter { !$0.photoNom.isEmpty }
+    }
+
+    private func ouvrirVisionneuse(_ o: Oeuvre) {
+        guard let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == o.id }) else { return }
+        RetourAppuiLong.jouer()
+        indexVisionneuse = i
+    }
+
+    private var visionneuseOuverte: Binding<Bool> {
+        Binding(get: { indexVisionneuse != nil },
+                set: { if !$0 { indexVisionneuse = nil } })
+    }
+
+    @ViewBuilder
+    private var contenuVisionneuse: some View {
+        if let i = indexVisionneuse, !oeuvresAvecPhoto.isEmpty {
+            VisionneuseOeuvres(
+                oeuvres: oeuvresAvecPhoto,
+                index: min(i, oeuvresAvecPhoto.count - 1),
+                onNaviguer: { o in
+                    // La vue de fond suit : à la fermeture, l'œuvre consultée
+                    // est sélectionnée et à l'écran.
+                    selection = [o.id]
+                    oeuvreADefiler = o.id
+                },
+                onFermer: { indexVisionneuse = nil })
+        }
+    }
+
     private func grilleVignettes(_ liste: [Oeuvre]) -> some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                             GridItem(.flexible(), spacing: 12)], spacing: 16) {
@@ -254,6 +297,12 @@ struct VueDonsStructuree: View {
         // Cible de défilement (proxy.scrollTo).
         .id(o.id)
         .onTapGesture { selection = [o.id]; detail = o }
+        // Appui prolongé : la visionneuse plein écran.
+        .onLongPressGesture(minimumDuration: 0.5) {
+            ouvrirVisionneuse(o)
+        } onPressingChanged: { enCours in
+            if enCours { RetourAppuiLong.preparer() }
+        }
     }
 
     private func listeLignes(_ liste: [Oeuvre]) -> some View {
@@ -293,6 +342,12 @@ struct VueDonsStructuree: View {
                     )
                 }
                 .buttonStyle(.plain)
+                // PAS d'appui prolongé sur les lignes de liste. Deux
+                // tentatives ont échoué : `.onLongPressGesture` n'aboutit
+                // jamais, le `Button` de la ligne captant le geste ; et
+                // `simultaneousGesture` a causé de nouveaux problèmes. La
+                // visionneuse s'ouvre donc depuis les VIGNETTES de galerie,
+                // qui ne sont pas des boutons. À reprendre autrement.
                 // Cible de défilement (proxy.scrollTo).
                 .id(o.id)
             }

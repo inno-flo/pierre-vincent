@@ -27,11 +27,6 @@ struct VueGalerie: View {
     @State private var derniere: UUID?
 
     #if os(iOS)
-    // Moteur haptique CONSERVÉ entre les gestes, et non créé au moment de
-    // frapper : un générateur neuf déclenche à froid, ce qui se ressent comme
-    // un choc mou. On le prépare dès que le doigt se pose (voir
-    // `onPressingChanged`), il est donc chaud quand l'appui aboutit.
-    @State private var retourHaptique = UIImpactFeedbackGenerator(style: .heavy)
     #endif
 
     #if os(macOS)
@@ -254,12 +249,12 @@ struct VueGalerie: View {
             // `.heavy` à pleine intensité : l'ouverture est confirmée au doigt
             // avant de l'être à l'œil, et le geste dure une demi-seconde — un
             // choc discret y passe inaperçu.
-            retourHaptique.impactOccurred(intensity: 1.0)
+            RetourAppuiLong.jouer()
             onAppuiLong(o)
         } onPressingChanged: { enCours in
             // Chauffe le moteur dès le contact : préparé, il répond
             // instantanément et le choc porte davantage.
-            if enCours { retourHaptique.prepare() }
+            if enCours { RetourAppuiLong.preparer() }
         }
         #endif
     }
