@@ -556,8 +556,10 @@ struct VueFeuille: View {
         }
         .modifier(RaccourcisClavier(
             editionActive: editionEntree != nil,
+            visionneuseOuverte: indexVisionneuse != nil,
             onApercu: { declencherApercu() },
             onToutSelectionner: { selectionnerTout() },
+            onDeselectionner: { selection = [] },
             onSupprimer: {
                 if !selection.isEmpty && !lectureSeule {
                     confirmerSuppression = true
@@ -1593,8 +1595,12 @@ private struct AlertesFeuille: ViewModifier {
 /// raccourcir la chaîne de modificateurs du body.
 private struct RaccourcisClavier: ViewModifier {
     let editionActive: Bool
+    /// Vrai tant que la visionneuse intégrée est à l'écran : elle a son propre
+    /// capteur pour Échap.
+    let visionneuseOuverte: Bool
     let onApercu: () -> Void
     let onToutSelectionner: () -> Void
+    let onDeselectionner: () -> Void
     let onSupprimer: () -> Void
 
     func body(content: Content) -> some View {
@@ -1614,6 +1620,17 @@ private struct RaccourcisClavier: ViewModifier {
                 Group {
                     if !editionActive {
                         CaptureCommandeA { onToutSelectionner() }
+                    }
+                }
+            )
+            // Échap : lève la sélection, contrepartie naturelle de ⌘A.
+            // Le capteur est retiré quand la visionneuse est ouverte, où Échap
+            // sert à la fermer — deux moniteurs sur la même touche se
+            // disputeraient l'événement.
+            .background(
+                Group {
+                    if !editionActive && !visionneuseOuverte {
+                        CaptureEchap { onDeselectionner() }
                     }
                 }
             )

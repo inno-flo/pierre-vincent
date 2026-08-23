@@ -32,6 +32,12 @@ struct CaptureEspace: NSViewRepresentable {
 
             moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }
+                // Ne rien capter si notre fenêtre n'est PAS la fenêtre clé :
+                // pendant un panneau d'ouverture ou une alerte, les touches
+                // appartiennent à celui-ci. Sans ce test, ⌘A sélectionnait le
+                // contenu du panneau de la vue en arrière-plan au lieu des
+                // fichiers affichés devant.
+                guard self.window?.isKeyWindow == true else { return event }
 
                 // Barre d'espace = keyCode 49.
                 guard event.keyCode == 49 else { return event }
@@ -95,6 +101,12 @@ struct CaptureCommandeA: NSViewRepresentable {
 
             moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }
+                // Ne rien capter si notre fenêtre n'est PAS la fenêtre clé :
+                // pendant un panneau d'ouverture ou une alerte, les touches
+                // appartiennent à celui-ci. Sans ce test, ⌘A sélectionnait le
+                // contenu du panneau de la vue en arrière-plan au lieu des
+                // fichiers affichés devant.
+                guard self.window?.isKeyWindow == true else { return event }
                 guard event.modifierFlags.contains(.command),
                       event.charactersIgnoringModifiers?.lowercased() == "a"
                 else { return event }
@@ -150,6 +162,12 @@ struct CaptureEchap: NSViewRepresentable {
 
             moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }
+                // Ne rien capter si notre fenêtre n'est PAS la fenêtre clé :
+                // pendant un panneau d'ouverture ou une alerte, les touches
+                // appartiennent à celui-ci. Sans ce test, ⌘A sélectionnait le
+                // contenu du panneau de la vue en arrière-plan au lieu des
+                // fichiers affichés devant.
+                guard self.window?.isKeyWindow == true else { return event }
                 guard event.keyCode == 53 else { return event }   // Échap
                 self.action?()
                 return nil
@@ -201,6 +219,12 @@ struct CaptureFlechesLaterales: NSViewRepresentable {
 
             moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }
+                // Ne rien capter si notre fenêtre n'est PAS la fenêtre clé :
+                // pendant un panneau d'ouverture ou une alerte, les touches
+                // appartiennent à celui-ci. Sans ce test, ⌘A sélectionnait le
+                // contenu du panneau de la vue en arrière-plan au lieu des
+                // fichiers affichés devant.
+                guard self.window?.isKeyWindow == true else { return event }
                 switch event.keyCode {
                 case 123: self.onGauche?()   // ←
                 case 124: self.onDroite?()   // →
@@ -280,6 +304,9 @@ struct CaptureFleches: NSViewRepresentable {
 
             moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self else { return event }
+                // Même garde que les autres capteurs : pendant un panneau
+                // d'ouverture ou une alerte, les touches lui appartiennent.
+                guard self.window?.isKeyWindow == true else { return event }
                 // 126 = flèche haut, 125 = flèche bas.
                 let delta: Int
                 switch event.keyCode {

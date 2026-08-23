@@ -88,12 +88,13 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   Faites à ce jour, **dans cet ordre** : statut « Vendu » hors dons et
   « Donné » pour les dons ; mode de vente « Don » pour les dons ;
   « Inconnu » dans tous les champs texte encore vides ; feuille
-  « Réserve » sur les œuvres encore détenues ; puis thème « Personnage »
-  renommé en « Portrait ».
+  « Réserve » sur les œuvres encore détenues ; thème « Personnage »
+  renommé en « Portrait » ; statut vide réparé ; « À garder » converti en
+  « Disponible » ; puis suppression des doublons d'un import répété.
   **L'ordre compte** : la passe « Inconnu » ne remplit que les champs vides,
   donc toute reprise qui en dépend doit s'exécuter AVANT elle, sinon elle ne
   trouve plus rien à remplir.
-  **Deux passes font exception et ÉCRASENT une valeur existante** :
+  **Plusieurs passes font exception et ÉCRASENT une valeur existante** :
   - `remplirFeuilleReserve` — `feuille` n'est jamais vide, elle vaut
     « Tableaux vendus » par défaut. Rejouable sans danger, le seul statut
     suffisant à décider : une œuvre disponible n'a été ni vendue ni donnée.
@@ -103,6 +104,17 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
     « dessin portrait »). Sans elle les deux valeurs coexisteraient et la
     sidebar afficherait DEUX rubriques « Portraits », une par valeur stockée,
     sans rien qui l'explique à l'écran.
+  - `convertirAGarderEnDisponible` — la table de l'import fait converger les
+    six mots-clés vers « Disponible » ; sans cette passe la base porterait
+    deux statuts pour une même réalité, selon la date d'import.
+  - `supprimerDoublonsImport` — **elle SUPPRIME**, elle ne répare pas.
+    Critère : feuille « Tableaux vendus » ET statut de réserve, combinaison
+    contradictoire qu'aucune œuvre légitime ne peut porter et qui ne s'affiche
+    nulle part. Une photo n'est effacée que si aucune œuvre conservée ne s'en
+    sert.
+  - `purgerReserve` est **DÉBRANCHÉE** et doit le rester : écrite avant
+    l'analyse d'un export, elle visait la feuille `.reserve`, c'est-à-dire la
+    BONNE copie. La rebrancher détruirait la Réserve au premier lancement.
   **Une reprise ne rattrape pas un import ultérieur** : son drapeau est
   consommé au lancement. Un fichier réimporté doit donc déjà porter les
   bonnes valeurs.
@@ -141,6 +153,23 @@ diffèrent en tout.
 - **Table de correspondance** isolée dans `CorrespondanceMotsCles`, seul point
   à compléter. Tant qu'elle est vide, nom de fichier, légende et mots-clés
   sont recopiés dans les **Remarques** : aucun import ne perd d'information.
+  - Les six mots-clés de statut — « disponible », « à garder », « à garder
+    absolument », pour tableaux comme pour dessins — donnent tous
+    **« Disponible »** : la nuance dit une intention, pas le sort de l'œuvre.
+    Rien pour les tapis, il n'en reste aucun de disponible.
+- **Deux filets, sans lesquels une œuvre importée devient INVISIBLE** :
+  - `statutParDefautImport` quand aucun mot-clé ne dit le sort. Un statut vide
+    ne satisfait ni `estVenduOuDonne` ni `estEnReserve` : l'œuvre tombe entre
+    les deux prédicats, bien en base et comptée à l'export, montrée par aucune
+    rubrique. **630 œuvres ont disparu ainsi.**
+  - **la feuille suit le statut** (`estEnReserve` → `.reserve`), comme à
+    l'import `.pvbase`. La rubrique d'où part l'import ne dit rien de l'œuvre,
+    et le repli `.tableauxVendus` produit sinon la même invisibilité.
+- **`DernierImport`** retient les identifiants du dernier lot importé, pour
+  Fichier › Importer › « Annuler l'importation ». **Les DEUX moteurs
+  l'alimentent** : si seul l'import de photos mémorisait, un import CSV suivi
+  d'une annulation supprimerait le lot de photos précédent. Un seul import est
+  mémorisé à la fois.
 - **Un DOSSIER peut être choisi** : l'import y prend toutes les images,
   sous-dossiers compris, dans un ordre alphabétique stable
   (`imagesContenues(dans:)`). Fichiers et dossiers peuvent être mélangés dans
@@ -324,6 +353,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   La sidebar et l'inspecteur échantillonnent ce qui se trouve derrière eux
   dans la fenêtre : un fond noir qui dépasse les fait virer au gris foncé. Le
   symptôme — « la sidebar change de couleur » — ne désigne pas sa cause.
+- **Un moniteur `NSEvent` local capte AUSSI pendant un panneau système.**
+  `NSOpenPanel` s'exécute hors processus en bac à sable, ce qui laisse croire
+  qu'il est hors d'atteinte — il ne l'est pas : ⌘A sélectionnait le contenu du
+  panneau de la vue EN ARRIÈRE-PLAN au lieu des fichiers affichés devant. Les
+  cinq capteurs testent donc `window?.isKeyWindow` avant d'agir.
 - **Un moniteur `NSEvent` local est appelé AVANT la chaîne de répondants**,
   donc avant `.onKeyPress`. Renvoyer `nil` suffit à reprendre la main sur un
   raccourci posé ailleurs : c'est ainsi que ← et → pilotent la visionneuse au
