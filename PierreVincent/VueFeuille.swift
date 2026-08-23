@@ -900,11 +900,11 @@ struct VueFeuille: View {
                                 selection = [oeuvresAvecPhoto[i].id]
                             }
                             indexVisionneuse = nil
-                            // Le CENTRAGE de la ligne consultée est en
-                            // attente : il demande une vue de référence pour
-                            // retrouver le tableau, et on rétablit d'abord le
-                            // défilement ordinaire. `scrollRowToVisible` la
-                            // ramène déjà dans la zone visible.
+                            // PAS de centrage : l'œuvre doit simplement être
+                            // sélectionnée et VISIBLE. Le défilement suit la
+                            // sélection tout seul — `scrollRowToVisible` en
+                            // liste, `scrollTo` en galerie — et il opère déjà
+                            // pendant la navigation, sous la visionneuse.
                         })
                 }
             }
