@@ -540,10 +540,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   0,4 s puis s'éteint **toute seule** via une tâche asynchrone — sans jamais
   dépendre d'un retour de navigation ni d'un geste personnalisé (voir pièges
   ci-dessous).
-- **Visionneuses d'images — ESSAI en cours, limité à Réserve › Catalogue**
-  (`Categorie.visionneuseIntegree`). Quick Look n'a pas été touché et reste
-  seul en place partout ailleurs : revenir en arrière se résume à supprimer le
-  drapeau.
+- **Visionneuses d'images — en place PARTOUT** (`Categorie.visionneuseIntegree`,
+  qui renvoie désormais `true`). Elles remplacent Quick Look dans toutes les
+  rubriques, sur les deux plateformes.
+  - Le drapeau est **conservé plutôt que supprimé**, et le code de Quick Look
+    reste derrière lui : renvoyer `false` suffit à revenir en arrière, sur
+    tout ou partie des rubriques.
+  - Sur iPhone, trois vues ont dû recevoir le geste — `VueiOS`,
+    `VueOeuvresStructuree` et `VueDonsStructuree` — chacune ayant son propre
+    rendu de vignettes. Sur Mac, `VueFeuille` sert toutes les rubriques : une
+    seule ligne a suffi.
   - **macOS** (`VisionneusePanneau.swift`) : la barre d'espace l'ouvre à la
     place de Quick Look. Posée en `overlay` sur le panneau et NON en `.sheet`,
     qui couvrirait toute la fenêtre, sidebar et barre d'outils comprises.
@@ -557,9 +563,34 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     qui montre UNE photo depuis la fiche de détail. Les deux coexistent.
   - Boutons au style des pastilles de comptage : cercle opaque cerclé
     d'orange, glyphe blanc, contour atténué en bout de série.
-  - Retour haptique en `.heavy` à pleine intensité, générateur **conservé et
-    préparé dès le contact** : un générateur neuf déclenche à froid, ce qui se
-    ressent comme un choc mou.
+  - **`RetourAppuiLong`** (iOS) réunit vibration et son du geste. Centralisé
+    parce que le retour existait dans QUATRE vues et allait diverger.
+    - Haptique `.heavy` à pleine intensité, générateur **conservé et préparé
+      dès le contact** : un générateur neuf déclenche à froid, ce qui se
+      ressent comme un choc mou.
+    - Son : le « tock » de clavier. **Son identifiant n'est pas une constante
+      publiée par Apple** — il fonctionne de longue date, sans garantie — et
+      il est **muet en mode silencieux**. La vibration reste donc le signal
+      principal, le son un supplément.
+  - **PAS d'appui prolongé sur les lignes de LISTE iPhone.** Deux tentatives
+    ont échoué :
+    - `.onLongPressGesture` n'aboutit jamais — la ligne est un `Button`, qui
+      capte le geste ;
+    - `simultaneousGesture` a causé d'autres problèmes, comme il l'avait déjà
+      fait sur les lignes de sidebar (voir les pièges).
+    La visionneuse s'ouvre donc depuis les **vignettes de galerie**, qui ne
+    sont pas des boutons. Piste restante : abandonner le `Button` pour ces
+    lignes et adopter la construction des vignettes — vue simple,
+    `.contentShape(Rectangle())` et `.onTapGesture`.
+- **NON RÉSOLU — couleur de sélection des listes macOS.** Après un passage par
+  une rubrique de la Réserve, la sélection passe du bleu au gris et **y reste**,
+  dans toutes les rubriques, jusqu'à la relance. Le défaut est récent.
+  Deux hypothèses réfutées par l'observation : ce n'est pas le focus clavier
+  (le comportement est stable et lié à la rubrique), et ce n'est pas
+  `DesactiveSurbrillanceSidebar` visant le mauvais tableau (la sidebar garde
+  son marron, et restreindre sa recherche au nombre de colonnes n'a rien
+  changé). Piste : depuis le retrait du `.id(cat)`, le MÊME `NSTableView` sert
+  dans toutes les rubriques — un réglage posé une fois y demeure.
 - **iOS — photo en plein écran depuis la fiche détail d'une œuvre**
   (`DetailiOS` dans `VueiOS.swift` + nouveau fichier
   `VisionneuseImagePleinEcran.swift`) : tap prolongé sur la photo (0,5 s,
