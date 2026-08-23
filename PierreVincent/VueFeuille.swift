@@ -16,6 +16,7 @@ struct VueFeuille: View {
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
+    let emplacements: [String]     // filtre sur le champ Emplacement (inclusion)
     let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
     let filtreParType: Bool        // bandeau de pastilles filtrant par type
     let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
@@ -28,6 +29,7 @@ struct VueFeuille: View {
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          themes: [String] = [],
+         emplacements: [String] = [],
          filtreParVendeur: Bool = false,
          filtreParType: Bool = false,
          nomEnGalerie: Bool = true,
@@ -40,6 +42,7 @@ struct VueFeuille: View {
         self.statuts = statuts
         self.types = types
         self.themes = themes
+        self.emplacements = emplacements
         self.filtreParVendeur = filtreParVendeur
         self.filtreParType = filtreParType
         self.nomEnGalerie = nomEnGalerie
@@ -128,7 +131,8 @@ struct VueFeuille: View {
         // « Ventes et dons » recense les œuvres sorties du fonds ; la Réserve
         // celles encore détenues (voir `Categorie.statuts`).
         base = base.filter {
-            correspond($0, statuts: statuts, types: types, themes: themes)
+            correspond($0, statuts: statuts, types: types, themes: themes,
+                       emplacements: emplacements)
         }
         return base
     }
@@ -411,6 +415,7 @@ struct VueFeuille: View {
          statuts.joined(separator: ","),
          types.joined(separator: ","),
          themes.joined(separator: ","),
+         emplacements.joined(separator: ","),
          modesVente.joined(separator: ",")].joined(separator: "|")
     }
 

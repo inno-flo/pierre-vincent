@@ -14,6 +14,7 @@ struct VueiOS: View {
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
+    let emplacements: [String]     // filtre sur le champ Emplacement (inclusion)
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
@@ -21,6 +22,7 @@ struct VueiOS: View {
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          themes: [String] = [],
+         emplacements: [String] = [],
          visionneuseIntegree: Bool = false) {
         self.feuille = feuille
         self.titre = titre
@@ -29,6 +31,7 @@ struct VueiOS: View {
         self.statuts = statuts
         self.types = types
         self.themes = themes
+        self.emplacements = emplacements
         self.visionneuseIntegree = visionneuseIntegree
     }
 
@@ -72,7 +75,8 @@ struct VueiOS: View {
         }
         // Filtres propres à la rubrique : statut, type, thème.
         return base.filter {
-            correspond($0, statuts: statuts, types: types, themes: themes)
+            correspond($0, statuts: statuts, types: types, themes: themes,
+                       emplacements: emplacements)
         }
     }
 

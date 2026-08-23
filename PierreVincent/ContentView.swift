@@ -18,6 +18,7 @@ enum Categorie: Hashable, Identifiable {
     case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
     case reserveInventaire // Réserve : toutes les œuvres encore détenues
     case reserveDessins   // Réserve : dessins encore disponibles
+    case reserveCollection // Réserve : œuvres rangées en collection personnelle
     /// Sous-catégorie de la Réserve : un thème précis. Même principe que
     /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
     /// variable de rubriques déduites des données (voir `themesPresents`).
@@ -40,6 +41,7 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return "Ventes"
         case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
+        case .reserveCollection: return "Collection personnelle"
         // Rendu au pluriel — et « Portraits » pour « Personnage » — comme les
         // modes de vente plus bas : la valeur STOCKÉE sur l'œuvre ne change
         // pas, c'est elle que voient l'éditeur, l'inspecteur et le filtre.
@@ -76,6 +78,7 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return "person.crop.circle.fill"
         case .reserveInventaire: return "square.grid.2x2"
         case .reserveDessins:   return "pencil.and.outline"
+        case .reserveCollection: return "archivebox"
         case .reserveTheme:     return "paintbrush"
         case .synthese:         return "chart.bar.doc.horizontal"
         case .modeVente:        return "tag"
@@ -95,6 +98,7 @@ enum Categorie: Hashable, Identifiable {
         // rapportent, et c'est le TYPE qui distingue Dessins du Catalogue.
         case .reserveInventaire: return .reserve
         case .reserveDessins:   return .reserve
+        case .reserveCollection: return .reserve
         // Même feuille que le reste de la Réserve : c'est le THÈME qui
         // restreint, pas la feuille.
         case .reserveTheme:     return .reserve
@@ -128,7 +132,7 @@ enum Categorie: Hashable, Identifiable {
     /// encore détenues.
     var statuts: [String] {
         switch self {
-        case .reserveInventaire, .reserveDessins, .reserveTheme:
+        case .reserveInventaire, .reserveDessins, .reserveTheme, .reserveCollection:
             return statutsReserve
         // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
         // dons ont leur propre rubrique.
@@ -136,6 +140,26 @@ enum Categorie: Hashable, Identifiable {
             return ["Vendu"]
         default:
             return Array(statutsVentesEtDons)
+        }
+    }
+
+    /// Filtre sur le champ Emplacement, par INCLUSION (vide = aucun filtre).
+    ///
+    /// La valeur stockée nomme le carton — « Collection personnelle carton 3 » —
+    /// alors que la rubrique désigne la collection entière.
+    ///
+    /// **Pourquoi pas le statut.** La rubrique devrait recenser les œuvres
+    /// marquées « à garder » à l'import, mais les six mots-clés convergent
+    /// désormais vers « Disponible » : la nuance n'est plus enregistrée nulle
+    /// part. L'emplacement est le seul champ qui la porte encore.
+    ///
+    /// **PROVISOIRE.** Ce critère tient lieu d'approximation en attendant une
+    /// nouvelle table de correspondance à l'import, qui rétablira une valeur
+    /// propre. Ne pas s'appuyer dessus ailleurs.
+    var emplacements: [String] {
+        switch self {
+        case .reserveCollection: return ["Collection personnelle"]
+        default:                 return []
         }
     }
 
@@ -462,6 +486,7 @@ struct ContentView: View {
                                statuts: cat.statuts,
                                types: cat.types,
                                themes: cat.themes,
+                               emplacements: cat.emplacements,
                                filtreParVendeur: cat.filtreParVendeur,
                                filtreParType: cat.filtreParType,
                                nomEnGalerie: cat.nomEnGalerie,
@@ -498,6 +523,7 @@ struct ContentView: View {
                                statuts: cat.statuts,
                                types: cat.types,
                                themes: cat.themes,
+                               emplacements: cat.emplacements,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
                     }
@@ -659,6 +685,7 @@ struct ContentView: View {
         }
         if blocStockOuvert {
             liste.append(.reserveInventaire)
+            liste.append(.reserveCollection)
             if sousBlocReserveCategoriesOuvert {
                 liste.append(.reserveDessins)
             }
@@ -689,7 +716,7 @@ struct ContentView: View {
     /// Raccourci : l'œuvre relève-t-elle de cette rubrique (statut + type) ?
     private func correspond(_ o: Oeuvre, a cat: Categorie) -> Bool {
         PierreVincent.correspond(o, statuts: cat.statuts, types: cat.types,
-                                 themes: cat.themes)
+                                 themes: cat.themes, emplacements: cat.emplacements)
     }
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
@@ -725,7 +752,7 @@ struct ContentView: View {
         // Ventes, ses sous-catégories et la Réserve ont leurs propres statuts :
         // on repart de `toutes`, pas de `recensees`.
         case .ventesRealisees, .modeVente,
-             .reserveInventaire, .reserveDessins, .reserveTheme:
+             .reserveInventaire, .reserveDessins, .reserveTheme, .reserveCollection:
             return toutes.filter { o in
                 // La FEUILLE aussi, sinon la pastille annonce des œuvres que
                 // la vue ne montre pas : c'est précisément ce qui affichait
@@ -899,6 +926,7 @@ struct ContentView: View {
     @ViewBuilder
     private var contenuStock: some View {
         lien(.reserveInventaire)
+        lien(.reserveCollection)
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
         DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {

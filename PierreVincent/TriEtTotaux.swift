@@ -21,7 +21,7 @@ let statutsVentesEtDons: Set<String> = ["Vendu", "Donné"]
 /// `types` vide = aucun filtre de type. Comparaisons insensibles à la casse et
 /// aux espaces de bord, les valeurs étant saisies à la main.
 func correspond(_ o: Oeuvre, statuts: [String], types: [String],
-                themes: [String] = []) -> Bool {
+                themes: [String] = [], emplacements: [String] = []) -> Bool {
     func egal(_ a: String, _ b: String) -> Bool {
         a.trimmingCharacters(in: .whitespacesAndNewlines)
             .caseInsensitiveCompare(b.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
@@ -29,6 +29,12 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String],
     guard statuts.contains(where: { egal(o.statut, $0) }) else { return false }
     guard types.isEmpty || types.contains(where: { egal(o.type, $0) }) else { return false }
     guard themes.isEmpty || themes.contains(where: { egal(o.theme, $0) }) else { return false }
+    // Emplacement : test par INCLUSION et non par égalité. La valeur stockée
+    // nomme le carton (« Collection personnelle carton 3 ») ; la rubrique, elle,
+    // désigne la collection entière.
+    guard emplacements.isEmpty || emplacements.contains(where: {
+        o.emplacement.localizedCaseInsensitiveContains($0)
+    }) else { return false }
     return true
 }
 
