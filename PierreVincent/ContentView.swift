@@ -40,7 +40,18 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return "Ventes"
         case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
-        case .reserveTheme(let t): return t
+        // Rendu au pluriel — et « Portraits » pour « Personnage » — comme les
+        // modes de vente plus bas : la valeur STOCKÉE sur l'œuvre ne change
+        // pas, c'est elle que voient l'éditeur, l'inspecteur et le filtre.
+        // Un thème inédit garde son libellé tel quel.
+        case .reserveTheme(let t):
+            switch t.lowercased() {
+            case "bouquet":      return "Bouquets"
+            case "nature morte": return "Natures mortes"
+            case "paysage":      return "Paysages"
+            case "portrait":     return "Portraits"
+            default:             return t
+            }
         case .synthese:         return "Synthèse"
         // Forme d'affichage du mode : la rubrique regroupe PLUSIEURS ventes,
         // d'où le pluriel, alors que la valeur stockée sur une œuvre reste au
@@ -242,6 +253,8 @@ struct ContentView: View {
     // œuvres encore détenues. Nouveau drapeau obligatoire — les précédents
     // sont consommés et ne se redéclenchent jamais.
     @AppStorage("feuilleReserveRemplie") private var feuilleReserveRemplie = false
+    // `themePortraitRenomme` : sixième passe, « Personnage » → « Portrait ».
+    @AppStorage("themePortraitRenomme") private var themePortraitRenomme = false
     // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
     // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
     // clés à chaque lancement — tout déplié, sauf « Modes de vente » et les
@@ -268,6 +281,11 @@ struct ContentView: View {
     // natif du NavigationLink et empêche la navigation par intermittence.
     @State private var categorieRecemmentChoisie: Categorie?
     @State private var tacheExtinctionSurbrillance: Task<Void, Never>?
+    // Message éphémère lors d'une bascule du masquage des prix, calqué sur
+    // celui du Mac (`bandeauPrix` dans VueFeuille) : même libellé, même
+    // apparence, même durée. S'éteint tout seul via une tâche asynchrone.
+    @State private var messagePrix: String?
+    @State private var tacheMessagePrix: Task<Void, Never>?
     #endif
 
     var body: some View {
@@ -521,9 +539,32 @@ struct ContentView: View {
                 RepriseDonnees.remplirFeuilleReserve(context: context)
                 feuilleReserveRemplie = true
             }
+
+            // Reprise ponctuelle : le thème « Personnage » devient
+            // « Portrait », valeur désormais écrite par l'import photos.
+            if !themePortraitRenomme {
+                RepriseDonnees.renommerThemePortrait(context: context)
+                themePortraitRenomme = true
+            }
         }
         #if os(iOS)
         .detecteSecoussePourPrix()
+        // Message éphémère du masquage des prix. Posé ICI, sur la racine, et
+        // non dans une vue de rubrique : sur iPhone la bascule se déclenche
+        // depuis le bouton de la sidebar ou par la secousse, donc depuis
+        // n'importe quel écran de la pile de navigation.
+        .overlay(alignment: .top) { bandeauPrix }
+        .animation(.easeInOut(duration: 0.2), value: messagePrix)
+        // Déclenché par la VALEUR et non par le bouton : la secousse doit
+        // afficher le même message.
+        .onChange(of: prixMasques) { _, masques in
+            messagePrix = masques ? "Prix masqués" : "Prix affichés"
+            tacheMessagePrix?.cancel()
+            tacheMessagePrix = Task {
+                try? await Task.sleep(nanoseconds: 840_000_000)   // 0,84 s
+                if !Task.isCancelled { messagePrix = nil }
+            }
+        }
         #endif
         // Couleur de texte par défaut suivant le thème.
         .foregroundStyle(Color.textePrincipal)
@@ -639,6 +680,28 @@ struct ContentView: View {
             return nil
         }
     }
+
+    #if os(iOS)
+    /// Pastille éphémère « Prix masqués » / « Prix affichés ».
+    /// Reprise à l'identique de `bandeauPrix` (`VueFeuille`, macOS).
+    @ViewBuilder
+    private var bandeauPrix: some View {
+        if let messagePrix {
+            HStack(spacing: 8) {
+                Image(systemName: prixMasques ? "eye.slash" : "eye")
+                Text(messagePrix)
+            }
+            .font(.headline)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1))
+            .shadow(radius: 10)
+            .padding(.top, 18)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+    #endif
 
     // MARK: Zone du bas de la sidebar
 

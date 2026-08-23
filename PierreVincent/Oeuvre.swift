@@ -125,6 +125,31 @@ enum RepriseDonnees {
         return compte
     }
 
+    /// Renomme le thème « Personnage » en « Portrait ».
+    ///
+    /// La table de correspondance de l'import photos écrit désormais
+    /// « Portrait » ; sans cette passe, les deux valeurs coexisteraient et la
+    /// sidebar afficherait DEUX rubriques « Portraits », une par valeur
+    /// stockée, sans que rien ne l'explique à l'écran.
+    ///
+    /// Comme `remplirFeuilleReserve`, elle écrase une valeur existante — c'est
+    /// tout son objet — et reste rejouable sans danger : une fois la bascule
+    /// faite, plus aucune œuvre ne porte l'ancienne valeur.
+    @discardableResult
+    @MainActor
+    static func renommerThemePortrait(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes
+        where o.theme.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare("Personnage") == .orderedSame {
+            o.theme = "Portrait"
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
     /// Bascule sur la feuille « Réserve » les œuvres encore détenues.
     ///
     /// À la différence des reprises ci-dessus, celle-ci **écrase** une valeur

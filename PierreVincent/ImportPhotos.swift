@@ -95,7 +95,7 @@ enum CorrespondanceMotsCles {
         "dessin nature morte": "Nature morte",
         "dessin animaux":      "Animaux",
         "dessin paysage":      "Paysage",
-        "dessin personnage":   "Personnage",
+        "dessin portrait":     "Portrait",
     ]
 
     /// Mot-clé → valeur du champ **Type**.
