@@ -1359,15 +1359,12 @@ struct VueFeuille: View {
         p.allowsMultipleSelection = true
         // Pas de `allowedContentTypes` : il grise les dossiers, qu'on veut
         // pouvoir choisir. Le tri par type se fait à l'import.
-        //
-        // NON RÉSOLU : dans ce panneau, la largeur de la barre latérale ne
-        // s'ajuste pas (le curseur change de forme, mais le glissement reste
-        // sans effet). Rétablir le filtre en y incluant `.folder` — la forme
-        // qu'emploie le panneau d'import CSV, qui lui fonctionne — n'y a rien
-        // changé. La cause est donc ailleurs.
         p.prompt = "Importer"
-        p.message = "Choisissez des photos, ou un dossier à importer en entier. "
-            + "Leurs mots-clés serviront à remplir les champs de chaque œuvre."
+        // PAS de `message` : il s'affiche dans un bandeau en tête du panneau et
+        // y impose une largeur minimale, qui empêchait d'ajuster la largeur de
+        // la barre latérale — le glissement restait sans effet alors que le
+        // curseur changeait bien de forme. Ne pas le réintroduire ; le titre du
+        // menu (« Photos… ») dit déjà ce qu'on attend.
         guard p.runModal() == .OK, !p.urls.isEmpty else { return }
 
         // Les vues agrégées (Inventaire, Ventes) n'ont pas de feuille propre :
@@ -1395,7 +1392,7 @@ struct VueFeuille: View {
         p.canChooseDirectories = true
         p.allowedContentTypes = [.commaSeparatedText, .plainText, .folder]
         p.prompt = "Importer"
-        p.message = "Choisissez un fichier CSV, ou un dossier contenant import.csv et un sous-dossier Photos"
+        // Pas de `message` non plus ici : voir la remarque dans `importerPhotos`.
         guard p.runModal() == .OK, let choix = p.url else { return }
 
         // Détermine si l'utilisateur a choisi un dossier ou un fichier.
