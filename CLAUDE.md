@@ -87,16 +87,25 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   drapeau pour toute reprise supplémentaire.
   Faites à ce jour, **dans cet ordre** : statut « Vendu » hors dons et
   « Donné » pour les dons ; mode de vente « Don » pour les dons ;
-  « Inconnu » dans tous les champs texte encore vides ; puis feuille
-  « Réserve » sur les œuvres encore détenues.
+  « Inconnu » dans tous les champs texte encore vides ; feuille
+  « Réserve » sur les œuvres encore détenues ; puis thème « Personnage »
+  renommé en « Portrait ».
   **L'ordre compte** : la passe « Inconnu » ne remplit que les champs vides,
   donc toute reprise qui en dépend doit s'exécuter AVANT elle, sinon elle ne
   trouve plus rien à remplir.
-  **`remplirFeuilleReserve` est l'exception** : contrairement aux autres, elle
-  ÉCRASE une valeur existante — `feuille` n'est jamais vide, elle vaut
-  « Tableaux vendus » par défaut. Elle reste rejouable sans danger, le seul
-  statut suffisant à décider : une œuvre disponible n'a été ni vendue ni
-  donnée. Elle passe après les reprises de statut, dont elle se sert.
+  **Deux passes font exception et ÉCRASENT une valeur existante** :
+  - `remplirFeuilleReserve` — `feuille` n'est jamais vide, elle vaut
+    « Tableaux vendus » par défaut. Rejouable sans danger, le seul statut
+    suffisant à décider : une œuvre disponible n'a été ni vendue ni donnée.
+    Passe après les reprises de statut, dont elle se sert.
+  - `renommerThemePortrait` — « Personnage » devient « Portrait », valeur que
+    la table de correspondance de l'import photos écrit désormais (mot-clé
+    « dessin portrait »). Sans elle les deux valeurs coexisteraient et la
+    sidebar afficherait DEUX rubriques « Portraits », une par valeur stockée,
+    sans rien qui l'explique à l'écran.
+  **Une reprise ne rattrape pas un import ultérieur** : son drapeau est
+  consommé au lancement. Un fichier réimporté doit donc déjà porter les
+  bonnes valeurs.
 - **Format d'échange `.pvbase`** (`EchangeBase.swift`) : tout champ ajouté au
   modèle doit y être ajouté aussi, **en optionnel**, sinon un transfert
   Mac → iPhone le perd silencieusement. Optionnel car un `Codable` synthétisé
@@ -278,6 +287,22 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   « Inconnu » : `acheteur` n'est jamais vide sur un don, il contient ce mot.
   Les vignettes affichaient donc « Inconnu » à la place du destinataire
   (`ligneGras`, `ligneNom`). Le champ à lire se décide sur `o.feuille`.
+- **Un `overlay` SwiftUI passe TOUJOURS derrière une `.sheet`.** Celle-ci se
+  présente au-dessus de toute la hiérarchie qui l'ouvre : remonter l'overlay à
+  la racine n'y change rien. C'est ce qui cachait la pastille « Prix masqués »
+  derrière l'éditeur. Deux réponses selon la plateforme :
+  - **macOS** : la même pastille est posée AUSSI sur le contenu de l'éditeur,
+    les deux partageant `messagePrix` ;
+  - **iOS** : `PastillePrix.swift` la rend dans une **`UIWindow` à part**
+    (`windowLevel = .alert + 1`), seule façon de passer devant n'importe
+    quelle feuille de n'importe quel écran.
+    **Le `hitTest` qui renvoie `nil` n'est pas du code mort** : cette fenêtre
+    recouvre l'écran en permanence et intercepterait tous les touchers sans
+    lui — l'app deviendrait impilotable. La scène est cherchée au premier
+    affichage, pas à l'`init`, où elle n'existe pas encore.
+- **`ObservableObject` et `@Published` réclament `import Combine`** depuis
+  Swift 6 (`MemberImportVisibility`). Préférer le macro `@Observable`, qui
+  n'en a pas besoin.
 - **Vue d'image chargée dans `.onAppear` avec un garde `image == nil`** :
   une vue DÉJÀ à l'écran ne rechargeait jamais. Après remplacement d'une photo
   (éditeur ou glisser-déposer), l'ancienne vignette restait affichée jusqu'à ce
@@ -682,6 +707,22 @@ JavaScript, inexploitables par extraction) :
   - La carte « Œuvres » de la vue Synthèse (bloc statistique, concept
     différent) n'a jamais été concernée par ces renommages.
 
+- **Sous-catégories dynamiques par thème, dans la Réserve**
+  (`ContentView.swift`, cas `reserveTheme(String)`) : même principe que les
+  modes de vente ci-dessous — `themesPresents` déduit les rubriques des
+  données, en écartant les vides et « Inconnu ».
+  - Le balayage ne porte QUE sur les œuvres de la Réserve : un thème
+    n'existant que sur une œuvre vendue aurait sinon sa rubrique ici,
+    systématiquement vide.
+  - Le filtre passe par un paramètre `themes` ajouté à `correspond`, donc au
+    même endroit que ceux par statut et par type — ce qui le fait reprendre
+    tel quel par les pastilles de comptage et la navigation clavier.
+  - Ces vues reprennent l'interface des Dons : pastilles Tableaux / Dessins et
+    compteur, pas de masquage des prix. Le menu de critère en est absent sans
+    rien ajouter, la feuille étant `.reserve`.
+  - Libellés **mis au pluriel à l'affichage** (« Natures mortes »,
+    « Paysages », « Bouquets », « Portraits ») ; la valeur stockée reste au
+    singulier, et c'est elle que voient l'éditeur, l'inspecteur et le filtre.
 - **Sous-catégories dynamiques par mode de vente** (`ContentView.swift`) :
   le groupe « Modes de vente » n'est **pas déclaré** — il est déduit des
   données par `modesDeVentePresents`. Un mode inédit crée sa rubrique dès
