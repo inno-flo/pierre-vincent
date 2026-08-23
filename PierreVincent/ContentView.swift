@@ -281,11 +281,6 @@ struct ContentView: View {
     // natif du NavigationLink et empêche la navigation par intermittence.
     @State private var categorieRecemmentChoisie: Categorie?
     @State private var tacheExtinctionSurbrillance: Task<Void, Never>?
-    // Message éphémère lors d'une bascule du masquage des prix, calqué sur
-    // celui du Mac (`bandeauPrix` dans VueFeuille) : même libellé, même
-    // apparence, même durée. S'éteint tout seul via une tâche asynchrone.
-    @State private var messagePrix: String?
-    @State private var tacheMessagePrix: Task<Void, Never>?
     #endif
 
     var body: some View {
@@ -549,21 +544,14 @@ struct ContentView: View {
         }
         #if os(iOS)
         .detecteSecoussePourPrix()
-        // Message éphémère du masquage des prix. Posé ICI, sur la racine, et
-        // non dans une vue de rubrique : sur iPhone la bascule se déclenche
-        // depuis le bouton de la sidebar ou par la secousse, donc depuis
-        // n'importe quel écran de la pile de navigation.
-        .overlay(alignment: .top) { bandeauPrix }
-        .animation(.easeInOut(duration: 0.2), value: messagePrix)
+        // Message éphémère du masquage des prix, rendu par `PastillePrix`
+        // dans une FENÊTRE à part : un overlay SwiftUI, même posé ici sur la
+        // racine, passerait derrière la fiche de détail, qui est une `.sheet`.
+        //
         // Déclenché par la VALEUR et non par le bouton : la secousse doit
         // afficher le même message.
         .onChange(of: prixMasques) { _, masques in
-            messagePrix = masques ? "Prix masqués" : "Prix affichés"
-            tacheMessagePrix?.cancel()
-            tacheMessagePrix = Task {
-                try? await Task.sleep(nanoseconds: 840_000_000)   // 0,84 s
-                if !Task.isCancelled { messagePrix = nil }
-            }
+            PastillePrix.shared.afficher(masques: masques)
         }
         #endif
         // Couleur de texte par défaut suivant le thème.
@@ -680,28 +668,6 @@ struct ContentView: View {
             return nil
         }
     }
-
-    #if os(iOS)
-    /// Pastille éphémère « Prix masqués » / « Prix affichés ».
-    /// Reprise à l'identique de `bandeauPrix` (`VueFeuille`, macOS).
-    @ViewBuilder
-    private var bandeauPrix: some View {
-        if let messagePrix {
-            HStack(spacing: 8) {
-                Image(systemName: prixMasques ? "eye.slash" : "eye")
-                Text(messagePrix)
-            }
-            .font(.headline)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(.regularMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1))
-            .shadow(radius: 10)
-            .padding(.top, 18)
-            .transition(.move(edge: .top).combined(with: .opacity))
-        }
-    }
-    #endif
 
     // MARK: Zone du bas de la sidebar
 

@@ -496,6 +496,13 @@ struct VueFeuille: View {
                     selection = [nouvelle.id]
                 }
             )
+            // La pastille est posée SUR l'éditeur en plus de la fenêtre
+            // principale. Une feuille (`.sheet`) se présente au-dessus de
+            // toute la hiérarchie qui l'ouvre : un overlay posé plus bas
+            // reste donc derrière, quelle que soit sa place. Les deux
+            // partagent le même état, il n'y a rien à synchroniser.
+            .overlay(alignment: .top) { bandeauPrix }
+            .animation(.easeInOut(duration: 0.2), value: messagePrix)
         }
         .modifier(AlertesFeuille(
             confirmerSuppression: $confirmerSuppression,
