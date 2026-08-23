@@ -141,6 +141,35 @@ diffèrent en tout.
 - **Table de correspondance** isolée dans `CorrespondanceMotsCles`, seul point
   à compléter. Tant qu'elle est vide, nom de fichier, légende et mots-clés
   sont recopiés dans les **Remarques** : aucun import ne perd d'information.
+- **Un DOSSIER peut être choisi** : l'import y prend toutes les images,
+  sous-dossiers compris, dans un ordre alphabétique stable
+  (`imagesContenues(dans:)`). Fichiers et dossiers peuvent être mélangés dans
+  la même sélection.
+  - **Les autorisations d'accès sont ouvertes AVANT la boucle et tenues
+    jusqu'à la fin.** Un fichier trouvé dans un dossier n'a pas
+    d'autorisation propre : il dépend de celle du dossier qui le contient.
+    Les fermer par fichier, comme avant, ferait échouer la lecture.
+- **`ImportPhotos.importer` est `async`** et rend la main entre deux fichiers
+  (`await Task.yield()`). Sans cela la boucle monopolise le fil principal du
+  premier au dernier fichier : l'interface ne se redessine qu'à la fin, et un
+  compteur y resterait figé avant de sauter d'un coup.
+  - La progression s'affiche **en pied de sidebar macOS**, via l'objet
+    `@Observable` partagé `ProgressionImport.partagee` — l'import se déroule
+    dans `VueFeuille`, à l'autre bout de la hiérarchie. Même patron que
+    `PastillePrix`. La zone du bas ne montre rien hors import.
+  - **Réserve connue** : la compression reste synchrone sur le fil principal.
+    Le compteur avance à chaque fichier, mais l'interface est peu réactive
+    pendant le traitement de chacun. La sortir du fil principal est un autre
+    chantier.
+- **`NSOpenPanel.message` impose une largeur minimale au panneau** — il
+  s'affiche dans un bandeau en tête. Un texte long y plaque le panneau à sa
+  largeur plancher : élargir la barre latérale exigerait de rétrécir la zone
+  des fichiers sous SON minimum, et le glissement est refusé, **alors que le
+  curseur change bien de forme** — symptôme trompeur, qui ne désigne pas la
+  cause. Le panneau des photos n'a donc PAS de `message` : ne pas en
+  réintroduire un, c'est exactement ce qu'on rajoute en voulant bien faire.
+  Celui du CSV en garde un, plus court, qui dit la structure attendue du
+  dossier ; ne pas l'allonger.
 - **Compression** (`PhotoStore.importerImageCompressee`) : réduction à
   **2000 px** de côté long, puis HEIC à qualité dégressive jusqu'à passer sous
   **450 Ko**. La boucle s'arrête au premier palier qui tient.
@@ -287,6 +316,22 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   « Inconnu » : `acheteur` n'est jamais vide sur un don, il contient ce mot.
   Les vignettes affichaient donc « Inconnu » à la place du destinataire
   (`ligneGras`, `ligneNom`). Le champ à lire se décide sur `o.feuille`.
+- **`clipped()` ne découpe que le DESSIN, pas la zone sensible aux clics.**
+  Une image en `scaleEffect(5)` restait cliquable bien au-delà de son cadre et
+  interceptait le bouton de fermeture posé au-dessus, qui devenait inopérant
+  dès qu'on avait zoomé. Ajouter `.contentShape(Rectangle())` après la découpe.
+- **Un fond avec `ignoresSafeArea()` déborde sous les colonnes translucides.**
+  La sidebar et l'inspecteur échantillonnent ce qui se trouve derrière eux
+  dans la fenêtre : un fond noir qui dépasse les fait virer au gris foncé. Le
+  symptôme — « la sidebar change de couleur » — ne désigne pas sa cause.
+- **Un moniteur `NSEvent` local est appelé AVANT la chaîne de répondants**,
+  donc avant `.onKeyPress`. Renvoyer `nil` suffit à reprendre la main sur un
+  raccourci posé ailleurs : c'est ainsi que ← et → pilotent la visionneuse au
+  lieu de la galerie qui les capte en temps normal.
+- **Référence de méthode dans un ternaire à résultat optionnel** :
+  `condition ? maMethode : nil` fait échouer la vérification de types de TOUTE
+  la vue, avec « failed to produce diagnostic » — message inexploitable.
+  Écrire `guard condition else { return nil }` puis une closure explicite.
 - **Un `overlay` SwiftUI passe TOUJOURS derrière une `.sheet`.** Celle-ci se
   présente au-dessus de toute la hiérarchie qui l'ouvre : remonter l'overlay à
   la racine n'y change rien. C'est ce qui cachait la pastille « Prix masqués »
@@ -442,6 +487,26 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   0,4 s puis s'éteint **toute seule** via une tâche asynchrone — sans jamais
   dépendre d'un retour de navigation ni d'un geste personnalisé (voir pièges
   ci-dessous).
+- **Visionneuses d'images — ESSAI en cours, limité à Réserve › Catalogue**
+  (`Categorie.visionneuseIntegree`). Quick Look n'a pas été touché et reste
+  seul en place partout ailleurs : revenir en arrière se résume à supprimer le
+  drapeau.
+  - **macOS** (`VisionneusePanneau.swift`) : la barre d'espace l'ouvre à la
+    place de Quick Look. Posée en `overlay` sur le panneau et NON en `.sheet`,
+    qui couvrirait toute la fenêtre, sidebar et barre d'outils comprises.
+    Échap ferme, le pincement du trackpad agrandit de 1× à 5×, le glissement
+    déplace l'image agrandie.
+  - **iOS** (`VisionneuseOeuvres.swift`) : appui prolongé sur une vignette
+    (0,5 s), le tap continuant d'ouvrir la fiche. Plein écran en portrait
+    comme en paysage. Balayage latéral pour changer d'image — **inerte tant
+    qu'on est zoomé**, le glissement y servant alors à se déplacer.
+  - **`VisionneuseOeuvres` est distincte de `VisionneuseImagePleinEcran`**,
+    qui montre UNE photo depuis la fiche de détail. Les deux coexistent.
+  - Boutons au style des pastilles de comptage : cercle opaque cerclé
+    d'orange, glyphe blanc, contour atténué en bout de série.
+  - Retour haptique en `.heavy` à pleine intensité, générateur **conservé et
+    préparé dès le contact** : un générateur neuf déclenche à froid, ce qui se
+    ressent comme un choc mou.
 - **iOS — photo en plein écran depuis la fiche détail d'une œuvre**
   (`DetailiOS` dans `VueiOS.swift` + nouveau fichier
   `VisionneuseImagePleinEcran.swift`) : tap prolongé sur la photo (0,5 s,

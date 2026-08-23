@@ -1392,7 +1392,12 @@ struct VueFeuille: View {
         p.canChooseDirectories = true
         p.allowedContentTypes = [.commaSeparatedText, .plainText, .folder]
         p.prompt = "Importer"
-        // Pas de `message` non plus ici : voir la remarque dans `importerPhotos`.
+        // `message` conservé ICI, contrairement au panneau des photos : il dit
+        // la structure attendue du dossier, que rien d'autre n'indique. Sa
+        // longueur reste sous le seuil où le bandeau bloque le redimensionnement
+        // de la barre latérale (voir la remarque dans `importerPhotos`) — ne pas
+        // l'allonger.
+        p.message = "Choisissez un fichier CSV, ou un dossier contenant import.csv et un sous-dossier Photos"
         guard p.runModal() == .OK, let choix = p.url else { return }
 
         // Détermine si l'utilisateur a choisi un dossier ou un fichier.
