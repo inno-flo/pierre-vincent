@@ -23,6 +23,9 @@ struct PierreVincentApp: App {
     // Remonté par la vue : la rubrique affichée est-elle sans prix (Dons ou
     // Réserve) ? Sert à griser « Masquer les prix ».
     @AppStorage("rubriqueSansPrix") private var rubriqueSansPrix = false
+    // Y a-t-il un import à annuler ? Posé par les deux moteurs d'import,
+    // effacé par l'annulation (voir `DernierImport`).
+    @AppStorage("importAnnulable") private var importAnnulable = false
     // Pilotage des actions import/export depuis le menu « Fichier ».
     @AppStorage("actionFichier") private var actionFichier = ""
     @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
@@ -98,6 +101,13 @@ struct PierreVincentApp: App {
                 Menu("Importer") {
                     Button("Photos…") { declencherFichier("importerPhotos") }
                     Button("Dossier CSV et photos…") { declencherFichier("importer") }
+                    Divider()
+                    // Grisée tant qu'aucun import n'est annulable, et de
+                    // nouveau après l'annulation.
+                    Button("Annuler l'importation…") {
+                        declencherFichier("annulerImport")
+                    }
+                    .disabled(!importAnnulable)
                 }
                 Divider()
                 // Tous les exports regroupés dans un sous-menu « Exporter ».

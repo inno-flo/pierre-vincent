@@ -146,6 +146,8 @@ enum Import {
 
         let iFeuille = idx("Feuille")
         var compte = 0
+        // Identifiants des œuvres créées, pour « Annuler l'importation ».
+        var creees: [UUID] = []
 
         for ligne in lignes.dropFirst() {
             let champs = decouper(ligne, separateur: separateur)
@@ -190,10 +192,14 @@ enum Import {
             }
 
             context.insert(o)
+            creees.append(o.id)
             compte += 1
         }
 
         try? context.save()
+        // Mémorise CE lot : sans cela, « Annuler l'importation » porterait
+        // encore sur l'import de photos précédent.
+        DernierImport.enregistrer(creees)
         return Resultat(importees: compte, erreur: nil)
     }
 }

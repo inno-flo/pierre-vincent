@@ -68,6 +68,8 @@ struct VueFeuille: View {
     @State private var texteProgression = ""
     // Pilote l'affichage de la fenêtre de confirmation de suppression.
     @State private var confirmerSuppression = false
+    // Confirmation de l'annulation du dernier import.
+    @State private var confirmerAnnulationImport = false
     // URL de l'image à prévisualiser via Quick Look (barre d'espace).
     @State private var apercuURL: URL?
     // Position courante dans la visionneuse intégrée (nil = fermée).
@@ -515,6 +517,20 @@ struct VueFeuille: View {
             titreConfirmation: titreConfirmation,
             messageImport: $messageImport,
             onSupprimer: { supprimerSelection() }))
+        // Annulation du dernier import : confirmation explicite, l'opération
+        // étant définitive et pouvant porter sur des centaines d'œuvres.
+        .alert("Annuler le dernier import ?",
+               isPresented: $confirmerAnnulationImport) {
+            Button("Annuler l'importation", role: .destructive) {
+                let n = DernierImport.annuler(context: context)
+                messageImport = "\(n) œuvre(s) supprimée(s)."
+            }
+            Button("Ne rien faire", role: .cancel) {}
+        } message: {
+            Text("\(DernierImport.nombre) œuvre(s) et leurs photos seront "
+                 + "supprimées définitivement. Les œuvres saisies à la main et "
+                 + "les imports antérieurs ne sont pas touchés.")
+        }
         // Quick Look natif : affiche l'image de la ligne sélectionnée.
         .apercuQuickLook($apercuURL)
         // Panneau centré unique : progression (indicateur) puis message final
@@ -569,6 +585,7 @@ struct VueFeuille: View {
         switch action {
         case "importer":     importerDonnees()
         case "importerPhotos": importerPhotos()
+        case "annulerImport": confirmerAnnulationImport = true
         case "csv":          exporterCSV()
         case "xls":          exporterXLS()
         case "dossier":      exporterDossier()

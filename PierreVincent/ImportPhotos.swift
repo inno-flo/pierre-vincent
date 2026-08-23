@@ -73,6 +73,9 @@ enum ImportPhotos {
 
         var importees = 0
         var ignorees = 0
+        // Identifiants des œuvres créées, pour permettre « Annuler
+        // l'importation » (voir `DernierImport`).
+        var creees: [UUID] = []
 
         // Accès sécurisé : les éléments choisis viennent de l'extérieur du bac
         // à sable. Les autorisations sont ouvertes ICI et tenues ouvertes
@@ -128,6 +131,7 @@ enum ImportPhotos {
             if estEnReserve(oeuvre) { oeuvre.feuille = .reserve }
 
             context.insert(oeuvre)
+            creees.append(oeuvre.id)
             importees += 1
 
             // Rend la main : c'est ce qui permet à la sidebar d'afficher la
@@ -137,6 +141,9 @@ enum ImportPhotos {
         }
 
         if importees > 0 { try? context.save() }
+        // Remplace la mémoire du dernier import, même si rien n'a été créé :
+        // sans cela, « Annuler l'importation » viserait encore le lot d'avant.
+        DernierImport.enregistrer(creees)
 
         if importees == 0 {
             return Resultat(importees: 0, ignorees: ignorees,
