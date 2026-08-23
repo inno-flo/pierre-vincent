@@ -255,6 +255,8 @@ struct ContentView: View {
     @AppStorage("feuilleReserveRemplie") private var feuilleReserveRemplie = false
     // `themePortraitRenomme` : sixième passe, « Personnage » → « Portrait ».
     @AppStorage("themePortraitRenomme") private var themePortraitRenomme = false
+    // `dimensionsNormalisees` : septième passe, format « 60x50 ».
+    @AppStorage("dimensionsNormalisees") private var dimensionsNormalisees = false
     // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
     // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
     // clés à chaque lancement — tout déplié, sauf « Modes de vente » et les
@@ -540,6 +542,13 @@ struct ContentView: View {
             if !themePortraitRenomme {
                 RepriseDonnees.renommerThemePortrait(context: context)
                 themePortraitRenomme = true
+            }
+
+            // Reprise ponctuelle : harmonise le champ Dimensions au modèle
+            // « 60x50 » (ni espaces, ni unité).
+            if !dimensionsNormalisees {
+                RepriseDonnees.normaliserDimensions(context: context)
+                dimensionsNormalisees = true
             }
         }
         #if os(iOS)

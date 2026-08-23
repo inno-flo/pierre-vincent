@@ -125,6 +125,64 @@ enum RepriseDonnees {
         return compte
     }
 
+    /// Harmonise le champ Dimensions au modèle « 60x50 » : pas d'espaces
+    /// autour du séparateur, pas d'unité.
+    ///
+    /// **Conservatrice par construction** : `normaliserDimensions` ne renvoie
+    /// une valeur que si TOUTES les parties sont des nombres. « Inconnu »,
+    /// une note libre (« H 65 x L 50 »), un format inattendu sont laissés
+    /// intacts plutôt que mutilés — le champ est en saisie libre, on ne peut
+    /// pas présumer de ce qu'il contient.
+    @discardableResult
+    @MainActor
+    static func normaliserDimensions(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes {
+            if let normalisee = RepriseDonnees.normaliserDimensions(o.dimensions) {
+                o.dimensions = normalisee
+                compte += 1
+            }
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
+    /// Forme normalisée d'une valeur de Dimensions, ou `nil` si elle n'est pas
+    /// reconnue — ou qu'elle est déjà au bon format, auquel cas il n'y a rien
+    /// à écrire.
+    ///
+    /// Accepte les séparateurs `x`, `X` et `×`, l'unité « cm » finale, les
+    /// espaces, et les décimales à la virgule comme au point.
+    static func normaliserDimensions(_ brut: String) -> String? {
+        var valeur = brut.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !valeur.isEmpty else { return nil }
+
+        // Unité finale, collée ou non au dernier nombre.
+        if valeur.lowercased().hasSuffix("cm") {
+            valeur = String(valeur.dropLast(2))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let separateurs: Set<Character> = ["x", "X", "×"]
+        let parties = valeur.split(whereSeparator: { separateurs.contains($0) })
+        guard parties.count >= 2 else { return nil }
+
+        var nombres: [String] = []
+        for partie in parties {
+            let n = partie.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Tout sauf un nombre fait abandonner : mieux vaut ne rien
+            // toucher que de perdre une information qu'on n'a pas su lire.
+            guard !n.isEmpty,
+                  n.allSatisfy({ $0.isNumber || $0 == "," || $0 == "." })
+            else { return nil }
+            nombres.append(n)
+        }
+
+        let normalisee = nombres.joined(separator: "x")
+        return normalisee == brut ? nil : normalisee
+    }
+
     /// Renomme le thème « Personnage » en « Portrait ».
     ///
     /// La table de correspondance de l'import photos écrit désormais
