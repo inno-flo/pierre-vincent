@@ -183,6 +183,124 @@ enum RepriseDonnees {
         return normalisee == brut ? nil : normalisee
     }
 
+    /// **PURGE — supprime les doublons d'un import de photos répété.**
+    ///
+    /// Critère : feuille « Tableaux vendus » ET statut de réserve. Cette
+    /// combinaison est contradictoire — une œuvre disponible n'a pas été
+    /// vendue — et n'apparaît donc dans AUCUNE rubrique : ni « Ventes et
+    /// dons », qui veut Vendu ou Donné, ni la Réserve, qui veut la feuille
+    /// `.reserve`. Aucune œuvre légitime ne peut y correspondre.
+    ///
+    /// Elle vient d'imports faits avant que `ImportPhotos` n'aligne la feuille
+    /// sur le statut : le statut était lu des mots-clés, la feuille restait au
+    /// repli `.tableauxVendus`. Vérifié sur l'export : 683 enregistrements de
+    /// ce type pour 630 noms de fichier, tous déjà présents dans la Réserve.
+    ///
+    /// La photo n'est effacée que si **aucune œuvre conservée ne s'en sert** —
+    /// sans quoi supprimer un doublon aveuglerait son jumeau.
+    @discardableResult
+    @MainActor
+    static func supprimerDoublonsImport(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        let cibles = toutes.filter { $0.feuille == .tableauxVendus && estEnReserve($0) }
+        guard !cibles.isEmpty else { return 0 }
+
+        let idsCibles = Set(cibles.map(\.id))
+        let photosConservees = Set(
+            toutes.filter { !idsCibles.contains($0.id) }.map(\.photoNom)
+        )
+
+        for o in cibles {
+            if !o.photoNom.isEmpty, !photosConservees.contains(o.photoNom) {
+                PhotoStore.supprimerPhoto(nom: o.photoNom)
+            }
+            context.delete(o)
+        }
+        try? context.save()
+        return cibles.count
+    }
+
+    /// **PURGE — supprime DÉFINITIVEMENT toutes les œuvres de la Réserve**,
+    /// leurs photos comprises.
+    ///
+    /// Opération ponctuelle demandée pour reprendre à zéro un import de photos
+    /// dont les mots-clés n'étaient pas encore reconnus. Ce n'est PAS une
+    /// reprise de données : elle détruit, elle ne répare pas.
+    ///
+    /// Le critère est la seule feuille `.reserve` — le plus simple à vérifier.
+    /// Elle emporte donc aussi les premiers dessins d'essai.
+    ///
+    /// Comme toutes les passes, elle a son drapeau et ne se rejoue pas. **Ne
+    /// pas la rebrancher sans nouveau drapeau** : un lancement suffirait à
+    /// effacer une Réserve reconstituée entre-temps.
+    @discardableResult
+    @MainActor
+    static func purgerReserve(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes where o.feuille == .reserve {
+            // La photo est hors base : la supprimer explicitement, sinon elle
+            // resterait sur disque sans plus rien pour la référencer.
+            if !o.photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: o.photoNom) }
+            context.delete(o)
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
+    /// Convertit le statut « À garder » en « Disponible ».
+    ///
+    /// La table de correspondance de l'import fait désormais converger les six
+    /// mots-clés — « disponible », « à garder », « à garder absolument », pour
+    /// les tableaux comme pour les dessins — vers « Disponible » : la nuance
+    /// dit une intention du propriétaire, pas le sort de l'œuvre. Sans cette
+    /// passe, la base porterait deux statuts pour une même réalité, selon la
+    /// date d'import.
+    ///
+    /// Elle ÉCRASE une valeur existante, comme `remplirFeuilleReserve` et
+    /// `renommerThemePortrait`, et reste rejouable : plus aucune œuvre ne porte
+    /// l'ancienne valeur ensuite.
+    @discardableResult
+    @MainActor
+    static func convertirAGarderEnDisponible(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes
+        where o.statut.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare("À garder") == .orderedSame {
+            o.statut = statutParDefautImport
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
+    /// Rattrape les œuvres au statut VIDE, invisibles dans toutes les vues.
+    ///
+    /// Cas rencontré après un import de photos sans mots-clés IPTC : l'œuvre
+    /// entre en base, l'export la compte, mais aucune rubrique ne la montre —
+    /// un statut vide ne satisfait ni `estVenduOuDonne` ni `estEnReserve`.
+    ///
+    /// **Le vide est un marqueur fiable ici** : la passe `remplirChampsVides`
+    /// a écrit « Inconnu » dans tous les champs texte vides d'alors. Une œuvre
+    /// au statut réellement vide est donc forcément postérieure, donc issue
+    /// d'un import de photos.
+    @discardableResult
+    @MainActor
+    static func reparerStatutsVides(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes
+        where o.statut.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            o.statut = statutParDefautImport
+            o.feuille = .reserve
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
     /// Renomme le thème « Personnage » en « Portrait ».
     ///
     /// La table de correspondance de l'import photos écrit désormais

@@ -45,6 +45,14 @@ let typesOeuvre: [String] = ["Dessin", "Tableau", "Tapis"]
 /// et la reprise de données `remplirFeuilleReserve` s'accordent toujours.
 let statutsReserve: [String] = ["Disponible", "À garder"]
 
+/// Statut donné à une œuvre importée par photo dont aucun mot-clé ne dit le
+/// sort. Une œuvre photographiée à l'atelier n'a été ni vendue ni donnée.
+///
+/// **Ce repli est indispensable** : un statut VIDE ne satisfait ni
+/// `estVenduOuDonne` ni `estEnReserve`, et l'œuvre n'apparaît alors dans
+/// AUCUNE rubrique — tout en étant bien en base, donc comptée à l'export.
+let statutParDefautImport = "Disponible"
+
 /// Vrai si l'œuvre est encore détenue, d'après son seul statut.
 func estEnReserve(_ o: Oeuvre) -> Bool {
     statutsReserve.contains { $0.caseInsensitiveCompare(o.statut) == .orderedSame }

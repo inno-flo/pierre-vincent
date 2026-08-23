@@ -115,6 +115,18 @@ enum ImportPhotos {
                                              legende: legende,
                                              nomFichier: nomFichier,
                                              sur: oeuvre)
+
+            // Filet : sans mot-clé de statut, l'œuvre resterait avec un statut
+            // vide et n'apparaîtrait dans aucune rubrique (voir
+            // `statutParDefautImport`). Les photos prises à l'atelier ne
+            // portent pas toujours d'IPTC.
+            if oeuvre.statut.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                oeuvre.statut = statutParDefautImport
+            }
+            // La feuille suit le statut, comme à l'import .pvbase : la rubrique
+            // d'où part l'import ne dit rien du sort de l'œuvre.
+            if estEnReserve(oeuvre) { oeuvre.feuille = .reserve }
+
             context.insert(oeuvre)
             importees += 1
 
@@ -177,9 +189,20 @@ enum CorrespondanceMotsCles {
     // MARK: Tables
 
     /// Mot-clé → valeur du champ **Statut**.
+    ///
+    /// Les six mots-clés donnent tous « Disponible » : la nuance « à garder »,
+    /// voire « absolument », dit une intention du propriétaire, pas le sort de
+    /// l'œuvre — laquelle est dans tous les cas encore détenue. Les clés sont
+    /// écrites sans accent, `normaliser` repliant les diacritiques.
+    ///
+    /// Pas d'entrée pour les tapis : il n'en reste aucun de disponible.
     private static let statuts: [String: String] = [
-        "dessin disponible": "Disponible",
-        "dessin a garder":   "À garder",
+        "dessin disponible":            "Disponible",
+        "dessin a garder":              "Disponible",
+        "dessin a garder absolument":   "Disponible",
+        "tableau disponible":           "Disponible",
+        "tableau a garder":             "Disponible",
+        "tableau a garder absolument":  "Disponible",
     ]
 
     /// Mot-clé → valeur du champ **Thème**.

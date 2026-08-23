@@ -262,6 +262,16 @@ struct ContentView: View {
     @AppStorage("themePortraitRenomme") private var themePortraitRenomme = false
     // `dimensionsNormalisees` : septième passe, format « 60x50 ».
     @AppStorage("dimensionsNormalisees") private var dimensionsNormalisees = false
+    // `statutsVidesRepares` : huitième passe, rattrapage des œuvres importées
+    // par photo sans statut, invisibles dans toutes les vues.
+    @AppStorage("statutsVidesRepares") private var statutsVidesRepares = false
+    // `aGarderConverti` : neuvième passe, « À garder » devient « Disponible ».
+    @AppStorage("aGarderConverti") private var aGarderConverti = false
+    // `reservePurgee` : purge ponctuelle de la Réserve, pour reprendre l'import
+    // de photos à zéro. DESTRUCTIF — voir `RepriseDonnees.purgerReserve`.
+    @AppStorage("reservePurgee") private var reservePurgee = false
+    // `doublonsImportSupprimes` : suppression des doublons d'un import répété.
+    @AppStorage("doublonsImportSupprimes") private var doublonsImportSupprimes = false
     // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
     // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
     // clés à chaque lancement — tout déplié, sauf « Modes de vente » et les
@@ -556,6 +566,38 @@ struct ContentView: View {
                 RepriseDonnees.normaliserDimensions(context: context)
                 dimensionsNormalisees = true
             }
+
+            // Reprise ponctuelle : statut « Disponible » et feuille Réserve sur
+            // les œuvres au statut vide, que rien n'affichait.
+            if !statutsVidesRepares {
+                RepriseDonnees.reparerStatutsVides(context: context)
+                statutsVidesRepares = true
+            }
+
+            // Reprise ponctuelle : « À garder » devient « Disponible », la
+            // table de correspondance ne produisant plus que cette valeur.
+            if !aGarderConverti {
+                RepriseDonnees.convertirAGarderEnDisponible(context: context)
+                aGarderConverti = true
+            }
+
+            // Suppression des doublons d'import : feuille « Tableaux vendus »
+            // avec un statut de réserve, combinaison contradictoire qui ne
+            // s'affiche nulle part. Voir `supprimerDoublonsImport`.
+            if !doublonsImportSupprimes {
+                RepriseDonnees.supprimerDoublonsImport(context: context)
+                doublonsImportSupprimes = true
+            }
+
+            // PURGE DE LA RÉSERVE : DÉBRANCHÉE, elle visait le mauvais lot.
+            // L'export a montré que les œuvres de la Réserve sont la BONNE
+            // copie, et que les doublons se trouvent ailleurs — feuille
+            // « Tableaux vendus » avec un statut « Disponible », donc
+            // invisibles partout. Ne pas rebrancher `purgerReserve`.
+            // if !reservePurgee {
+            //     RepriseDonnees.purgerReserve(context: context)
+            //     reservePurgee = true
+            // }
         }
         #if os(iOS)
         .detecteSecoussePourPrix()
