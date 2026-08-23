@@ -648,8 +648,20 @@ struct ContentView: View {
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
 
-    /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de pastille).
+    /// Nombre d'œuvres pour une sous-rubrique de la sidebar (nil = pas de
+    /// pastille).
+    ///
+    /// **Une rubrique vide n'a pas de pastille** : un « 0 » n'apprend rien et
+    /// alourdit la barre latérale. Le filtre est posé ICI, et non aux deux
+    /// points d'affichage — macOS et iOS ne peuvent donc pas diverger sur ce
+    /// point, comme ils l'ont déjà fait sur les filtres de comptage.
     private func compteurPourCategorie(_ cat: Categorie) -> Int? {
+        guard let n = nombrePourCategorie(cat), n > 0 else { return nil }
+        return n
+    }
+
+    /// Le compte brut, sans la règle d'affichage ci-dessus.
+    private func nombrePourCategorie(_ cat: Categorie) -> Int? {
         // Même filtre que les vues, sinon les pastilles annonceraient des
         // nombres que l'utilisateur ne retrouverait pas à l'écran.
         let recensees = toutes.filter(estVenduOuDonne)
