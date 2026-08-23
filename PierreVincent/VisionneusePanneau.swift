@@ -185,7 +185,7 @@ struct VisionneusePanneau: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(10)
-                .background(Circle().fill(.white.opacity(0.18)))
+                .background(pastille(actif: true))
         }
         .buttonStyle(.plain)
         .help("Fermer")
@@ -196,13 +196,27 @@ struct VisionneusePanneau: View {
         Button(action: action) {
             Image(systemName: symbole)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white.opacity(actif ? 1 : 0.25))
+                .foregroundStyle(.white.opacity(actif ? 1 : 0.3))
                 .padding(12)
-                .background(Circle().fill(.white.opacity(actif ? 0.18 : 0.06)))
+                .background(pastille(actif: actif))
         }
         .buttonStyle(.plain)
         .disabled(!actif)
         .help(aide)
+    }
+
+    /// Fond des boutons : cercle opaque cerclé d'orange, sur le modèle des
+    /// pastilles de comptage. Le contour s'atténue quand le bouton est inerte
+    /// — en bout de série — sans disparaître, pour que la rangée garde sa
+    /// forme.
+    private func pastille(actif: Bool) -> some View {
+        Circle()
+            .fill(.black.opacity(0.55))
+            .overlay(
+                Circle().strokeBorder(
+                    Color.orangeInternational.opacity(actif ? 1 : 0.35),
+                    lineWidth: 1)
+            )
     }
 }
 #endif

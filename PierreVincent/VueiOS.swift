@@ -14,12 +14,14 @@ struct VueiOS: View {
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
+    let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
          filtreParVendeur: Bool = false,
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
-         themes: [String] = []) {
+         themes: [String] = [],
+         visionneuseIntegree: Bool = false) {
         self.feuille = feuille
         self.titre = titre
         self.modesVente = modesVente
@@ -27,6 +29,7 @@ struct VueiOS: View {
         self.statuts = statuts
         self.types = types
         self.themes = themes
+        self.visionneuseIntegree = visionneuseIntegree
     }
 
     @Query private var toutes: [Oeuvre]
@@ -45,6 +48,8 @@ struct VueiOS: View {
     @State private var oeuvreADefiler: UUID?
     // Filtre vendeur actif (uniquement quand filtreParVendeur est vrai).
     @State private var vendeurFiltre: String = "Tout"
+    // Position courante dans la visionneuse plein écran (nil = fermée).
+    @State private var indexVisionneuse: Int?
 
     /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
     /// AVANT le filtre par vendeur et avant tri.
@@ -148,6 +153,46 @@ struct VueiOS: View {
     /// présentations, galerie et liste.
     private var recapVisible: Bool { feuille != .reserve }
 
+    /// Œuvres de la rubrique ayant réellement une photo — ce que parcourt la
+    /// visionneuse. Une œuvre sans photo n'y mènerait qu'à un écran vide.
+    private var oeuvresAvecPhoto: [Oeuvre] {
+        oeuvresGalerie.filter { !$0.photoNom.isEmpty }
+    }
+
+    /// Présentation de la visionneuse, adossée à `indexVisionneuse`.
+    private var visionneuseOuverte: Binding<Bool> {
+        Binding(get: { indexVisionneuse != nil },
+                set: { if !$0 { indexVisionneuse = nil } })
+    }
+
+    @ViewBuilder
+    private var contenuVisionneuse: some View {
+        if let i = indexVisionneuse, !oeuvresAvecPhoto.isEmpty {
+            VisionneuseOeuvres(
+                oeuvres: oeuvresAvecPhoto,
+                index: min(i, oeuvresAvecPhoto.count - 1),
+                onFermer: { indexVisionneuse = nil })
+        }
+    }
+
+    /// Action d'appui prolongé passée à la galerie, ou `nil` si la rubrique
+    /// ne propose pas la visionneuse.
+    ///
+    /// Écrite en `guard` + closure explicite, et non en ternaire : la forme
+    /// `visionneuseIntegree ? ouvrirVisionneuse : nil` — une référence de
+    /// méthode dans un ternaire à résultat optionnel — faisait échouer la
+    /// vérification de types de toute la vue, sans diagnostic exploitable.
+    private var appuiLongGalerie: ((Oeuvre) -> Void)? {
+        guard visionneuseIntegree else { return nil }
+        return { oeuvre in ouvrirVisionneuse(oeuvre) }
+    }
+
+    /// Ouvre la visionneuse sur l'œuvre touchée, si elle a une photo.
+    private func ouvrirVisionneuse(_ o: Oeuvre) {
+        guard let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == o.id }) else { return }
+        indexVisionneuse = i
+    }
+
     private var recapCell: some View {
         HStack {
             Text("Nombre de ventes")
@@ -191,12 +236,16 @@ struct VueiOS: View {
                     oeuvres: oeuvresGalerie,
                     selection: $selection,
                     onOuvrir: { o in selection = [o.id]; detail = o },
+                    onAppuiLong: appuiLongGalerie,
                     entete: recapVisible ? AnyView(recapCell) : nil
                 )
             } else {
                 liste
             }
         }
+        // Plein écran, barres système comprises : `.fullScreenCover` et non
+        // `.sheet`, qui laisserait la fiche en carte avec ses coins arrondis.
+        .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .background(Color.cremeFond)
         .navigationTitle(titre)
         .toolbar {

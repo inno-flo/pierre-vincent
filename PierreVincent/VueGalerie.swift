@@ -11,6 +11,10 @@ struct VueGalerie: View {
     @Binding var selection: Set<UUID>
     /// Double-clic sur une carte : ouvre la fiche d'édition.
     var onOuvrir: (Oeuvre) -> Void
+    /// Appui prolongé sur une vignette (iPhone). Nul = pas d'appui prolongé,
+    /// ce qui est le cas de toutes les rubriques sauf celles qui déclarent la
+    /// visionneuse intégrée.
+    var onAppuiLong: ((Oeuvre) -> Void)? = nil
     /// Affiche la ligne de nom en tête de légende (acheteur, destinataire ou
     /// emplacement). Fausse pour les enchères et les expositions, où seuls le
     /// prix et les dimensions renseignent.
@@ -21,6 +25,14 @@ struct VueGalerie: View {
 
     // Ancre pour la sélection par plage (Maj + clic).
     @State private var derniere: UUID?
+
+    #if os(iOS)
+    // Moteur haptique CONSERVÉ entre les gestes, et non créé au moment de
+    // frapper : un générateur neuf déclenche à froid, ce qui se ressent comme
+    // un choc mou. On le prépare dès que le doigt se pose (voir
+    // `onPressingChanged`), il est donc chaud quand l'appui aboutit.
+    @State private var retourHaptique = UIImpactFeedbackGenerator(style: .heavy)
+    #endif
 
     #if os(macOS)
     // Largeur mesurée de la grille, pour déduire le nombre de colonnes.
@@ -231,6 +243,24 @@ struct VueGalerie: View {
         #else
         // Sur iPhone : un simple tap ouvre directement la fiche de détail.
         .onTapGesture { onOuvrir(o) }
+        // …et un appui prolongé la visionneuse, quand la rubrique la propose.
+        // Déclaré APRÈS le tap : les deux cohabitent sans que l'un mange
+        // l'autre. Ce n'est pas une ligne de `List(selection:)` avec un
+        // `NavigationLink` — le cas où un geste personnalisé bloque la
+        // navigation de façon aléatoire (voir CLAUDE.md) —, mais une carte à
+        // simple `onTapGesture`.
+        .onLongPressGesture(minimumDuration: 0.5) {
+            guard let onAppuiLong else { return }
+            // `.heavy` à pleine intensité : l'ouverture est confirmée au doigt
+            // avant de l'être à l'œil, et le geste dure une demi-seconde — un
+            // choc discret y passe inaperçu.
+            retourHaptique.impactOccurred(intensity: 1.0)
+            onAppuiLong(o)
+        } onPressingChanged: { enCours in
+            // Chauffe le moteur dès le contact : préparé, il répond
+            // instantanément et le choc porte davantage.
+            if enCours { retourHaptique.prepare() }
+        }
         #endif
     }
 

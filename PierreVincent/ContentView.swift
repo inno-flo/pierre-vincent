@@ -484,7 +484,8 @@ struct ContentView: View {
                                filtreParVendeur: cat.filtreParVendeur,
                                statuts: cat.statuts,
                                types: cat.types,
-                               themes: cat.themes)
+                               themes: cat.themes,
+                               visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
                     }
                     #endif
@@ -685,26 +686,6 @@ struct ContentView: View {
     }
 
     // MARK: Zone du bas de la sidebar
-
-    // VIDE. Le squelette est gardé en commentaire pour y reposer un bouton
-    // temporaire de test — c'est ce qu'a porté cette zone à chaque fois :
-    // pastilles de choix de thème, bouton « G » de mise en gras des en-têtes,
-    // puis pastille de comparaison des deux marrons de sélection. Chacun a été
-    // retiré une fois sa question tranchée.
-    //
-    // Le réactiver demande de décommenter LES DEUX blocs : celui-ci et l'appel
-    // dans la VStack de la sidebar (`Divider()` + `barreOutilsBas`).
-    //
-    // #if os(macOS)
-    // private var barreOutilsBas: some View {
-    //     HStack(spacing: 10) {
-    //         // …le bouton du moment…
-    //         Spacer()
-    //     }
-    //     .padding(.horizontal, 20)
-    //     .padding(.vertical, 10)
-    // }
-    // #endif
 
     // MARK: Lien de catégorie (barre latérale)
 
@@ -908,11 +889,36 @@ struct ContentView: View {
                 }
             }
             #else
-            Label {
-                Text(cat.titre)
-            } icon: {
-                Image(systemName: cat.symbole)
-                    .foregroundStyle(Color.orangeInternational)
+            HStack(spacing: 6) {
+                Label {
+                    Text(cat.titre)
+                } icon: {
+                    Image(systemName: cat.symbole)
+                        .foregroundStyle(Color.orangeInternational)
+                }
+                if let n = compteurPourCategorie(cat) {
+                    Spacer()
+                    // Même pastille que sur Mac : contour orange au repos,
+                    // fond orange plein et texte blanc sur la rubrique
+                    // sélectionnée.
+                    // Corps SÉMANTIQUE et non 11 pt comme sur Mac : figer une
+                    // taille en points casserait le Dynamic Type. `.caption`
+                    // (12 pt) reste plus petit que le libellé (body, 17 pt),
+                    // et suit les réglages système.
+                    Text("\(n)")
+                        .font(.caption)
+                        .fontWeight(categorie == cat ? .bold : .regular)
+                        .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background {
+                            if categorie == cat {
+                                Capsule().fill(Color.orangeInternational)
+                            } else {
+                                Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                            }
+                        }
+                }
             }
             #endif
         }
