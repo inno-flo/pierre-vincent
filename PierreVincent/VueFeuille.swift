@@ -606,6 +606,11 @@ struct VueFeuille: View {
     /// de fenêtre (inspecteur inclus). Sans placement, macOS 26 les confine
     /// automatiquement à la section toolbar du panneau de contenu — le pattern
     /// de l'exemple Landmarks d'Apple.
+    /// Vrai tant que la visionneuse occupe le panneau : tous les boutons de la
+    /// barre d'outils sont alors grisés, **sauf l'Inspecteur** — lui reste utile,
+    /// il montre les détails de l'œuvre qu'on est en train de regarder.
+    private var barreOutilsInactive: Bool { indexVisionneuse != nil }
+
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
         // Spacer flexible en tête : pousse tous les boutons vers la droite
@@ -622,13 +627,14 @@ struct VueFeuille: View {
                         editionNouvelle = true
                         editionEntree = o
                     } label: { Label("Ajouter", systemImage: "plus") }
+                    .disabled(barreOutilsInactive)
                 }
             }
             ToolbarItem {
                 Button(role: .destructive) {
                     confirmerSuppression = true
                 } label: { Label(labelSupprimer, systemImage: "trash") }
-                .disabled(selection.isEmpty)
+                .disabled(selection.isEmpty || barreOutilsInactive)
             }
             if selection.count == 1 {
                 ToolbarItem {
@@ -638,6 +644,7 @@ struct VueFeuille: View {
                             editionEntree = o
                         }
                     } label: { Label("Modifier", systemImage: "pencil") }
+                    .disabled(barreOutilsInactive)
                 }
             }
         }
@@ -652,6 +659,7 @@ struct VueFeuille: View {
                 } label: {
                     Image(systemName: prixMasques ? "eye.slash" : "eye")
                 }
+                .disabled(barreOutilsInactive)
                 .help(prixMasques ? "Afficher les prix" : "Masquer les prix")
             }
         }
@@ -660,13 +668,13 @@ struct VueFeuille: View {
             Button {
                 modeAffichage = "liste"
             } label: { Label("Liste", systemImage: "list.bullet") }
-            .disabled(modeAffichage == "liste")
+            .disabled(modeAffichage == "liste" || barreOutilsInactive)
         }
         ToolbarItem {
             Button {
                 modeAffichage = "icone"
             } label: { Label("Galerie", systemImage: "square.grid.2x2") }
-            .disabled(modeAffichage == "icone")
+            .disabled(modeAffichage == "icone" || barreOutilsInactive)
         }
 
         // === Tri + sens + inspecteur (galerie seulement) ===
@@ -678,6 +686,7 @@ struct VueFeuille: View {
                 // le tri par dimensions y gardant du sens.
                 if feuille != .reserve {
                     menuTri
+                        .disabled(barreOutilsInactive)
                 }
                 Button {
                     triCroissant.toggle()
@@ -685,6 +694,7 @@ struct VueFeuille: View {
                     Image(systemName: "line.3.horizontal.decrease")
                         .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
                 }
+                .disabled(barreOutilsInactive)
                 .help(triCroissant ? "Tri croissant" : "Tri décroissant")
             }
             ToolbarSpacer(.fixed)
@@ -890,6 +900,11 @@ struct VueFeuille: View {
                                 selection = [oeuvresAvecPhoto[i].id]
                             }
                             indexVisionneuse = nil
+                            // Le CENTRAGE de la ligne consultée est en
+                            // attente : il demande une vue de référence pour
+                            // retrouver le tableau, et on rétablit d'abord le
+                            // défilement ordinaire. `scrollRowToVisible` la
+                            // ramène déjà dans la zone visible.
                         })
                 }
             }
@@ -1036,7 +1051,8 @@ struct VueFeuille: View {
                 .background(Color.cremeFond)
                 .background(
                     CaptureFleches(zone: ZoneClavier.contenu,
-                                   suspendu: editionEntree != nil) { delta in
+                                   suspendu: editionEntree != nil
+                                             || indexVisionneuse != nil) { delta in
                         naviguerListe(delta: delta)
                     }
                 )
@@ -1554,20 +1570,36 @@ private struct DefilementTableau: NSViewRepresentable {
         // Différé : au moment de la mise à jour SwiftUI, le NSTableView n'a pas
         // forcément encore pris en compte le nouveau nombre de lignes.
         DispatchQueue.main.async {
-            guard let racine = nsView.window?.contentView,
-                  let table = Self.tableau(dans: racine),
+            guard let table = Self.tableauProche(de: nsView),
                   ligne < table.numberOfRows else { return }
             table.scrollRowToVisible(ligne)
         }
     }
 
-    /// Cherche en profondeur le NSTableView du panneau de contenu.
-    /// On exclut NSOutlineView : la sidebar en est une (et NSOutlineView hérite
-    /// de NSTableView), elle serait donc trouvée en premier.
-    private static func tableau(dans vue: NSView) -> NSTableView? {
-        if let t = vue as? NSTableView, !(vue is NSOutlineView) { return t }
+    /// Cherche le tableau du panneau de contenu **de proche en proche**, en
+    /// remontant depuis la vue du représentable — laquelle est posée en
+    /// `.background` du `Table`, donc juste à côté de lui.
+    ///
+    /// **Ne PAS repartir de la racine de la fenêtre en filtrant par classe.**
+    /// La version précédente cherchait le premier `NSTableView` en excluant
+    /// les `NSOutlineView`, au motif que la sidebar en est une. Mais le `Table`
+    /// de SwiftUI peut lui aussi être adossé à un `NSOutlineView` selon la
+    /// version : il devenait alors introuvable, et **plus aucune liste de
+    /// l'app ne défilait**. Le voisinage est un critère stable, la classe non.
+    static func tableauProche(de vue: NSView) -> NSTableView? {
+        var courant: NSView? = vue.superview
+        while let ancetre = courant {
+            if let t = premierTableau(dans: ancetre) { return t }
+            courant = ancetre.superview
+        }
+        return nil
+    }
+
+    /// Premier tableau trouvé en profondeur, `NSOutlineView` compris.
+    private static func premierTableau(dans vue: NSView) -> NSTableView? {
+        if let t = vue as? NSTableView { return t }
         for sous in vue.subviews {
-            if let t = tableau(dans: sous) { return t }
+            if let t = premierTableau(dans: sous) { return t }
         }
         return nil
     }

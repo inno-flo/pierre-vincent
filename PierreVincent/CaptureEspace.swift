@@ -181,7 +181,12 @@ struct CaptureEchap: NSViewRepresentable {
 }
 
 
-/// Capte les flèches ← et → au niveau de la fenêtre, et les CONSOMME.
+/// Capte les QUATRE flèches au niveau de la fenêtre, et les CONSOMME.
+///
+/// ← et → pilotent la visionneuse. ↑ et ↓ sont **absorbées sans rien faire** :
+/// sans cela elles continuaient de déplacer la sélection dans la galerie ou la
+/// liste derrière la visionneuse, à l'insu de l'utilisateur.
+///
 ///
 /// Monté seulement pendant l'affichage de la visionneuse. C'est ce qui empêche
 /// la galerie en arrière-plan de les recevoir : elle porte ses propres
@@ -228,6 +233,7 @@ struct CaptureFlechesLaterales: NSViewRepresentable {
                 switch event.keyCode {
                 case 123: self.onGauche?()   // ←
                 case 124: self.onDroite?()   // →
+                case 125, 126: break         // ↓ ↑ : absorbées, sans effet
                 default:  return event
                 }
                 return nil

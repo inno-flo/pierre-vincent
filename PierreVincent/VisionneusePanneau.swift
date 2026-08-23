@@ -79,6 +79,9 @@ struct VisionneusePanneau: View {
         .background(CaptureEchap { onFermer() })
         // ← et → défilent les images ici, et NON dans la galerie en dessous,
         // qui porte ses propres raccourcis. Le capteur consomme l'événement.
+        // Les quatre flèches appartiennent à la visionneuse tant qu'elle est
+        // ouverte : ←→ changent d'image, ↑↓ sont absorbées pour ne plus
+        // déplacer la sélection dans la vue en arrière-plan.
         .background(CaptureFlechesLaterales(
             onGauche: { if index > 0 { index -= 1 } },
             onDroite: { if index < oeuvres.count - 1 { index += 1 } }))

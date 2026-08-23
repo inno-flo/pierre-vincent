@@ -50,6 +50,10 @@ struct VueiOS: View {
     @State private var vendeurFiltre: String = "Tout"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
+    // Moteur haptique conservé entre les gestes et préparé dès le contact :
+    // un générateur neuf déclenche à froid, ce qui se ressent comme un choc
+    // mou. Même patron que dans `VueGalerie`.
+    @State private var retourHaptique = UIImpactFeedbackGenerator(style: .heavy)
 
     /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
     /// AVANT le filtre par vendeur et avant tri.
@@ -155,6 +159,9 @@ struct VueiOS: View {
 
     /// Œuvres de la rubrique ayant réellement une photo — ce que parcourt la
     /// visionneuse. Une œuvre sans photo n'y mènerait qu'à un écran vide.
+    ///
+    /// Les deux présentations partagent `oeuvresGalerie` : la liste affiche
+    /// elle aussi cette liste triée, pas `oeuvres`.
     private var oeuvresAvecPhoto: [Oeuvre] {
         oeuvresGalerie.filter { !$0.photoNom.isEmpty }
     }
@@ -448,6 +455,16 @@ struct VueiOS: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        // Appui prolongé : la visionneuse, comme sur une
+                        // vignette de galerie. Le tap du bouton continue
+                        // d'ouvrir la fiche de détail.
+                        .onLongPressGesture(minimumDuration: 0.5) {
+                            guard visionneuseIntegree else { return }
+                            retourHaptique.impactOccurred(intensity: 1.0)
+                            ouvrirVisionneuse(o)
+                        } onPressingChanged: { enCours in
+                            if enCours { retourHaptique.prepare() }
+                        }
                         .id(o.id)
                     }
                 }

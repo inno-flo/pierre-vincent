@@ -161,10 +161,16 @@ enum Categorie: Hashable, Identifiable {
     // bouton « Ajouter » reste absent faute de feuille cible unique).
     var lectureSeule: Bool { false }
 
-    /// ESSAI limité à Réserve › Catalogue : la barre d'espace y ouvre la
-    /// visionneuse intégrée (`VisionneusePanneau`) au lieu de Quick Look.
-    /// Ailleurs, Quick Look reste seul en place.
-    var visionneuseIntegree: Bool { self == .reserveInventaire }
+    /// ESSAI en cours sur **toute la section Réserve** : la visionneuse
+    /// intégrée y remplace Quick Look — barre d'espace sur Mac, appui prolongé
+    /// sur iPhone, en liste comme en galerie. « Ventes et dons » garde Quick
+    /// Look, le temps de valider l'essai.
+    var visionneuseIntegree: Bool {
+        switch self {
+        case .reserveInventaire, .reserveDessins, .reserveTheme: return true
+        default:                                                 return false
+        }
+    }
 
     /// Vrai si la rubrique propose un bandeau de pastilles filtrant par TYPE
     /// d'œuvre (Tableaux / Dessins). Réservé aux Dons, qui mêlent les deux
@@ -1090,17 +1096,30 @@ struct DesactiveSurbrillanceSidebar: NSViewRepresentable {
         // Différé : au moment de la mise à jour SwiftUI, la vue n'est pas
         // forcément encore rattachée à sa fenêtre.
         DispatchQueue.main.async {
-            guard let racine = nsView.window?.contentView,
-                  let outline = Self.outlineView(dans: racine) else { return }
+            guard let outline = Self.outlineViewProche(de: nsView) else { return }
             if outline.selectionHighlightStyle != .none {
                 outline.selectionHighlightStyle = .none
             }
         }
     }
 
-    /// Cherche en profondeur le `NSOutlineView` de la sidebar. Le `Table` du
-    /// panneau de contenu est une `NSTableView` simple : aucun risque de
-    /// confusion, `NSOutlineView` étant plus spécifique.
+    /// Cherche l'`NSOutlineView` de la sidebar **de proche en proche**, en
+    /// remontant depuis la vue du représentable — posée en `.background` de la
+    /// `List`, donc juste à côté d'elle.
+    ///
+    /// **Ne PAS repartir de la racine de la fenêtre.** Le `Table` du panneau
+    /// de contenu peut lui aussi être adossé à un `NSOutlineView` : la
+    /// recherche depuis la racine tombait alors sur LUI, et c'est la sélection
+    /// de la LISTE qui devenait invisible, la sidebar gardant son bleu.
+    private static func outlineViewProche(de vue: NSView) -> NSOutlineView? {
+        var courant: NSView? = vue.superview
+        while let ancetre = courant {
+            if let o = outlineView(dans: ancetre) { return o }
+            courant = ancetre.superview
+        }
+        return nil
+    }
+
     private static func outlineView(dans vue: NSView) -> NSOutlineView? {
         if let o = vue as? NSOutlineView { return o }
         for sous in vue.subviews {
