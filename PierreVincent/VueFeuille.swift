@@ -541,8 +541,9 @@ struct VueFeuille: View {
                     confirmerSuppression = true
                 }
             }))
-        // Le filtre par vendeur ne survit pas au changement de rubrique : la
-        // vue est recréée (`.id(cat)`), donc l'état repart à nil de lui-même.
+        // Le filtre par vendeur ne survit pas au changement de rubrique :
+        // c'est `.onChange(of: cleRubrique)` plus haut qui le remet à nil.
+        // (La vue n'est plus recréée par un `.id(cat)`, retiré depuis.)
         .onAppear {
             nbSelection = selection.count
             uneSelectionExiste = !selection.isEmpty
@@ -552,7 +553,9 @@ struct VueFeuille: View {
 
     /// Sélectionne toutes les entrées de la catégorie affichée.
     private func selectionnerTout() {
-        selection = Set(oeuvres.map { $0.id })
+        // `listeAffichee` et non `oeuvres` : c'est la liste réellement à
+        // l'écran, galerie comme liste.
+        selection = Set(listeAffichee.map { $0.id })
     }
 
     /// Exécute l'action import/export demandée par le menu « Fichier ».
@@ -1527,13 +1530,19 @@ private struct RaccourcisClavier: ViewModifier {
                     }
                 }
             )
-            // Cmd A (tout sélectionner) et Delete (supprimer), boutons masqués.
+            // ⌘A : moniteur NSEvent, et non un bouton caché à raccourci —
+            // celui-ci ne répondait que dans certaines rubriques.
             .background(
                 Group {
                     if !editionActive {
-                        Button("Tout sélectionner") { onToutSelectionner() }
-                            .keyboardShortcut("a", modifiers: .command)
-                            .hidden()
+                        CaptureCommandeA { onToutSelectionner() }
+                    }
+                }
+            )
+            // Delete (supprimer), bouton masqué.
+            .background(
+                Group {
+                    if !editionActive {
                         Button("Supprimer") { onSupprimer() }
                             .keyboardShortcut(.delete, modifiers: [])
                             .hidden()

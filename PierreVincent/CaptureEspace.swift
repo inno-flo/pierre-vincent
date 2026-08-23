@@ -63,6 +63,63 @@ struct CaptureEspace: NSViewRepresentable {
 }
 
 
+/// Capte ⌘A au niveau de la fenêtre, sur le même patron que `CaptureEspace`.
+///
+/// Un `Button().keyboardShortcut("a", modifiers: .command).hidden()` remplissait
+/// ce rôle, mais ne répondait que dans certaines rubriques : ce raccourci-là
+/// dépend du focus SwiftUI et de la concurrence avec le « Tout sélectionner »
+/// standard du menu Édition, qui vise le premier répondant. Le moniteur
+/// `NSEvent` ne dépend d'aucun des deux — c'est le seul mécanisme clavier qui
+/// se soit montré fiable sur ce projet (voir CLAUDE.md).
+struct CaptureCommandeA: NSViewRepresentable {
+    let action: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let vue = VueCapteur()
+        vue.action = action
+        return vue
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? VueCapteur)?.action = action
+    }
+
+    final class VueCapteur: NSView {
+        var action: (() -> Void)?
+        private var moniteur: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let m = moniteur { NSEvent.removeMonitor(m); moniteur = nil }
+            guard window != nil else { return }
+
+            moniteur = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self else { return event }
+                guard event.modifierFlags.contains(.command),
+                      event.charactersIgnoringModifiers?.lowercased() == "a"
+                else { return event }
+
+                // Dans un champ de saisie, ⌘A doit sélectionner le TEXTE :
+                // on laisse alors l'événement suivre son cours.
+                if let responder = self.window?.firstResponder {
+                    if responder is NSTextView || responder is NSTextField { return event }
+                    if String(describing: type(of: responder)).contains("Text") {
+                        return event
+                    }
+                }
+
+                self.action?()
+                return nil   // consommé : pas de bip, pas de double traitement
+            }
+        }
+
+        deinit {
+            if let m = moniteur { NSEvent.removeMonitor(m) }
+        }
+    }
+}
+
+
 /// Zone de l'interface qui reçoit les flèches ↑↓, pilotée explicitement par
 /// l'application (et non par le focus SwiftUI ni par le premier répondant
 /// AppKit, qui se sont tous deux révélés non fiables ici : le panneau qui
