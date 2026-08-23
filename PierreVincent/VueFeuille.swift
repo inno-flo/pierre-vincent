@@ -1353,25 +1353,39 @@ struct VueFeuille: View {
     private func importerPhotos() {
         let p = NSOpenPanel()
         p.canChooseFiles = true
-        p.canChooseDirectories = false
+        // Un DOSSIER est accepté : l'import y cherche toutes les images, y
+        // compris dans les sous-dossiers (voir `imagesContenues(dans:)`).
+        p.canChooseDirectories = true
         p.allowsMultipleSelection = true
-        p.allowedContentTypes = PhotoStore.typesAcceptes
+        // Pas de `allowedContentTypes` : il grise les dossiers, qu'on veut
+        // pouvoir choisir. Le tri par type se fait à l'import.
+        //
+        // NON RÉSOLU : dans ce panneau, la largeur de la barre latérale ne
+        // s'ajuste pas (le curseur change de forme, mais le glissement reste
+        // sans effet). Rétablir le filtre en y incluant `.folder` — la forme
+        // qu'emploie le panneau d'import CSV, qui lui fonctionne — n'y a rien
+        // changé. La cause est donc ailleurs.
         p.prompt = "Importer"
-        p.message = "Choisissez une ou plusieurs photos. "
+        p.message = "Choisissez des photos, ou un dossier à importer en entier. "
             + "Leurs mots-clés serviront à remplir les champs de chaque œuvre."
         guard p.runModal() == .OK, !p.urls.isEmpty else { return }
 
         // Les vues agrégées (Inventaire, Ventes) n'ont pas de feuille propre :
         // on retombe sur « Tableaux vendus », comme l'import CSV.
         let cible = feuille ?? .tableauxVendus
-        let r = ImportPhotos.importer(fichiers: p.urls, feuilleCible: cible, context: context)
-
-        if let err = r.erreur {
-            messageImport = "Échec : \(err)"
-        } else if r.ignorees > 0 {
-            messageImport = "\(r.importees) photo(s) importée(s), \(r.ignorees) ignorée(s) (illisibles)."
-        } else {
-            messageImport = "\(r.importees) photo(s) importée(s)."
+        // En tâche : l'import rend la main entre deux fichiers pour que la
+        // progression s'affiche (voir `ProgressionImport`).
+        Task {
+            let r = await ImportPhotos.importer(fichiers: p.urls,
+                                                feuilleCible: cible,
+                                                context: context)
+            if let err = r.erreur {
+                messageImport = "Échec : \(err)"
+            } else if r.ignorees > 0 {
+                messageImport = "\(r.importees) photo(s) importée(s), \(r.ignorees) ignorée(s) (illisibles)."
+            } else {
+                messageImport = "\(r.importees) photo(s) importée(s)."
+            }
         }
     }
 

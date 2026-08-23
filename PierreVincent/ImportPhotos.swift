@@ -1,6 +1,7 @@
 #if os(macOS)
 import Foundation
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Importe des œuvres directement depuis des fichiers image.
 ///
@@ -19,14 +20,53 @@ enum ImportPhotos {
         let erreur: String?
     }
 
+    /// Images à importer pour un élément choisi dans le panneau.
+    ///
+    /// Un fichier se renvoie lui-même ; un **dossier** est parcouru en
+    /// profondeur et rend toutes les images qu'il contient, sous-dossiers
+    /// compris. Les fichiers cachés sont ignorés.
+    private static func imagesContenues(dans url: URL) -> [URL] {
+        let gestionnaire = FileManager.default
+        var estDossier: ObjCBool = false
+        guard gestionnaire.fileExists(atPath: url.path, isDirectory: &estDossier) else { return [] }
+
+        guard estDossier.boolValue else {
+            return estUneImage(url) ? [url] : []
+        }
+
+        guard let parcours = gestionnaire.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]) else { return [] }
+
+        var trouvees: [URL] = []
+        for cas in parcours {
+            guard let fichier = cas as? URL, estUneImage(fichier) else { continue }
+            trouvees.append(fichier)
+        }
+        // Ordre stable : le parcours du système ne garantit rien.
+        return trouvees.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    /// Vrai si le fichier relève d'un des types acceptés (JPEG, PNG, HEIC).
+    private static func estUneImage(_ url: URL) -> Bool {
+        guard let type = UTType(filenameExtension: url.pathExtension) else { return false }
+        return PhotoStore.typesAcceptes.contains { type.conforms(to: $0) }
+    }
+
     /// Crée une œuvre par fichier image fourni.
+    ///
+    /// **`async`** : l'import rend la main entre deux fichiers
+    /// (`await Task.yield()`), sans quoi la boucle monopolise le fil principal
+    /// et l'interface ne se redessine qu'à la fin — aucun compteur ne pourrait
+    /// bouger.
     /// - Parameters:
     ///   - fichiers: les images choisies dans le sélecteur.
     ///   - feuilleCible: la feuille de destination (rubrique affichée).
     @MainActor
     static func importer(fichiers: [URL],
                          feuilleCible: Feuille,
-                         context: ModelContext) -> Resultat {
+                         context: ModelContext) async -> Resultat {
         guard !fichiers.isEmpty else {
             return Resultat(importees: 0, ignorees: 0, erreur: "Aucun fichier choisi.")
         }
@@ -34,10 +74,29 @@ enum ImportPhotos {
         var importees = 0
         var ignorees = 0
 
-        for fichier in fichiers {
-            // Accès sécurisé : les fichiers viennent de l'extérieur du bac à sable.
-            let acces = fichier.startAccessingSecurityScopedResource()
-            defer { if acces { fichier.stopAccessingSecurityScopedResource() } }
+        // Accès sécurisé : les éléments choisis viennent de l'extérieur du bac
+        // à sable. Les autorisations sont ouvertes ICI et tenues ouvertes
+        // pendant TOUT l'import — un fichier trouvé dans un dossier n'a pas
+        // d'autorisation propre, il dépend de celle du dossier qui le contient.
+        var autorises: [URL] = []
+        defer { autorises.forEach { $0.stopAccessingSecurityScopedResource() } }
+
+        var aTraiter: [URL] = []
+        for choix in fichiers {
+            if choix.startAccessingSecurityScopedResource() { autorises.append(choix) }
+            aTraiter += imagesContenues(dans: choix)
+        }
+
+        guard !aTraiter.isEmpty else {
+            return Resultat(importees: 0, ignorees: 0,
+                            erreur: "Aucune image trouvée dans la sélection.")
+        }
+
+        let suivi = ProgressionImport.partagee
+        suivi.demarrer(total: aTraiter.count)
+        defer { suivi.terminer() }
+
+        for fichier in aTraiter {
 
             // Métadonnées LUES AVANT la compression : la version stockée est
             // ré-encodée et ne conserve pas l'IPTC d'origine.
@@ -58,6 +117,11 @@ enum ImportPhotos {
                                              sur: oeuvre)
             context.insert(oeuvre)
             importees += 1
+
+            // Rend la main : c'est ce qui permet à la sidebar d'afficher la
+            // progression au fur et à mesure, et non d'un seul coup à la fin.
+            suivi.avancer()
+            await Task.yield()
         }
 
         if importees > 0 { try? context.save() }
@@ -67,6 +131,35 @@ enum ImportPhotos {
                             erreur: "Aucune image n'a pu être lue.")
         }
         return Resultat(importees: importees, ignorees: ignorees, erreur: nil)
+    }
+}
+
+/// Progression de l'import en cours, affichée en pied de sidebar (macOS).
+///
+/// `@Observable` et non `ObservableObject` : ce dernier réclame
+/// `import Combine` depuis Swift 6.
+@MainActor
+@Observable
+final class ProgressionImport {
+    static let partagee = ProgressionImport()
+    private init() {}
+
+    private(set) var enCours = false
+    private(set) var traites = 0
+    private(set) var total = 0
+
+    func demarrer(total: Int) {
+        self.total = total
+        traites = 0
+        enCours = true
+    }
+
+    func avancer() { traites += 1 }
+
+    func terminer() {
+        enCours = false
+        traites = 0
+        total = 0
     }
 }
 

@@ -377,18 +377,17 @@ struct ContentView: View {
                 #endif
 
                 // --- Zone du bas de la sidebar ---
-                // VIDE. A successivement porté les pastilles de choix de
+                // Occupée par la progression d'import, et par elle seule :
+                // hors import, le bas de la barre latérale reste vide, comme
+                // avant. A successivement porté les pastilles de choix de
                 // thème, le bouton « G » de mise en gras des en-têtes, puis la
-                // pastille de comparaison des deux marrons de sélection — tous
-                // retirés une fois leur question tranchée.
-                // Gardé en commentaire pour y reposer au besoin un bouton
-                // temporaire de test : réactiver demande de décommenter LES
-                // DEUX blocs, celui-ci et la propriété `barreOutilsBas` près de
-                // `lien()`, sinon la compilation échoue.
-                // #if os(macOS)
-                // Divider()
-                // barreOutilsBas
-                // #endif
+                // pastille de comparaison des deux marrons de sélection.
+                #if os(macOS)
+                if ProgressionImport.partagee.enCours {
+                    Divider()
+                    barreProgressionImport
+                }
+                #endif
             }
             #if os(iOS)
             // Fond de toute la colonne.
@@ -686,6 +685,49 @@ struct ContentView: View {
     }
 
     // MARK: Zone du bas de la sidebar
+
+    #if os(macOS)
+    /// Progression de l'import de photos, en pied de barre latérale.
+    ///
+    /// Lue sur `ProgressionImport.partagee` : l'import se déroule dans
+    /// `VueFeuille`, à l'autre bout de la hiérarchie, et n'a aucun moyen de
+    /// remonter son état jusqu'ici autrement.
+    ///
+    /// 11 pt, comme tout ce qui est subordonné aux libellés de rubrique.
+    private var barreProgressionImport: some View {
+        let suivi = ProgressionImport.partagee
+        return HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Import \(suivi.traites) / \(suivi.total)")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+    #endif
+
+    // VIDE. Le squelette est gardé en commentaire pour y reposer un bouton
+    // temporaire de test — c'est ce qu'a porté cette zone à chaque fois :
+    // pastilles de choix de thème, bouton « G » de mise en gras des en-têtes,
+    // puis pastille de comparaison des deux marrons de sélection. Chacun a été
+    // retiré une fois sa question tranchée.
+    //
+    // Le réactiver demande de décommenter LES DEUX blocs : celui-ci et l'appel
+    // dans la VStack de la sidebar (`Divider()` + `barreOutilsBas`).
+    //
+    // #if os(macOS)
+    // private var barreOutilsBas: some View {
+    //     HStack(spacing: 10) {
+    //         // …le bouton du moment…
+    //         Spacer()
+    //     }
+    //     .padding(.horizontal, 20)
+    //     .padding(.vertical, 10)
+    // }
+    // #endif
 
     // MARK: Lien de catégorie (barre latérale)
 
