@@ -882,7 +882,15 @@ struct VueFeuille: View {
                                     selection = [oeuvresAvecPhoto[nouveau].id]
                                 }
                             }),
-                        onFermer: { indexVisionneuse = nil })
+                        onFermer: {
+                            // Réaffirme la sélection sur l'œuvre consultée :
+                            // le panneau doit la montrer, filet orange
+                            // compris, dès que la visionneuse s'efface.
+                            if oeuvresAvecPhoto.indices.contains(i) {
+                                selection = [oeuvresAvecPhoto[i].id]
+                            }
+                            indexVisionneuse = nil
+                        })
                 }
             }
     }

@@ -171,6 +171,12 @@ struct VueiOS: View {
             VisionneuseOeuvres(
                 oeuvres: oeuvresAvecPhoto,
                 index: min(i, oeuvresAvecPhoto.count - 1),
+                onNaviguer: { o in
+                    // Sélection ET défilement : à la fermeture, l'œuvre
+                    // consultée doit être à l'écran, filet orange visible.
+                    selection = [o.id]
+                    oeuvreADefiler = o.id
+                },
                 onFermer: { indexVisionneuse = nil })
         }
     }

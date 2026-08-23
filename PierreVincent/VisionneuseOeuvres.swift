@@ -16,6 +16,10 @@ struct VisionneuseOeuvres: View {
     /// Œuvres parcourables — celles qui ont réellement une photo.
     let oeuvres: [Oeuvre]
     @State var index: Int
+    /// Appelé à CHAQUE changement d'image — balayage, chevrons — pour que la
+    /// liste en arrière-plan suive. Sans cela l'index reste enfermé ici
+    /// (`@State`) et fermer la visionneuse ramenait sur l'œuvre de départ.
+    var onNaviguer: (Oeuvre) -> Void = { _ in }
     let onFermer: () -> Void
 
     // Échelle et décalage courants, et leurs valeurs de référence au début de
@@ -81,7 +85,15 @@ struct VisionneuseOeuvres: View {
         .statusBarHidden()
         // Changer d'image repart de l'image entière et recentrée : garder le
         // zoom ferait arriver sur un détail arbitraire de la suivante.
-        .onChange(of: index) { _, _ in reinitialiserZoom() }
+        .onChange(of: index) { _, nouveau in
+            reinitialiserZoom()
+            if oeuvres.indices.contains(nouveau) { onNaviguer(oeuvres[nouveau]) }
+        }
+        // Position de départ : la vue de fond peut déjà être ailleurs si la
+        // visionneuse a été ouverte depuis une vignette non sélectionnée.
+        .onAppear {
+            if oeuvres.indices.contains(index) { onNaviguer(oeuvres[index]) }
+        }
     }
 
     // MARK: Éléments
