@@ -10,8 +10,8 @@ import UIKit
 /// et s'ouvre depuis la fiche de détail : les deux coexistent, celle-ci
 /// s'ouvrant par appui prolongé sur une vignette de galerie.
 ///
-/// **Essai limité à Réserve › Catalogue** (`Categorie.visionneuseIntegree`),
-/// comme sur Mac.
+/// En place dans TOUTES les rubriques (`Categorie.visionneuseIntegree`), comme
+/// sur Mac.
 struct VisionneuseOeuvres: View {
     /// Œuvres parcourables — celles qui ont réellement une photo.
     let oeuvres: [Oeuvre]
@@ -20,6 +20,10 @@ struct VisionneuseOeuvres: View {
     /// liste en arrière-plan suive. Sans cela l'index reste enfermé ici
     /// (`@State`) et fermer la visionneuse ramenait sur l'œuvre de départ.
     var onNaviguer: (Oeuvre) -> Void = { _ in }
+    /// Cadre écran de la vignette d'où l'on vient, quand la transition est
+    /// faite à la main (`TransitionVisionneuse.ressortMaison`). Nul avec la
+    /// transition système, qui s'en charge elle-même.
+    var cadreDepart: CGRect? = nil
     let onFermer: () -> Void
 
     // Échelle et décalage courants, et leurs valeurs de référence au début de
@@ -44,15 +48,43 @@ struct VisionneuseOeuvres: View {
     // dans `DetailiOS`.
     @State private var enTransition = false
 
+    /// Vrai une fois l'ouverture jouée : l'image occupe alors tout l'écran.
+    /// Faux au premier rendu, où elle épouse encore le cadre de la vignette.
+    @State private var ouverte = false
+
     private var oeuvreCourante: Oeuvre? {
         oeuvres.indices.contains(index) ? oeuvres[index] : nil
     }
 
+    /// Échelle et décalage de l'ANIMATION D'OUVERTURE, distincts du zoom que
+    /// l'utilisateur applique ensuite. À l'état fermé, l'image est réduite et
+    /// déplacée pour coïncider avec la vignette de départ.
+    private func ouvertureDepuisVignette(_ ecran: CGSize) -> (CGFloat, CGSize) {
+        guard TransitionVisionneuse.estRessort, !ouverte,
+              let cadre = cadreDepart, ecran.width > 0, ecran.height > 0
+        else { return (1, .zero) }
+        let facteur = min(cadre.width / ecran.width, cadre.height / ecran.height)
+        return (facteur,
+                CGSize(width: cadre.midX - ecran.width / 2,
+                       height: cadre.midY - ecran.height / 2))
+    }
+
     var body: some View {
-        ZStack {
+        GeometryReader { geo in
+            corps(ecran: geo.size)
+        }
+        .ignoresSafeArea()
+    }
+
+    private func corps(ecran: CGSize) -> some View {
+        let (facteur, decalageOuverture) = ouvertureDepuisVignette(ecran)
+        return ZStack {
             // Plein écran, encoche et barres système comprises : c'est ce qui
             // fait tenir la vue en paysage comme en portrait.
             Color.black.ignoresSafeArea()
+                // Le fond se révèle avec l'image : apparaître d'un bloc
+                // trahirait le déplacement qu'on cherche à montrer.
+                .opacity(TransitionVisionneuse.estRessort && !ouverte ? 0 : 1)
 
             // ZStack indispensable : sans lui, SwiftUI ne superpose pas
             // l'ancienne et la nouvelle image pendant l'animation, et le
@@ -81,8 +113,19 @@ struct VisionneuseOeuvres: View {
                 barreNavigation
             }
             .padding(20)
+            // Les commandes n'arrivent qu'une fois l'image en place.
+            .opacity(TransitionVisionneuse.estRessort && !ouverte ? 0 : 1)
         }
+        // L'agrandissement porte sur TOUT le contenu, image et commandes.
+        .scaleEffect(facteur)
+        .offset(decalageOuverture)
         .statusBarHidden()
+        // Déclenche l'ouverture au premier rendu : l'état de départ a été
+        // dessiné, le ressort a donc quelque chose à animer.
+        .task {
+            guard TransitionVisionneuse.estRessort, !ouverte else { return }
+            withAnimation(TransitionVisionneuse.ressort) { ouverte = true }
+        }
         // Changer d'image repart de l'image entière et recentrée : garder le
         // zoom ferait arriver sur un détail arbitraire de la suivante.
         .onChange(of: index) { _, nouveau in

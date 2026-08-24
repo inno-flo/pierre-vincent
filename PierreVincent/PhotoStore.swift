@@ -69,6 +69,10 @@ enum PhotoStore {
     /// Charge une image à partir de son nom de fichier stocké.
     static func chargerImage(nom: String) -> ImagePlateforme? {
         guard !nom.isEmpty else { return nil }
+        #if os(iOS)
+        // Déjà préparée par `prechargerImage` : on évite lecture et décodage.
+        if let prete = cacheImages.object(forKey: nom as NSString) { return prete }
+        #endif
         let url = dossierPhotos.appendingPathComponent(nom)
         #if os(macOS)
         return NSImage(contentsOf: url)
@@ -77,6 +81,41 @@ enum PhotoStore {
         return UIImage(data: data)
         #endif
     }
+
+    #if os(iOS)
+    /// Petit cache d'images PRÊTES À AFFICHER, pour la visionneuse.
+    ///
+    /// Volontairement minuscule : ces images sont décompressées en mémoire, et
+    /// la base en compte des centaines. On ne garde que les dernières vues.
+    private static let cacheImages: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 6
+        return cache
+    }()
+
+    /// Charge et **décode** une image en tâche de fond, pour qu'elle soit prête
+    /// quand on l'affichera.
+    ///
+    /// Appelée dès que le doigt se pose sur une vignette, avant même que
+    /// l'appui prolongé n'aboutisse : sans cela, la lecture du fichier et le
+    /// décodage tombent en plein milieu de l'animation d'ouverture et la font
+    /// saccader — à la PREMIÈRE ouverture seulement, le système gardant
+    /// ensuite le fichier en cache.
+    ///
+    /// `byPreparingForDisplay` fait le décodage tout de suite. Sans lui,
+    /// `UIImage` le diffère jusqu'au premier tracé, c'est-à-dire jusqu'au pire
+    /// moment.
+    static func prechargerImage(nom: String) {
+        guard !nom.isEmpty, cacheImages.object(forKey: nom as NSString) == nil else { return }
+        let url = dossierPhotos.appendingPathComponent(nom)
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let data = try? Data(contentsOf: url),
+                  let image = UIImage(data: data) else { return }
+            let prete = image.preparingForDisplay() ?? image
+            cacheImages.setObject(prete, forKey: nom as NSString)
+        }
+    }
+    #endif
 
     /// URL complète d'une photo (utile pour l'export).
     static func urlPhoto(nom: String) -> URL? {

@@ -53,6 +53,9 @@ struct VueiOS: View {
     @State private var vendeurFiltre: String = "Tout"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
+    // Cadres des vignettes visibles, pour que la visionneuse sache d'où
+    // partir quand la transition est faite à la main.
+    @State private var cadresVignettes: [UUID: CGRect] = [:]
     // Espace de la transition de zoom : la vignette pressée s'agrandit pour
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
@@ -189,10 +192,14 @@ struct VueiOS: View {
                     selection = [o.id]
                     oeuvreADefiler = o.id
                 },
+                cadreDepart: cadresVignettes[oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id],
                 onFermer: { indexVisionneuse = nil })
-            .navigationTransition(
-                .zoom(sourceID: oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id,
-                      in: espaceZoom))
+            // Une seule des deux transitions s'applique. Avec le ressort
+            // maison, on coupe AUSSI l'animation de présentation : sinon la
+            // feuille glisse depuis le bas pendant que l'image s'agrandit.
+            .modifier(TransitionOuverture(
+                identifiant: oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id,
+                espace: espaceZoom))
         }
     }
 
@@ -211,7 +218,7 @@ struct VueiOS: View {
     /// Ouvre la visionneuse sur l'œuvre touchée, si elle a une photo.
     private func ouvrirVisionneuse(_ o: Oeuvre) {
         guard let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == o.id }) else { return }
-        indexVisionneuse = i
+        TransitionVisionneuse.presenter { indexVisionneuse = i }
     }
 
     private var recapCell: some View {
@@ -267,6 +274,7 @@ struct VueiOS: View {
         }
         // Plein écran, barres système comprises : `.fullScreenCover` et non
         // `.sheet`, qui laisserait la fiche en carte avec ses coins arrondis.
+        .onPreferenceChange(CadresVignettes.self) { cadresVignettes = $0 }
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .background(Color.cremeFond)
         .navigationTitle(titre)

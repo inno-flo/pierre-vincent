@@ -50,6 +50,9 @@ struct VueOeuvresStructuree: View {
     // haptique conservé puis préparé au contact — un générateur neuf déclenche
     // à froid, ce qui se ressent comme un choc mou. Même patron que `VueiOS`.
     @State private var indexVisionneuse: Int?
+    // Cadres des vignettes visibles, pour que la visionneuse sache d'où
+    // partir quand la transition est faite à la main.
+    @State private var cadresVignettes: [UUID: CGRect] = [:]
     // Espace de la transition de zoom : la vignette pressée s'agrandit pour
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
@@ -293,6 +296,7 @@ struct VueOeuvresStructuree: View {
                 }
             }
         }
+        .onPreferenceChange(CadresVignettes.self) { cadresVignettes = $0 }
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: o.feuille == .oeuvresDonnees,
@@ -391,7 +395,7 @@ struct VueOeuvresStructuree: View {
     private func ouvrirVisionneuse(_ o: Oeuvre) {
         guard let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == o.id }) else { return }
         RetourAppuiLong.jouer()
-        indexVisionneuse = i
+        TransitionVisionneuse.presenter { indexVisionneuse = i }
     }
 
     private var visionneuseOuverte: Binding<Bool> {
@@ -411,10 +415,14 @@ struct VueOeuvresStructuree: View {
                     selection = [o.id]
                     oeuvreADefiler = o.id
                 },
+                cadreDepart: cadresVignettes[oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id],
                 onFermer: { indexVisionneuse = nil })
-            .navigationTransition(
-                .zoom(sourceID: oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id,
-                      in: espaceZoom))
+            // Une seule des deux transitions s'applique. Avec le ressort
+            // maison, on coupe AUSSI l'animation de présentation : sinon la
+            // feuille glisse depuis le bas pendant que l'image s'agrandit.
+            .modifier(TransitionOuverture(
+                identifiant: oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id,
+                espace: espaceZoom))
         }
     }
 
@@ -471,7 +479,12 @@ struct VueOeuvresStructuree: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.filetVignette, lineWidth: 1)
+                // Même filet de sélection que `VueGalerie` : orange et 3 px
+                // sur la vignette retenue, gris et 1 px sinon. Ces vues ont
+                // leur propre rendu de vignette et l'avaient perdu.
+                .strokeBorder(selection.contains(o.id)
+                              ? Color.orangeInternational : Color.filetVignette,
+                              lineWidth: selection.contains(o.id) ? 3 : 1)
         )
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
@@ -481,11 +494,17 @@ struct VueOeuvresStructuree: View {
         .onTapGesture { selection = [o.id]; detail = o }
         // Source de la transition de zoom vers la visionneuse.
         .matchedTransitionSource(id: o.id, in: espaceZoom)
+        .publieCadreVignette(o.id)
         // Appui prolongé : la visionneuse plein écran.
         .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
             ouvrirVisionneuse(o)
         } onPressingChanged: { enCours in
-            if enCours { RetourAppuiLong.preparer() }
+            if enCours {
+                                RetourAppuiLong.preparer()
+                                // Décodage lancé dès le contact : il a le temps
+                                // de finir avant que l'appui n'aboutisse.
+                                PhotoStore.prechargerImage(nom: o.photoNom)
+                            }
         }
     }
 
