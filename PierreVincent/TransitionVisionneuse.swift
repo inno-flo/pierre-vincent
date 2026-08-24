@@ -31,16 +31,17 @@ enum TransitionVisionneuse {
 
     static var estRessort: Bool { choisie == .ressortMaison }
 
-    /// Ouvre la visionneuse en neutralisant l'animation de PRÉSENTATION quand
-    /// l'agrandissement est joué à la main.
+    /// Ouvre la visionneuse SANS animation de présentation.
     ///
-    /// Le neutraliser sur le contenu présenté ne suffit pas — c'est le
-    /// changement d'état qui déclenche la présentation, et c'est donc lui qu'il
-    /// faut envelopper. Sans cela la feuille glisse depuis le bas de l'écran
-    /// pendant que l'image s'agrandit : deux mouvements contradictoires, et
-    /// c'est le glissement qu'on voit.
+    /// **C'est le menu contextuel qui porte le mouvement d'ouverture** : son
+    /// aperçu grossit sous le doigt, puis s'étend quand on le tape. Toute
+    /// animation ajoutée ici s'y superpose — on voyait deux agrandissements
+    /// se chevaucher.
+    ///
+    /// Neutraliser sur le contenu présenté ne suffirait pas : c'est le
+    /// changement d'état qui déclenche la présentation, et c'est donc lui
+    /// qu'il faut envelopper.
     static func presenter(_ action: () -> Void) {
-        guard estRessort else { action(); return }
         var sansAnimation = Transaction()
         sansAnimation.disablesAnimations = true
         withTransaction(sansAnimation, action)
@@ -84,14 +85,14 @@ struct TransitionOuverture: ViewModifier {
     let espace: Namespace.ID
 
     func body(content: Content) -> some View {
-        switch TransitionVisionneuse.choisie {
-        case .zoomSysteme:
-            content.navigationTransition(.zoom(sourceID: identifiant, in: espace))
-        case .ressortMaison:
-            // Rien ici : l'animation de présentation se coupe à l'ouverture,
-            // sur le changement d'état (voir `presenter`).
-            content
-        }
+        // AUCUNE transition posée ici, dans les deux cas : depuis que
+        // l'ouverture passe par le menu contextuel, c'est lui qui joue
+        // l'agrandissement. La transition de zoom en ajoutait un SECOND,
+        // superposé au premier — d'où un rendu confus.
+        //
+        // Les deux méthodes restent décrites dans l'enum : elles redeviendront
+        // utiles le jour où la visionneuse s'ouvrira autrement que par le menu.
+        content
     }
 }
 
