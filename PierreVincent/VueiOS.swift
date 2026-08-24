@@ -14,7 +14,7 @@ struct VueiOS: View {
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
-    let emplacements: [String]     // filtre sur le champ Emplacement (inclusion)
+    let collectionSeule: Bool      // ne recenser que la collection personnelle
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
@@ -22,7 +22,7 @@ struct VueiOS: View {
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          themes: [String] = [],
-         emplacements: [String] = [],
+         collectionSeule: Bool = false,
          visionneuseIntegree: Bool = false) {
         self.feuille = feuille
         self.titre = titre
@@ -31,7 +31,7 @@ struct VueiOS: View {
         self.statuts = statuts
         self.types = types
         self.themes = themes
-        self.emplacements = emplacements
+        self.collectionSeule = collectionSeule
         self.visionneuseIntegree = visionneuseIntegree
     }
 
@@ -84,7 +84,7 @@ struct VueiOS: View {
         // Filtres propres à la rubrique : statut, type, thème.
         return base.filter {
             correspond($0, statuts: statuts, types: types, themes: themes,
-                       emplacements: emplacements)
+                       collectionSeule: collectionSeule)
         }
     }
 
@@ -663,6 +663,9 @@ struct DetailiOS: View {
             cellule {
                 ligne("Statut", oeuvre.statut)
                 ligne("Thème", oeuvre.theme)
+                // Placé AVANT l'emplacement : il dit à quel ensemble l'œuvre
+                // appartient, l'emplacement où la trouver.
+                ligne("Collection personnelle", oeuvre.collectionPersonnelle)
                 ligne("Emplacement", oeuvre.emplacement)
             }
 

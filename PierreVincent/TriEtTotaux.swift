@@ -21,7 +21,7 @@ let statutsVentesEtDons: Set<String> = ["Vendu", "Donné"]
 /// `types` vide = aucun filtre de type. Comparaisons insensibles à la casse et
 /// aux espaces de bord, les valeurs étant saisies à la main.
 func correspond(_ o: Oeuvre, statuts: [String], types: [String],
-                themes: [String] = [], emplacements: [String] = []) -> Bool {
+                themes: [String] = [], collectionSeule: Bool = false) -> Bool {
     func egal(_ a: String, _ b: String) -> Bool {
         a.trimmingCharacters(in: .whitespacesAndNewlines)
             .caseInsensitiveCompare(b.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
@@ -29,12 +29,10 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String],
     guard statuts.contains(where: { egal(o.statut, $0) }) else { return false }
     guard types.isEmpty || types.contains(where: { egal(o.type, $0) }) else { return false }
     guard themes.isEmpty || themes.contains(where: { egal(o.theme, $0) }) else { return false }
-    // Emplacement : test par INCLUSION et non par égalité. La valeur stockée
-    // nomme le carton (« Collection personnelle carton 3 ») ; la rubrique, elle,
-    // désigne la collection entière.
-    guard emplacements.isEmpty || emplacements.contains(where: {
-        o.emplacement.localizedCaseInsensitiveContains($0)
-    }) else { return false }
+    // Le statut est déjà testé plus haut : une œuvre vendue ou donnée ne peut
+    // donc pas apparaître dans la collection personnelle, quelle que soit la
+    // valeur du drapeau.
+    guard !collectionSeule || estEnCollectionPersonnelle(o) else { return false }
     return true
 }
 
@@ -45,6 +43,15 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String],
 /// les filtres par type — une œuvre ainsi renseignée n'apparaissait dans
 /// aucune rubrique de catégorie.
 let typesOeuvre: [String] = ["Dessin", "Tableau", "Tapis"]
+
+/// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
+/// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
+let valeurCollectionPersonnelle = "Oui"
+
+/// Vrai si l'œuvre relève de la collection personnelle.
+func estEnCollectionPersonnelle(_ o: Oeuvre) -> Bool {
+    o.collectionPersonnelle.caseInsensitiveCompare(valeurCollectionPersonnelle) == .orderedSame
+}
 
 /// Statuts recensés par la section « Réserve » : les œuvres encore détenues.
 /// Défini ici, et non dans `Categorie`, pour que les rubriques de la sidebar

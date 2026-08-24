@@ -23,6 +23,7 @@ enum CleColonne {
     case destinataire
     case statut
     case theme
+    case collectionPersonnelle
     case emplacement
     case remarques
 
@@ -42,6 +43,7 @@ enum CleColonne {
         case .destinataire: return o.destinataire
         case .statut:       return o.statut
         case .theme:        return o.theme
+        case .collectionPersonnelle: return o.collectionPersonnelle
         case .emplacement:  return o.emplacement
         case .remarques:    return o.remarques
         }
@@ -68,6 +70,7 @@ enum CleColonne {
         case .destinataire: o.destinataire = valeur
         case .statut:       o.statut = valeur
         case .theme:        o.theme = valeur
+        case .collectionPersonnelle: o.collectionPersonnelle = valeur
         case .emplacement:  o.emplacement = valeur
         case .remarques:    o.remarques = valeur
         }
@@ -75,8 +78,13 @@ enum CleColonne {
 
     /// Vrai si cette colonne est éditable directement au clavier (pas la photo).
     var editable: Bool {
-        if case .photo = self { return false }
-        return true
+        switch self {
+        // La photo ne se saisit pas au clavier, et la collection personnelle
+        // vient des mots-clés de l'import : la modifier à la main ferait
+        // diverger la base de ce que disent les fichiers.
+        case .photo, .collectionPersonnelle: return false
+        default:                             return true
+        }
     }
 
     /// Valeur de comparaison pour le tri (le prix se trie numériquement).
@@ -114,6 +122,7 @@ enum SchemaFeuille {
         Colonne(titre: "Date",       cle: .date),
         Colonne(titre: "Statut",     cle: .statut),
         Colonne(titre: "Thème",      cle: .theme),
+        Colonne(titre: "Collection personnelle", cle: .collectionPersonnelle),
         Colonne(titre: "Emplacement", cle: .emplacement),
         Colonne(titre: "Remarques",  cle: .remarques),
     ]
@@ -126,6 +135,7 @@ enum SchemaFeuille {
         Colonne(titre: "Format",       cle: .format),
         Colonne(titre: "Statut",       cle: .statut),
         Colonne(titre: "Thème",        cle: .theme),
+        Colonne(titre: "Collection personnelle", cle: .collectionPersonnelle),
         Colonne(titre: "Emplacement",  cle: .emplacement),
         Colonne(titre: "Remarques",    cle: .remarques),
     ]
@@ -139,6 +149,7 @@ enum SchemaFeuille {
         Colonne(titre: "Format",       cle: .format),
         Colonne(titre: "Statut",       cle: .statut),
         Colonne(titre: "Thème",        cle: .theme),
+        Colonne(titre: "Collection personnelle", cle: .collectionPersonnelle),
         Colonne(titre: "Emplacement",  cle: .emplacement),
         Colonne(titre: "Remarques",    cle: .remarques),
     ]

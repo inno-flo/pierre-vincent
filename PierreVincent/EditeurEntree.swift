@@ -373,6 +373,12 @@ struct EditeurEntree: View {
     private var blocSuivi: some View {
         champTexte("Statut", $statut, champ: .statut)
         champTexte("Thème", $theme, champ: .theme)
+        // En LECTURE SEULE : la valeur est posée à l'import par les mots-clés
+        // « à garder », et la saisir à la main ferait diverger la base de ce
+        // que disent les fichiers.
+        champLectureSeule("Collection personnelle",
+                          oeuvre.collectionPersonnelle.isEmpty
+                          ? "Non" : oeuvre.collectionPersonnelle)
         champTexte("Emplacement", $emplacement, champ: .emplacement)
     }
 

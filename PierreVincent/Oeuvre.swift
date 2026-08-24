@@ -53,6 +53,11 @@ final class Oeuvre {
     // (migration légère), sans perte de données.
     var statut: String = ""
     var theme: String = ""
+    /// « Oui » si l'œuvre relève de la collection personnelle, vide sinon.
+    /// Renseigné à l'import par les mots-clés « à garder ». Texte et non
+    /// booléen, pour rester homogène avec les autres champs et voyager tel
+    /// quel dans les exports.
+    var collectionPersonnelle: String = ""
     var emplacement: String = ""
 
     // Date technique de création de l'entrée (pour l'ordre par défaut)
@@ -110,6 +115,9 @@ enum RepriseDonnees {
             \.type, \.dimensions, \.format, \.remarques,
             \.vendeur, \.modeVente, \.acheteur, \.date,
             \.destinataire, \.statut, \.theme, \.emplacement,
+            // `collectionPersonnelle` est ABSENT volontairement : son vide
+            // signifie « non », pas « on ne sait pas ». Y écrire « Inconnu »
+            // rendrait le filtre de la rubrique inopérant.
         ]
         var compte = 0
         for o in toutes {

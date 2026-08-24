@@ -143,25 +143,15 @@ enum Categorie: Hashable, Identifiable {
         }
     }
 
-    /// Filtre sur le champ Emplacement, par INCLUSION (vide = aucun filtre).
+    /// Vrai pour la rubrique qui ne recense que la collection personnelle.
     ///
-    /// La valeur stockée nomme le carton — « Collection personnelle carton 3 » —
-    /// alors que la rubrique désigne la collection entière.
+    /// Le critère est le champ `collectionPersonnelle`, posé à l'import par
+    /// les mots-clés « à garder ». Il a remplacé une approximation fondée sur
+    /// l'emplacement, faute de champ dédié à l'époque.
     ///
-    /// **Pourquoi pas le statut.** La rubrique devrait recenser les œuvres
-    /// marquées « à garder » à l'import, mais les six mots-clés convergent
-    /// désormais vers « Disponible » : la nuance n'est plus enregistrée nulle
-    /// part. L'emplacement est le seul champ qui la porte encore.
-    ///
-    /// **PROVISOIRE.** Ce critère tient lieu d'approximation en attendant une
-    /// nouvelle table de correspondance à l'import, qui rétablira une valeur
-    /// propre. Ne pas s'appuyer dessus ailleurs.
-    var emplacements: [String] {
-        switch self {
-        case .reserveCollection: return ["Collection personnelle"]
-        default:                 return []
-        }
-    }
+    /// La rubrique restant dans la Réserve, ses `statuts` excluent d'office
+    /// les œuvres vendues ou données.
+    var collectionSeule: Bool { self == .reserveCollection }
 
     /// Filtre sur le champ Thème (vide = aucun filtre).
     var themes: [String] {
@@ -486,7 +476,7 @@ struct ContentView: View {
                                statuts: cat.statuts,
                                types: cat.types,
                                themes: cat.themes,
-                               emplacements: cat.emplacements,
+                               collectionSeule: cat.collectionSeule,
                                filtreParVendeur: cat.filtreParVendeur,
                                filtreParType: cat.filtreParType,
                                nomEnGalerie: cat.nomEnGalerie,
@@ -523,7 +513,7 @@ struct ContentView: View {
                                statuts: cat.statuts,
                                types: cat.types,
                                themes: cat.themes,
-                               emplacements: cat.emplacements,
+                               collectionSeule: cat.collectionSeule,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
                     }
@@ -716,7 +706,8 @@ struct ContentView: View {
     /// Raccourci : l'œuvre relève-t-elle de cette rubrique (statut + type) ?
     private func correspond(_ o: Oeuvre, a cat: Categorie) -> Bool {
         PierreVincent.correspond(o, statuts: cat.statuts, types: cat.types,
-                                 themes: cat.themes, emplacements: cat.emplacements)
+                                 themes: cat.themes,
+                                 collectionSeule: cat.collectionSeule)
     }
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)

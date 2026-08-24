@@ -195,6 +195,18 @@ enum CorrespondanceMotsCles {
 
     // MARK: Tables
 
+    /// Mots-clés qui rangent l'œuvre dans la **collection personnelle**.
+    ///
+    /// Ils fixent AUSSI le statut « Disponible » via la table ci-dessous : ce
+    /// sont deux informations distinctes portées par le même mot-clé, d'où un
+    /// test à part et non une branche du `else if`.
+    private static let collectionPersonnelle: Set<String> = [
+        "tableau a garder",
+        "tableau a garder absolument",
+        "dessin a garder",
+        "dessin a garder absolument",
+    ]
+
     /// Mot-clé → valeur du champ **Statut**.
     ///
     /// Les six mots-clés donnent tous « Disponible » : la nuance « à garder »,
@@ -255,6 +267,13 @@ enum CorrespondanceMotsCles {
 
         for mot in motsCles {
             let cle = normaliser(mot)
+            // Testé AVANT l'aiguillage : un mot-clé « à garder » dit deux
+            // choses — le sort de l'œuvre et son rangement — et doit donc
+            // alimenter les deux champs.
+            if collectionPersonnelle.contains(cle) {
+                ecrire(valeurCollectionPersonnelle,
+                       dans: \.collectionPersonnelle, sur: o)
+            }
             if let v = statuts[cle] {
                 ecrire(v, dans: \.statut, sur: o)
             } else if let v = themes[cle] {
