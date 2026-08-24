@@ -394,7 +394,6 @@ struct VueOeuvresStructuree: View {
 
     private func ouvrirVisionneuse(_ o: Oeuvre) {
         guard let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == o.id }) else { return }
-        RetourAppuiLong.jouer()
         TransitionVisionneuse.presenter { indexVisionneuse = i }
     }
 
@@ -491,21 +490,17 @@ struct VueOeuvresStructuree: View {
         // Cible de défilement (proxy.scrollTo).
         .id(o.id)
         // Sur iPhone : un simple tap ouvre la fiche de détail.
-        .onTapGesture { selection = [o.id]; detail = o }
+
         // Source de la transition de zoom vers la visionneuse.
         .matchedTransitionSource(id: o.id, in: espaceZoom)
         .publieCadreVignette(o.id)
-        // Appui prolongé : la visionneuse plein écran.
-        .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
-            ouvrirVisionneuse(o)
-        } onPressingChanged: { enCours in
-            if enCours {
-                                RetourAppuiLong.preparer()
-                                // Décodage lancé dès le contact : il a le temps
-                                // de finir avant que l'appui n'aboutisse.
-                                PhotoStore.prechargerImage(nom: o.photoNom)
-                            }
-        }
+        // Tap et appui prolongé pris par une vue UIKit en overlay :
+        // elle seule peut prévenir d'un tap sur l'aperçu du menu contextuel,
+        // le geste de Photos, que SwiftUI n'expose pas.
+        .overlay(InteractionApercu(
+            oeuvre: o,
+            onTap: { selection = [o.id]; detail = o },
+            onAfficher: { ouvrirVisionneuse(o) }))
     }
 
     /// Liste de lignes compactes (vignette + informations).

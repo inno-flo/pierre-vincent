@@ -245,31 +245,13 @@ struct VueGalerie: View {
             onOuvrir(o)
         }
         #else
-        // Sur iPhone : un simple tap ouvre directement la fiche de détail.
-        .onTapGesture { onOuvrir(o) }
-        // …et un appui prolongé la visionneuse, quand la rubrique la propose.
-        // Déclaré APRÈS le tap : les deux cohabitent sans que l'un mange
-        // l'autre. Ce n'est pas une ligne de `List(selection:)` avec un
-        // `NavigationLink` — le cas où un geste personnalisé bloque la
-        // navigation de façon aléatoire (voir CLAUDE.md) —, mais une carte à
-        // simple `onTapGesture`.
-        .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
-            guard let onAppuiLong else { return }
-            // `.heavy` à pleine intensité : l'ouverture est confirmée au doigt
-            // avant de l'être à l'œil, et le geste dure une demi-seconde — un
-            // choc discret y passe inaperçu.
-            RetourAppuiLong.jouer()
-            onAppuiLong(o)
-        } onPressingChanged: { enCours in
-            // Chauffe le moteur dès le contact : préparé, il répond
-            // instantanément et le choc porte davantage.
-            if enCours {
-                                RetourAppuiLong.preparer()
-                                // Décodage lancé dès le contact : il a le temps
-                                // de finir avant que l'appui n'aboutisse.
-                                PhotoStore.prechargerImage(nom: o.photoNom)
-                            }
-        }
+        // Sur iPhone : tap et appui prolongé sont pris par une vue UIKit
+        // posée en overlay. Elle seule peut prévenir d'un tap sur l'aperçu du
+        // menu contextuel — le geste de Photos —, que SwiftUI n'expose pas.
+        // Elle prend AUSSI le tap simple : sinon elle le confisquerait.
+        .overlay(MenuApercuSiDemande(oeuvre: o,
+                                     onTap: { onOuvrir(o) },
+                                     onAfficher: onAppuiLong))
         #endif
     }
 
@@ -318,6 +300,26 @@ struct VueGalerie: View {
 
 
 #if os(iOS)
+/// Pose le menu contextuel quand la rubrique propose la visionneuse.
+/// Enveloppé parce que l'action est optionnelle : sans elle, pas de menu.
+struct MenuApercuSiDemande: View {
+    let oeuvre: Oeuvre
+    let onTap: () -> Void
+    /// Nul quand la rubrique ne propose pas la visionneuse : le menu
+    /// contextuel n'aurait alors rien à montrer.
+    let onAfficher: ((Oeuvre) -> Void)?
+
+    var body: some View {
+        if let onAfficher {
+            InteractionApercu(oeuvre: oeuvre,
+                              onTap: onTap,
+                              onAfficher: { onAfficher(oeuvre) })
+        } else {
+            Color.clear.allowsHitTesting(false)
+        }
+    }
+}
+
 /// Marque une vue comme point de départ de la transition de zoom.
 ///
 /// Enveloppé dans un `ViewModifier` parce que `matchedTransitionSource` exige

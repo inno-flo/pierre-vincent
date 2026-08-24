@@ -4,10 +4,13 @@ import AudioToolbox
 
 /// Retour donné quand un appui prolongé aboutit : une vibration ET un son bref.
 ///
-/// **Centralisé ici** parce que le geste existe dans quatre vues — les
-/// vignettes de `VueGalerie`, et les lignes comme les vignettes de `VueiOS`,
-/// `VueOeuvresStructuree` et `VueDonsStructuree`. Quatre copies auraient fini
-/// par diverger.
+/// **Usage réduit.** Les vignettes de galerie sont passées au menu contextuel
+/// à aperçu, qui fournit son PROPRE retour haptique : y ajouter celui-ci
+/// ferait double emploi. Il ne sert plus qu'à l'appui prolongé sur la photo de
+/// la fiche de détail (`DetailiOS`).
+///
+/// Conservé tel quel : le réglage y est centralisé, et tout geste d'appui
+/// prolongé qu'on rajouterait devra s'y raccorder plutôt que d'en refaire un.
 @MainActor
 enum RetourAppuiLong {
     /// Générateur CONSERVÉ entre les gestes, et non créé au moment de frapper :
@@ -27,14 +30,21 @@ enum RetourAppuiLong {
 
     /// Durée d'appui avant que le geste aboutisse.
     ///
-    /// 0,14 s, réglé à l'usage par réductions successives depuis 0,5 s.
+    /// 0,07 s, réglé à l'usage par réductions successives depuis 0,5 s.
     /// Défini ICI pour que les points d'appel restent d'accord ; le réglage se
     /// fait donc en un seul endroit.
     ///
-    /// **Plancher à ne pas franchir sans y regarder** : trop court, le geste
-    /// cesse de se distinguer d'un tap, et la fiche de détail deviendrait
-    /// difficile à ouvrir sans déclencher la visionneuse.
-    static let duree: Double = 0.14
+    /// **On est descendu très bas.** À ce niveau le geste ne se distingue
+    /// presque plus d'un tap un peu appuyé, et le tap ouvre la FICHE quand
+    /// l'appui ouvre la VISIONNEUSE : si des fiches deviennent difficiles à
+    /// ouvrir, c'est cette valeur qu'il faut remonter, pas le geste qu'il faut
+    /// revoir.
+    ///
+    /// Second effet, moins visible : le préchargement de l'image
+    /// (`PhotoStore.prechargerImage`) est lancé au contact et dispose de ce
+    /// délai pour décoder. Plus il raccourcit, plus l'ouverture risque de
+    /// saccader la première fois.
+    static let duree: Double = 0.07
 
     /// À appeler dès le contact : chauffe le moteur, qui répond alors
     /// instantanément quand l'appui aboutit.

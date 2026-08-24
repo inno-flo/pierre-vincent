@@ -17,9 +17,17 @@ enum TransitionVisionneuse {
     case zoomSysteme
     case ressortMaison
 
-    /// Méthode en vigueur. Repasser à `.zoomSysteme` suffit à revenir en
-    /// arrière : les deux chemins restent complets dans le code.
-    static let choisie: TransitionVisionneuse = .ressortMaison
+    /// Méthode en vigueur : **celle d'Apple**.
+    ///
+    /// Le ressort maison a été essayé pour gagner en vitesse, puisque la
+    /// transition système ne laisse pas régler sa durée. Il ouvre bien depuis
+    /// la vignette, mais reste en deçà : l'agrandissement système est plus
+    /// fluide, et il apporte le geste de retour interactif — celui qui suit le
+    /// doigt à la fermeture.
+    ///
+    /// Le chemin `.ressortMaison` reste COMPLET dans le code : changer ce seul
+    /// mot y ramène. Ne pas le supprimer sans raison.
+    static let choisie: TransitionVisionneuse = .zoomSysteme
 
     static var estRessort: Bool { choisie == .ressortMaison }
 
@@ -86,4 +94,109 @@ struct TransitionOuverture: ViewModifier {
         }
     }
 }
+
+/// Menu contextuel à aperçu, façon Photos — **en UIKit**.
+///
+/// **Pourquoi pas `.contextMenu(menuItems:preview:)` de SwiftUI.** Celui-ci
+/// affiche bien l'aperçu, mais ne prévient pas quand l'utilisateur le TAPE :
+/// il fallait alors une commande « Afficher en grand » dans le menu, là où
+/// Photos ouvre en plein écran d'un simple tap sur l'image. `UIKit` expose ce
+/// rappel (`willPerformPreviewActionForMenuWith`), SwiftUI non.
+///
+/// La vue posée en overlay prend AUSSI le tap simple, faute de quoi elle le
+/// confisquerait à la carte SwiftUI en dessous.
+///
+/// Le retour haptique est fourni par le système : ne pas en ajouter un second.
+struct InteractionApercu: UIViewRepresentable {
+    let oeuvre: Oeuvre
+    /// Tap simple — ouvre la fiche de détail.
+    let onTap: () -> Void
+    /// Tap sur l'aperçu du menu — ouvre la visionneuse.
+    let onAfficher: () -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let vue = UIView()
+        vue.backgroundColor = .clear
+        vue.addInteraction(UIContextMenuInteraction(delegate: context.coordinator))
+        let tap = UITapGestureRecognizer(target: context.coordinator,
+                                         action: #selector(Coordinateur.tapSimple))
+        vue.addGestureRecognizer(tap)
+        return vue
+    }
+
+    func updateUIView(_ vue: UIView, context: Context) {
+        context.coordinator.oeuvre = oeuvre
+        context.coordinator.onTap = onTap
+        context.coordinator.onAfficher = onAfficher
+    }
+
+    func makeCoordinator() -> Coordinateur {
+        Coordinateur(oeuvre: oeuvre, onTap: onTap, onAfficher: onAfficher)
+    }
+
+    final class Coordinateur: NSObject, UIContextMenuInteractionDelegate {
+        var oeuvre: Oeuvre
+        var onTap: () -> Void
+        var onAfficher: () -> Void
+
+        init(oeuvre: Oeuvre, onTap: @escaping () -> Void,
+             onAfficher: @escaping () -> Void) {
+            self.oeuvre = oeuvre
+            self.onTap = onTap
+            self.onAfficher = onAfficher
+        }
+
+        @objc func tapSimple() { onTap() }
+
+        func contextMenuInteraction(
+            _ interaction: UIContextMenuInteraction,
+            configurationForMenuAtLocation location: CGPoint
+        ) -> UIContextMenuConfiguration? {
+            UIContextMenuConfiguration(identifier: nil) { [oeuvre] in
+                let hote = UIHostingController(rootView: ApercuOeuvre(oeuvre: oeuvre))
+                hote.view.backgroundColor = .black
+                // Sans taille préférée, l'aperçu prend la dimension
+                // intrinsèque de l'image — plusieurs milliers de points.
+                hote.preferredContentSize = CGSize(width: 320, height: 420)
+                return hote
+            } actionProvider: { _ in
+                UIMenu(children: [
+                    // INERTE pour l'instant : la rubrique « Favoris » n'existe
+                    // pas encore. L'entrée tient sa place dans le menu.
+                    UIAction(title: "Ajouter aux favoris",
+                             image: UIImage(systemName: "star")) { _ in }
+                ])
+            }
+        }
+
+        /// Appelé quand on TAPE l'aperçu — le geste de Photos.
+        func contextMenuInteraction(
+            _ interaction: UIContextMenuInteraction,
+            willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration,
+            animator: UIContextMenuInteractionCommitAnimating
+        ) {
+            // En complétion : la visionneuse s'ouvre une fois le menu refermé,
+            // sinon les deux présentations se chevauchent.
+            animator.addCompletion { [onAfficher] in onAfficher() }
+        }
+    }
+}
+
+/// Contenu de l'aperçu : la photo seule, en grand.
+struct ApercuOeuvre: View {
+    let oeuvre: Oeuvre
+
+    var body: some View {
+        if let image = PhotoStore.chargerImage(nom: oeuvre.photoNom) {
+            Image(imagePlateforme: image)
+                .resizable()
+                .scaledToFit()
+        } else {
+            Image(systemName: "photo")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
 #endif
