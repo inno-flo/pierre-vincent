@@ -38,6 +38,12 @@ struct VisionneuseOeuvres: View {
     private let echelleMax: CGFloat = 5
     /// Amplitude minimale d'un balayage pour qu'il change d'image.
     private let seuilBalayage: CGFloat = 60
+    /// Distance verticale au-delà de laquelle le glissement ferme la vue.
+    private let seuilFermeture: CGFloat = 120
+
+    /// Glissement vertical en cours vers la fermeture. Le contenu suit le
+    /// doigt : sans ce retour, on ne saurait pas que le geste est engagé.
+    @State private var glissementFermeture: CGFloat = 0
     /// Durée de la transition, alignée sur celle de `DetailiOS`.
     private let dureeTransition: Double = 0.25
 
@@ -83,8 +89,12 @@ struct VisionneuseOeuvres: View {
             // fait tenir la vue en paysage comme en portrait.
             Color.black.ignoresSafeArea()
                 // Le fond se révèle avec l'image : apparaître d'un bloc
-                // trahirait le déplacement qu'on cherche à montrer.
-                .opacity(TransitionVisionneuse.estRessort && !ouverte ? 0 : 1)
+                // trahirait le déplacement qu'on cherche à montrer. Il
+                // s'estompe ensuite à mesure qu'on tire vers le bas, ce qui
+                // annonce la fermeture avant qu'elle ne soit acquise.
+                .opacity(TransitionVisionneuse.estRessort && !ouverte
+                         ? 0
+                         : max(0.35, 1 - abs(glissementFermeture) / 400))
 
             // ZStack indispensable : sans lui, SwiftUI ne superpose pas
             // l'ancienne et la nouvelle image pendant l'animation, et le
@@ -116,6 +126,13 @@ struct VisionneuseOeuvres: View {
             // Les commandes n'arrivent qu'une fois l'image en place.
             .opacity(TransitionVisionneuse.estRessort && !ouverte ? 0 : 1)
         }
+        // Le contenu suit le doigt pendant le glissement de fermeture.
+        .offset(y: glissementFermeture)
+        // Geste posé sur TOUT l'écran, et non sur la seule image : la
+        // fermeture par glissement doit marcher partout, y compris dans les
+        // marges noires d'une image qui ne remplit pas l'écran.
+        .contentShape(Rectangle())
+        .gesture(gesteCombine)
         // L'agrandissement porte sur TOUT le contenu, image et commandes.
         .scaleEffect(facteur)
         .offset(decalageOuverture)
@@ -150,7 +167,6 @@ struct VisionneuseOeuvres: View {
                 .scaleEffect(echelle)
                 .offset(decalage)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .gesture(gesteCombine)
                 // Double-tap : retour rapide à l'image entière.
                 .onTapGesture(count: 2) { reinitialiserZoom() }
         } else {
@@ -225,23 +241,36 @@ struct VisionneuseOeuvres: View {
 
         let glissement = DragGesture()
             .onChanged { valeur in
-                // Inerte à l'échelle 1 : l'image tient entière à l'écran, et
-                // un glissement libre y serait sans objet.
-                guard echelle > echelleMin else { return }
-                decalage = CGSize(
-                    width: decalageReference.width + valeur.translation.width,
-                    height: decalageReference.height + valeur.translation.height)
-            }
-            .onEnded { valeur in
-                // À l'échelle 1, le glissement ne déplace rien : il sert alors
-                // à passer d'une image à l'autre. Une fois zoomé, il reprend
-                // son rôle de déplacement — les deux ne peuvent pas coexister
-                // sur le même geste.
-                guard echelle > echelleMin else {
-                    balayer(valeur.translation)
+                // ZOOMÉ : le glissement déplace l'image, et RIEN d'autre.
+                // La navigation dans l'image prime, comme demandé.
+                guard echelle <= echelleMin else {
+                    decalage = CGSize(
+                        width: decalageReference.width + valeur.translation.width,
+                        height: decalageReference.height + valeur.translation.height)
                     return
                 }
-                decalageReference = decalage
+                // À l'échelle 1, un geste franchement VERTICAL amorce la
+                // fermeture et le contenu suit le doigt. Un geste horizontal
+                // ne bouge rien : il changera d'image au relâchement.
+                let t = valeur.translation
+                glissementFermeture = abs(t.height) > abs(t.width) ? t.height : 0
+            }
+            .onEnded { valeur in
+                guard echelle <= echelleMin else {
+                    decalageReference = decalage
+                    return
+                }
+                let t = valeur.translation
+                // Vers le BAS et assez loin : on ferme. Vers le haut, ou pas
+                // assez loin, le contenu revient en place.
+                if abs(t.height) > abs(t.width), t.height > seuilFermeture {
+                    onFermer()
+                    return
+                }
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    glissementFermeture = 0
+                }
+                balayer(t)
             }
 
         return pincement.simultaneously(with: glissement)
