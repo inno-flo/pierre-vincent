@@ -15,6 +15,9 @@ struct VueGalerie: View {
     /// ce qui est le cas de toutes les rubriques sauf celles qui déclarent la
     /// visionneuse intégrée.
     var onAppuiLong: ((Oeuvre) -> Void)? = nil
+    /// Espace de transition partagé avec la vue qui présente la visionneuse.
+    /// Nul = pas de transition de zoom (macOS, ou rubrique sans visionneuse).
+    var espaceZoom: Namespace.ID? = nil
     /// Affiche la ligne de nom en tête de légende (acheteur, destinataire ou
     /// emplacement). Fausse pour les enchères et les expositions, où seuls le
     /// prix et les dimensions renseignent.
@@ -222,6 +225,11 @@ struct VueGalerie: View {
         )
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
+        #if os(iOS)
+        // Source de la transition de zoom : la vignette s'agrandit pour
+        // devenir la visionneuse, au lieu d'un remplacement sec.
+        .modifier(SourceZoom(identifiant: o.id, espace: espaceZoom))
+        #endif
         #if os(macOS)
         // Sur Mac : un clic sélectionne, un double-clic sélectionne PUIS ouvre
         // la fiche. Le double-clic n'appelait auparavant que `onOuvrir` : le
@@ -244,7 +252,7 @@ struct VueGalerie: View {
         // `NavigationLink` — le cas où un geste personnalisé bloque la
         // navigation de façon aléatoire (voir CLAUDE.md) —, mais une carte à
         // simple `onTapGesture`.
-        .onLongPressGesture(minimumDuration: 0.5) {
+        .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
             guard let onAppuiLong else { return }
             // `.heavy` à pleine intensité : l'ouverture est confirmée au doigt
             // avant de l'être à l'œil, et le geste dure une demi-seconde — un
@@ -301,3 +309,24 @@ struct VueGalerie: View {
         #endif
     }
 }
+
+
+#if os(iOS)
+/// Marque une vue comme point de départ de la transition de zoom.
+///
+/// Enveloppé dans un `ViewModifier` parce que `matchedTransitionSource` exige
+/// un `Namespace.ID` non optionnel : la vue appelante, elle, n'en a pas
+/// toujours un (macOS, ou rubrique sans visionneuse).
+struct SourceZoom: ViewModifier {
+    let identifiant: UUID
+    let espace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let espace {
+            content.matchedTransitionSource(id: identifiant, in: espace)
+        } else {
+            content
+        }
+    }
+}
+#endif

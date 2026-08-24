@@ -53,6 +53,11 @@ struct VueiOS: View {
     @State private var vendeurFiltre: String = "Tout"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
+    // Espace de la transition de zoom : la vignette pressée s'agrandit pour
+    // devenir la visionneuse. C'est l'effet standard d'Apple pour une
+    // présentation plein écran issue d'un élément précis.
+    @Namespace private var espaceZoom
+
 
     /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
     /// AVANT le filtre par vendeur et avant tri.
@@ -185,6 +190,9 @@ struct VueiOS: View {
                     oeuvreADefiler = o.id
                 },
                 onFermer: { indexVisionneuse = nil })
+            .navigationTransition(
+                .zoom(sourceID: oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id,
+                      in: espaceZoom))
         }
     }
 
@@ -250,6 +258,7 @@ struct VueiOS: View {
                     selection: $selection,
                     onOuvrir: { o in selection = [o.id]; detail = o },
                     onAppuiLong: appuiLongGalerie,
+                    espaceZoom: espaceZoom,
                     entete: recapVisible ? AnyView(recapCell) : nil
                 )
             } else {
@@ -602,7 +611,7 @@ struct DetailiOS: View {
                     .cornerRadius(12)
                     // Tap prolongé (comme sur une icône d'écran d'accueil) :
                     // retour haptique puis ouverture en plein écran, zoomable.
-                    .onLongPressGesture(minimumDuration: 0.5) {
+                    .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         imagePleinEcranOuverte = true
                     }

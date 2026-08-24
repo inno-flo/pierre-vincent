@@ -50,6 +50,11 @@ struct VueOeuvresStructuree: View {
     // haptique conservé puis préparé au contact — un générateur neuf déclenche
     // à froid, ce qui se ressent comme un choc mou. Même patron que `VueiOS`.
     @State private var indexVisionneuse: Int?
+    // Espace de la transition de zoom : la vignette pressée s'agrandit pour
+    // devenir la visionneuse. C'est l'effet standard d'Apple pour une
+    // présentation plein écran issue d'un élément précis.
+    @Namespace private var espaceZoom
+
 
     @State private var vendeurFiltre: String = "Tout"
 
@@ -407,6 +412,9 @@ struct VueOeuvresStructuree: View {
                     oeuvreADefiler = o.id
                 },
                 onFermer: { indexVisionneuse = nil })
+            .navigationTransition(
+                .zoom(sourceID: oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id,
+                      in: espaceZoom))
         }
     }
 
@@ -471,8 +479,10 @@ struct VueOeuvresStructuree: View {
         .id(o.id)
         // Sur iPhone : un simple tap ouvre la fiche de détail.
         .onTapGesture { selection = [o.id]; detail = o }
+        // Source de la transition de zoom vers la visionneuse.
+        .matchedTransitionSource(id: o.id, in: espaceZoom)
         // Appui prolongé : la visionneuse plein écran.
-        .onLongPressGesture(minimumDuration: 0.5) {
+        .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
             ouvrirVisionneuse(o)
         } onPressingChanged: { enCours in
             if enCours { RetourAppuiLong.preparer() }
