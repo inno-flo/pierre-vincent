@@ -66,10 +66,27 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
   sélection — c'est le signe qu'un choix reste à faire.
 - Photos stockées **hors base**, sur disque, via `PhotoStore` (dossier « Photos »
   dans Application Support). La base ne contient que le nom de fichier.
-- **Champs de suivi** ajoutés à `Oeuvre` : `statut`, `theme`, `emplacement`
-  (texte, défaut vide → SwiftData fait une migration légère automatique).
-  Présents dans l'éditeur, l'inspecteur, la fiche iOS, le mode Liste et tous
-  les exports.
+- **Champs de suivi** ajoutés à `Oeuvre` : `statut`, `theme`,
+  `collectionPersonnelle`, `lieuStockage`, `emplacement` (texte, défaut vide
+  → SwiftData fait une migration légère automatique). Présents dans l'éditeur,
+  l'inspecteur, la fiche iOS, le mode Liste et tous les exports.
+  - **`collectionPersonnelle` est BINAIRE** : « Oui » ou « Non », jamais vide.
+    `normaliserCollectionPersonnelle(_:)` (`TriEtTotaux.swift`) applique la
+    règle, et elle est appelée aux QUATRE entrées possibles — import,
+    ouverture de l'éditeur, enregistrement de l'éditeur, et une passe de
+    reprise. Un champ vide y ferait un troisième état, que le `Picker` à deux
+    entrées ne saurait pas représenter. C'est pourquoi il est **exclu de
+    `remplirChampsVides`** : « Inconnu » n'y a pas de sens.
+  - `estEnCollectionPersonnelle(_:)` sert au filtre de la rubrique dédiée. Il
+    a remplacé une approximation fondée sur l'emplacement, faute de champ à
+    l'époque.
+  - **`lieuStockage` et `emplacement` ne se recouvrent pas** : le premier dit
+    la maison (« Bourg-de-Péage », « Domicile »), le second le rangement fin
+    (« Natures mortes carton 2 »). `rangementVignette(_:)` (`TriEtTotaux.swift`)
+    choisit lequel montrer sur une vignette de Réserve — le lieu de stockage
+    pour un **Tableau**, l'emplacement sinon, les cartons étant un rangement
+    de dessins. Fonction PARTAGÉE par `VueGalerie` et `VueiOS` : le test écrit
+    dans chaque vignette aurait divergé, comme les rendus l'ont déjà fait.
 - **Le statut pilote la visibilité.** Les rubriques de « Ventes et dons »
   (Inventaire, Tableaux, Dessins, Tapis, Dons, Ventes) ne recensent que les
   œuvres **sorties du fonds** : statut « Vendu » ou « Donné ». Prédicat unique
@@ -157,6 +174,23 @@ diffèrent en tout.
     absolument », pour tableaux comme pour dessins — donnent tous
     **« Disponible »** : la nuance dit une intention, pas le sort de l'œuvre.
     Rien pour les tapis, il n'en reste aucun de disponible.
+  - **Un mot-clé peut dire DEUX choses.** Les quatre « à garder » fixent le
+    statut ET rangent l'œuvre en collection personnelle : la collection est
+    donc testée **avant** l'aiguillage `else if`, et non comme une de ses
+    branches — sinon la seconde information serait perdue.
+  - **Chaque thème a DEUX clés**, « dessin … » et « tableau … », pour une
+    seule et même valeur (`tableau nature morte` → « Nature morte »). Le
+    mot-clé nomme le genre d'objet ET le sujet, quand le champ `theme` ne
+    retient que le sujet — le genre se lit sur `type`. Les clés « tableau »
+    manquaient au départ : les tableaux importés n'obtenaient aucun thème et
+    n'apparaissaient dans **AUCUNE** sous-rubrique de Thèmes, leur mot-clé
+    finissant en « non reconnu » dans les Remarques. Rien n'était perdu, rien
+    n'était exploitable — c'est exactement ce que le repli en Remarques est
+    là pour garantir.
+  - `lieuxStockage` : « Stockage Bourg-de-Péage » → « Bourg-de-Péage »,
+    « Stockage domicile » → « Domicile ». Attention aux traits d'union du
+    mot-clé source, une clé mal orthographiée passe en « non reconnu » sans
+    autre signe.
 - **Deux filets, sans lesquels une œuvre importée devient INVISIBLE** :
   - `statutParDefautImport` quand aucun mot-clé ne dit le sort. Un statut vide
     ne satisfait ni `estVenduOuDonne` ni `estEnReserve` : l'œuvre tombe entre
@@ -234,6 +268,21 @@ diffèrent en tout.
   observer `themeApp` aux vues concernées plutôt que de nuker la hiérarchie.
 - Accent de marque : orange international `Color(red: 1.0, green: 0.31, blue: 0.0)`,
   réservé aux valeurs chiffrées.
+- **DEUX accents, selon la section** : orange dans « Ventes et dons »,
+  **bleu ardoise** (`Color.bleuArdoise`, 70/100/135 en clair, éclairci en
+  sombre) dans la Réserve. La couleur dit d'un coup d'œil où l'on se trouve,
+  sans lire le titre.
+  - `Categorie.accent` donne la teinte, et `ContentView` la pose **une seule
+    fois** sur la colonne de contenu, via l'environnement
+    (`\.accentRubrique`, défini en fin de `Couleurs.swift`).
+  - **Pourquoi l'environnement et non un paramètre** : l'accent sert dans une
+    dizaine de vues imbriquées — vignettes, pastilles, prix, boutons de la
+    visionneuse, éditeur —, dont plusieurs sont partagées par les deux
+    sections. Le passer de main en main aurait demandé un paramètre à chaque
+    étage ; posé une fois, il descend seul, y compris à travers les feuilles
+    et les présentations plein écran.
+  - Valeur par défaut : l'orange. Une vue qui ne déclare rien reste donc dans
+    la teinte de « Ventes et dons ».
 
 ## Import de données depuis PDF (workflow établi)
 
@@ -262,6 +311,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - `ToolbarSpacer` n'accepte pas `spacing:` et `placement:` simultanément.
 - Erreur `_main` à la compilation = un fichier a perdu son appartenance à la cible
   (Target Membership décochée dans Xcode).
+- **« The executable is not codesigned » / « No code signature found »** — sur
+  Mac comme sur iPhone. **Ce n'est PAS un problème de certificat ni de profil**
+  (la piste où l'on perd le plus de temps) : une compilation incrémentale saute
+  l'étape `CodeSign` quand elle juge le binaire à jour. Le remède est un
+  **`clean build`**, rien d'autre.
 - Le blocage de veille de l'iPhone pendant le débogage est **normal** (débogueur
   Xcode attaché), ce n'est pas un bug de l'app.
 - **Geste personnalisé sur une ligne de `List(selection:)` contenant un
@@ -484,6 +538,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   galerie et de la Synthèse étaient déjà correctes ; seules ces trois listes
   verticales ne l'étaient pas avant correction.
   
+- **Vignettes : une file SÉRIELLE, pas une tâche par image**
+  (`CacheVignettes.swift`). Un `Task.detached` par vignette saturait le pool
+  coopératif de Swift Concurrency et Xcode signalait un **« Hang Risk »**
+  (inversion de priorité). Une `DispatchQueue` sérielle en `.userInitiated`
+  sérialise le décodage : les vignettes arrivent l'une après l'autre au lieu
+  de se disputer les fils.
+- **Préchargement de l'image pleine taille** (`PhotoStore.prechargerImage` +
+  `cacheImages`, un `NSCache` à 6 entrées) : lancé dès le contact du doigt, il
+  dispose du délai d'appui pour décoder. `UIImage.preparingForDisplay()` force
+  le décodage **hors** du chemin d'animation, sans quoi la première ouverture
+  saccade là où les suivantes sont fluides.
+
 - **`formaterEuros()` — formatter statique** (`TriEtTotaux.swift`) : la
   version initiale recréait un `NumberFormatter` à chaque appel (coûteux :
   chargement de données de locale). La fonction est appelée à chaque ligne
@@ -555,16 +621,62 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     qui couvrirait toute la fenêtre, sidebar et barre d'outils comprises.
     Échap ferme, le pincement du trackpad agrandit de 1× à 5×, le glissement
     déplace l'image agrandie.
-  - **iOS** (`VisionneuseOeuvres.swift`) : appui prolongé sur une vignette
-    (0,5 s), le tap continuant d'ouvrir la fiche. Plein écran en portrait
-    comme en paysage. Balayage latéral pour changer d'image — **inerte tant
-    qu'on est zoomé**, le glissement y servant alors à se déplacer.
+  - **iOS** (`VisionneuseOeuvres.swift`) : appui prolongé sur une vignette,
+    le tap continuant d'ouvrir la fiche. Plein écran en portrait comme en
+    paysage. Balayage latéral pour changer d'image — **inerte tant qu'on est
+    zoomé**, le glissement y servant alors à se déplacer. **Glissement
+    vertical vers le bas pour fermer** (seuil 120 pt), lui aussi inerte une
+    fois zoomé ; le contenu suit le doigt et le fond s'estompe, sans quoi on
+    ne saurait pas que le geste est engagé.
+  - **iOS — l'ouverture passe par un MENU CONTEXTUEL à aperçu, façon Photos**
+    (`TransitionVisionneuse.swift`). L'appui prolongé fait grossir un aperçu
+    de la photo ; **taper l'aperçu** ouvre la visionneuse.
+    - **Écrit en UIKit** (`InteractionApercu`, `UIContextMenuInteraction`).
+      `.contextMenu(menuItems:preview:)` de SwiftUI affiche bien l'aperçu mais
+      **ne prévient pas quand on le TAPE** : il fallait alors une commande
+      « Afficher en grand » dans le menu, là où Photos ouvre d'un simple tap.
+      UIKit expose ce rappel (`willPerformPreviewActionForMenuWith`), SwiftUI
+      non. La vue posée en overlay prend AUSSI le tap simple, faute de quoi
+      elle le confisquerait à la carte SwiftUI en dessous.
+    - Le menu porte une entrée **« Ajouter aux favoris » INERTE** : le système
+      exige un menu, et la rubrique Favoris n'existe pas encore.
+    - `preferredContentSize` est **obligatoire** sur l'aperçu : sans elle il
+      prend la dimension intrinsèque de l'image, soit des milliers de points.
+      `TransitionVisionneuse.taillePreview` (320 × 420) sert DEUX fois — à
+      dimensionner l'aperçu, et à donner à la visionneuse son point de départ.
+      Les deux doivent rester d'accord.
+    - **Le retour haptique est fourni par le système** : ne pas en ajouter un
+      second.
+  - **La transition d'ouverture part de l'APERÇU, pas de la vignette.**
+    `.zoom(sourceID:in:)` repart toujours de la vignette : il rejouait donc un
+    agrandissement que le menu venait déjà de jouer, d'où **deux mouvements
+    superposés** — le défaut signalé comme « disgracieux ». La méthode en
+    vigueur est le **ressort maison** (`TransitionVisionneuse.choisie =
+    .ressortMaison`), qui part de la taille de l'aperçu et va au plein écran :
+    un seul mouvement, dans la continuité de ce que le doigt vient de faire.
+    - `TransitionOuverture` n'applique **rien** aujourd'hui, et c'est voulu :
+      c'est le menu qui porte le mouvement. Les deux méthodes restent décrites
+      dans l'enum, utiles le jour où la visionneuse s'ouvrira autrement.
+    - `presenter(_:)` enveloppe le changement d'état dans une `Transaction`
+      sans animation. Neutraliser sur le contenu présenté ne suffirait pas :
+      c'est le changement d'état qui déclenche la présentation.
   - **`VisionneuseOeuvres` est distincte de `VisionneuseImagePleinEcran`**,
     qui montre UNE photo depuis la fiche de détail. Les deux coexistent.
   - Boutons au style des pastilles de comptage : cercle opaque cerclé
     d'orange, glyphe blanc, contour atténué en bout de série.
   - **`RetourAppuiLong`** (iOS) réunit vibration et son du geste. Centralisé
     parce que le retour existait dans QUATRE vues et allait diverger.
+    **Usage désormais réduit** : les vignettes de galerie sont passées au menu
+    contextuel, qui fournit son propre retour — y ajouter celui-ci ferait
+    double emploi. Il ne sert plus qu'à l'appui prolongé sur la photo de la
+    fiche de détail. Conservé tel quel : tout geste d'appui prolongé qu'on
+    rajouterait devra s'y raccorder plutôt que d'en refaire un.
+    - `duree` vaut **0,07 s**, descendu par paliers depuis 0,5 s. À ce niveau
+      le geste se distingue à peine d'un tap appuyé, et le tap ouvre la FICHE
+      quand l'appui ouvre la VISIONNEUSE : si des fiches deviennent difficiles
+      à ouvrir, c'est cette valeur qu'il faut remonter. Effet secondaire moins
+      visible : le préchargement de l'image dispose de ce délai pour décoder,
+      donc plus il raccourcit, plus la première ouverture risque de saccader.
     - Haptique `.heavy` à pleine intensité, générateur **conservé et préparé
       dès le contact** : un générateur neuf déclenche à froid, ce qui se
       ressent comme un choc mou.
@@ -667,6 +779,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     dont le type ne nomme ni l'un ni l'autre n'est retenue par AUCUNE pastille,
     et les deux comptes ne totalisent alors pas la rubrique. Sans filtre elle
     reste visible, ce qui est l'état par défaut.
+- **iOS — pendant du filtre par type** (`BandeauTypes.swift`) : `BandeauTypes`
+  (les pastilles), `MenuFiltreTypes` (le menu de barre d'outils) et
+  `TypesFiltrables` (la liste des deux types, leurs symboles et la fonction
+  `filtrer`). Les deux commandes pilotent le **MÊME** état : il n'y a pas deux
+  filtres à tenir d'accord.
+  - **Écrit une seule fois** pour les deux vues qui en ont besoin — `VueiOS`
+    pour la Réserve, `VueDonsStructuree` pour les Dons —, chacune ayant son
+    propre rendu de vignettes : deux copies auraient divergé, comme cela s'est
+    déjà produit sur le filet de sélection.
+  - Corps **sémantiques** (`.subheadline`, `.caption`) et non des points,
+    contrairement au bandeau macOS : figer une taille casserait le Dynamic
+    Type.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
@@ -836,12 +960,12 @@ JavaScript, inexploitables par extraction) :
   ```
   ▼ VENTES ET DONS               ▼ RÉSERVE
        Catalogue                      Catalogue
-       Ventes                       ▼ Catégories
-       Dons                              Dessins
-       Synthèse
-     ▼ Modes de vente
-          Expositions
-          Ventes aux enchères
+       Ventes                         Collection personnelle
+       Dons                         ▼ Catégories
+       Synthèse                          Tableaux
+     ▼ Modes de vente                    Dessins
+          Expositions               ▼ Thèmes
+          Ventes aux enchères            …déduits des données
           Vente privée
           …tout mode inédit
      ▼ Catégories
@@ -864,6 +988,31 @@ JavaScript, inexploitables par extraction) :
     rubrique, Ventes, est remontée au premier niveau.
   - La carte « Œuvres » de la vue Synthèse (bloc statistique, concept
     différent) n'a jamais été concernée par ces renommages.
+  - **Les icônes sont des SF Symbols, réunies dans `Categorie.symbole`** — un
+    seul endroit pour les deux plateformes : la branche macOS de `lien()`
+    construit un `HStack` (pour placer la pastille à droite) et la branche iOS
+    un `Label`, mais toutes deux affichent `Image(systemName: cat.symbole)`.
+    En vigueur : `photo.artframe` (les deux Catalogue), `paintpalette`
+    (Tableaux), `pencil.and.outline` (Dessins), `square.grid.3x3.square`
+    (Tapis), `gift` (Dons), `creditcard` (Ventes), `cart` (tout mode de
+    vente), `person` (Collection personnelle), `paintbrush.pointed` (tout
+    thème), `chart.bar.doc.horizontal` (Synthèse).
+    Les cas à valeur associée n'ont qu'une branche : un mode ou un thème
+    inédit reçoit son icône sans rien à ajouter.
+
+- **Réserve › Catégories : Tableaux et Dessins**, pendants exacts l'un de
+  l'autre — seul leur `types` diffère (`["Tableau"]` / `["Dessin"]`). Le
+  statut « Disponible » ne leur est PAS écrit en dur : il vient de
+  `statutsReserve`, comme à toute la section. Leur `feuille` valant
+  `.reserve`, elles héritent sans rien ajouter de l'absence de prix, de menu
+  de tri et de bouton de masquage.
+  - Ajouter une rubrique demande **dix points de branchement** dans
+    `ContentView.swift`, dont deux qui s'oublient : `categoriesSidebar`, sans
+    quoi la navigation clavier ↑↓ saute la rubrique, et la liste des
+    **pastilles de comptage**, dont l'écart avec la vue avait déjà produit un
+    « 9 » au-dessus d'une rubrique vide.
+  - `filtreParType` y reste **faux** : filtrer par type une rubrique déjà
+    filtrée par type n'aurait pas de sens.
 
 - **Sous-catégories dynamiques par thème, dans la Réserve**
   (`ContentView.swift`, cas `reserveTheme(String)`) : même principe que les
