@@ -18,6 +18,7 @@ enum Categorie: Hashable, Identifiable {
     case ventesRealisees  // ventes en exposition ou aux enchères (filtre sur modeVente)
     case reserveInventaire // Réserve : toutes les œuvres encore détenues
     case reserveDessins   // Réserve : dessins encore disponibles
+    case reserveTableaux  // Réserve : tableaux encore disponibles
     case reserveCollection // Réserve : œuvres rangées en collection personnelle
     /// Sous-catégorie de la Réserve : un thème précis. Même principe que
     /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
@@ -41,6 +42,7 @@ enum Categorie: Hashable, Identifiable {
         case .ventesRealisees:  return "Ventes"
         case .reserveInventaire: return "Catalogue"
         case .reserveDessins:   return "Dessins"
+        case .reserveTableaux:  return "Tableaux"
         case .reserveCollection: return "Collection personnelle"
         // Rendu au pluriel — et « Portraits » pour « Personnage » — comme les
         // modes de vente plus bas : la valeur STOCKÉE sur l'œuvre ne change
@@ -70,18 +72,24 @@ enum Categorie: Hashable, Identifiable {
 
     var symbole: String {
         switch self {
-        case .oeuvres:          return "square.grid.2x2"
+        // Les deux rubriques « Catalogue » partagent le même symbole : elles
+        // portent le même nom et jouent le même rôle dans leur section.
+        case .oeuvres:          return "photo.artframe"
         case .tableauxVendus:   return "paintpalette"
         case .dessinsVendus:    return "pencil.and.outline"
         case .tapisVendus:      return "square.grid.3x3.square"
         case .oeuvresDonnees:   return "gift"
-        case .ventesRealisees:  return "person.crop.circle.fill"
-        case .reserveInventaire: return "square.grid.2x2"
+        case .ventesRealisees:  return "creditcard"
+        case .reserveInventaire: return "photo.artframe"
         case .reserveDessins:   return "pencil.and.outline"
-        case .reserveCollection: return "archivebox"
-        case .reserveTheme:     return "paintbrush"
+        case .reserveTableaux:  return "paintpalette"
+        case .reserveCollection: return "person"
+        case .reserveTheme:     return "paintbrush.pointed"
         case .synthese:         return "chart.bar.doc.horizontal"
-        case .modeVente:        return "tag"
+        // Les trois sous-rubriques de « Modes de vente » — et tout mode inédit
+        // — partagent ce symbole : le cas est à valeur associée, il n'y a
+        // qu'une branche pour tous.
+        case .modeVente:        return "cart"
         }
     }
 
@@ -98,6 +106,7 @@ enum Categorie: Hashable, Identifiable {
         // rapportent, et c'est le TYPE qui distingue Dessins du Catalogue.
         case .reserveInventaire: return .reserve
         case .reserveDessins:   return .reserve
+        case .reserveTableaux:  return .reserve
         case .reserveCollection: return .reserve
         // Même feuille que le reste de la Réserve : c'est le THÈME qui
         // restreint, pas la feuille.
@@ -132,7 +141,8 @@ enum Categorie: Hashable, Identifiable {
     /// encore détenues.
     var statuts: [String] {
         switch self {
-        case .reserveInventaire, .reserveDessins, .reserveTheme, .reserveCollection:
+        case .reserveInventaire, .reserveDessins, .reserveTableaux,
+             .reserveTheme, .reserveCollection:
             return statutsReserve
         // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
         // dons ont leur propre rubrique.
@@ -165,7 +175,8 @@ enum Categorie: Hashable, Identifiable {
     /// Comparaison insensible à la casse et aux espaces de bord.
     var types: [String] {
         switch self {
-        case .reserveDessins: return ["Dessin"]
+        case .reserveDessins:  return ["Dessin"]
+        case .reserveTableaux: return ["Tableau"]
         default:              return []
         }
     }
@@ -251,8 +262,8 @@ enum Categorie: Hashable, Identifiable {
     /// vignettes, pastilles, prix et boutons de la visionneuse.
     var accent: Color {
         switch self {
-        case .reserveInventaire, .reserveDessins, .reserveTheme,
-             .reserveCollection: return .bleuArdoise
+        case .reserveInventaire, .reserveDessins, .reserveTableaux,
+             .reserveTheme, .reserveCollection: return .bleuArdoise
         default:                 return .orangeInternational
         }
     }
@@ -710,6 +721,7 @@ struct ContentView: View {
             liste.append(.reserveInventaire)
             liste.append(.reserveCollection)
             if sousBlocReserveCategoriesOuvert {
+                liste.append(.reserveTableaux)
                 liste.append(.reserveDessins)
             }
             if sousBlocReserveThemesOuvert {
@@ -776,7 +788,8 @@ struct ContentView: View {
         // Ventes, ses sous-catégories et la Réserve ont leurs propres statuts :
         // on repart de `toutes`, pas de `recensees`.
         case .ventesRealisees, .modeVente,
-             .reserveInventaire, .reserveDessins, .reserveTheme, .reserveCollection:
+             .reserveInventaire, .reserveDessins, .reserveTableaux,
+             .reserveTheme, .reserveCollection:
             return toutes.filter { o in
                 // La FEUILLE aussi, sinon la pastille annonce des œuvres que
                 // la vue ne montre pas : c'est précisément ce qui affichait
@@ -954,6 +967,7 @@ struct ContentView: View {
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
         DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
+            lien(.reserveTableaux)
             lien(.reserveDessins)
         } label: {
             Text("Catégories").fontWeight(.semibold)

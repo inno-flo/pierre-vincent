@@ -230,12 +230,25 @@ enum CorrespondanceMotsCles {
     ]
 
     /// Mot-clé → valeur du champ **Thème**.
+    ///
+    /// **Chaque thème a DEUX clés**, l'une en « dessin », l'autre en
+    /// « tableau », pour une seule et même valeur : le mot-clé nomme le genre
+    /// d'objet ET son sujet, alors que le champ `theme` ne retient que le
+    /// sujet — le genre se lit sur `type`.
+    /// Sans les clés « tableau », les tableaux importés n'obtenaient aucun
+    /// thème et n'apparaissaient dans AUCUNE sous-rubrique de Thèmes, leur
+    /// mot-clé finissant en « non reconnu » dans les Remarques.
     private static let themes: [String: String] = [
-        "dessin bouquet":      "Bouquet",
-        "dessin nature morte": "Nature morte",
-        "dessin animaux":      "Animaux",
-        "dessin paysage":      "Paysage",
-        "dessin portrait":     "Portrait",
+        "dessin bouquet":       "Bouquet",
+        "dessin nature morte":  "Nature morte",
+        "dessin animaux":       "Animaux",
+        "dessin paysage":       "Paysage",
+        "dessin portrait":      "Portrait",
+        "tableau bouquet":      "Bouquet",
+        "tableau nature morte": "Nature morte",
+        "tableau animaux":      "Animaux",
+        "tableau paysage":      "Paysage",
+        "tableau portrait":     "Portrait",
     ]
 
     /// Mot-clé → valeur du champ **Type**.
