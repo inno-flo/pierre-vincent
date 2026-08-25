@@ -26,9 +26,9 @@ struct VueDonsStructuree: View {
     // haptique conservé puis préparé au contact — un générateur neuf déclenche
     // à froid, ce qui se ressent comme un choc mou. Même patron que `VueiOS`.
     @State private var indexVisionneuse: Int?
-    // Cadres des vignettes visibles, pour que la visionneuse sache d'où
-    // partir quand la transition est faite à la main.
-    @State private var cadresVignettes: [UUID: CGRect] = [:]
+    // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
+    // c'est un filtre de consultation, pas un réglage.
+    @State private var typeRetenu: String?
     // Espace de la transition de zoom : la vignette pressée s'agrandit pour
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
@@ -46,7 +46,9 @@ struct VueDonsStructuree: View {
     private var dons: [Oeuvre] {
         // Ne recense que les œuvres sorties du fonds (voir `estVenduOuDonne`) :
         // celles encore disponibles relèvent de la section « Réserve ».
-        trier(toutes.filter { $0.feuille == .oeuvresDonnees }.filter(estVenduOuDonne))
+        let retenus = toutes.filter { $0.feuille == .oeuvresDonnees }
+            .filter(estVenduOuDonne)
+        return trier(TypesFiltrables.filtrer(retenus, mot: typeRetenu))
     }
 
     /// Icône du bouton de menu selon le critère actif.
@@ -79,7 +81,14 @@ struct VueDonsStructuree: View {
                     // --- 1. Bloc récapitulatif ---
                     recapitulatif(proxy: proxy)
 
-                    // --- 2. La liste, sans découpage ---
+                    // --- 2. Filtre par type ---
+                    // Le compteur du bandeau ferait double emploi avec le
+                    // récapitulatif juste au-dessus, qui annonce déjà le
+                    // nombre affiché : les deux comptent la même chose.
+                    BandeauTypes(typeRetenu: $typeRetenu,
+                                 nombreAffiche: dons.count)
+
+                    // --- 3. La liste, sans découpage ---
                     // Marge haute portée ICI : elle l'était par le titre de
                     // section (`padding(.top, 24)`), disparu avec le découpage
                     // par type, et le récapitulatif s'est retrouvé collé à la
@@ -108,6 +117,8 @@ struct VueDonsStructuree: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
+                    // Filtre par type, en TÊTE de la capsule.
+                    MenuFiltreTypes(typeRetenu: $typeRetenu)
                     Button { modeAffichage = "liste" } label: {
                         Image(systemName: "list.bullet")
                             .padding(6)
@@ -153,7 +164,6 @@ struct VueDonsStructuree: View {
                 }
             }
         }
-        .onPreferenceChange(CadresVignettes.self) { cadresVignettes = $0 }
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: true,
@@ -253,7 +263,6 @@ struct VueDonsStructuree: View {
                     selection = [o.id]
                     oeuvreADefiler = o.id
                 },
-                cadreDepart: cadresVignettes[oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id],
                 onFermer: { indexVisionneuse = nil })
             // Une seule des deux transitions s'applique. Avec le ressort
             // maison, on coupe AUSSI l'animation de présentation : sinon la
@@ -319,7 +328,6 @@ struct VueDonsStructuree: View {
 
         // Source de la transition de zoom vers la visionneuse.
         .matchedTransitionSource(id: o.id, in: espaceZoom)
-        .publieCadreVignette(o.id)
         // Tap et appui prolongé pris par une vue UIKit en overlay :
         // elle seule peut prévenir d'un tap sur l'aperçu du menu contextuel,
         // le geste de Photos, que SwiftUI n'expose pas.

@@ -15,6 +15,7 @@ struct VueiOS: View {
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
     let collectionSeule: Bool      // ne recenser que la collection personnelle
+    let filtreParType: Bool        // bandeau de pastilles Tableaux / Dessins
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
@@ -23,6 +24,7 @@ struct VueiOS: View {
          types: [String] = [],
          themes: [String] = [],
          collectionSeule: Bool = false,
+         filtreParType: Bool = false,
          visionneuseIntegree: Bool = false) {
         self.feuille = feuille
         self.titre = titre
@@ -32,6 +34,7 @@ struct VueiOS: View {
         self.types = types
         self.themes = themes
         self.collectionSeule = collectionSeule
+        self.filtreParType = filtreParType
         self.visionneuseIntegree = visionneuseIntegree
     }
 
@@ -53,9 +56,9 @@ struct VueiOS: View {
     @State private var vendeurFiltre: String = "Tout"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
-    // Cadres des vignettes visibles, pour que la visionneuse sache d'où
-    // partir quand la transition est faite à la main.
-    @State private var cadresVignettes: [UUID: CGRect] = [:]
+    // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
+    // c'est un filtre de consultation, pas un réglage.
+    @State private var typeRetenu: String?
     // Espace de la transition de zoom : la vignette pressée s'agrandit pour
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
@@ -82,10 +85,11 @@ struct VueiOS: View {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
         // Filtres propres à la rubrique : statut, type, thème.
-        return base.filter {
+        let retenues = base.filter {
             correspond($0, statuts: statuts, types: types, themes: themes,
                        collectionSeule: collectionSeule)
         }
+        return TypesFiltrables.filtrer(retenues, mot: typeRetenu)
     }
 
     /// Vendeurs réellement présents dans la rubrique, par ordre alphabétique.
@@ -165,6 +169,25 @@ struct VueiOS: View {
     /// présentations, galerie et liste.
     private var recapVisible: Bool { feuille != .reserve }
 
+    /// En-tête commun aux deux présentations : le récapitulatif quand il a du
+    /// sens, et le bandeau de pastilles quand la rubrique le déclare.
+    ///
+    /// Rendu DANS la zone de défilement — comme le récapitulatif — pour que la
+    /// barre de navigation garde sa translucidité. Ancré au-dessus, elle
+    /// deviendrait pleine.
+    private var entete: AnyView? {
+        guard recapVisible || filtreParType else { return nil }
+        return AnyView(
+            VStack(spacing: 0) {
+                if recapVisible { recapCell }
+                if filtreParType {
+                    BandeauTypes(typeRetenu: $typeRetenu,
+                                 nombreAffiche: oeuvresGalerie.count)
+                }
+            }
+        )
+    }
+
     /// Œuvres de la rubrique ayant réellement une photo — ce que parcourt la
     /// visionneuse. Une œuvre sans photo n'y mènerait qu'à un écran vide.
     ///
@@ -192,7 +215,6 @@ struct VueiOS: View {
                     selection = [o.id]
                     oeuvreADefiler = o.id
                 },
-                cadreDepart: cadresVignettes[oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id],
                 onFermer: { indexVisionneuse = nil })
             // Une seule des deux transitions s'applique. Avec le ressort
             // maison, on coupe AUSSI l'animation de présentation : sinon la
@@ -266,7 +288,7 @@ struct VueiOS: View {
                     onOuvrir: { o in selection = [o.id]; detail = o },
                     onAppuiLong: appuiLongGalerie,
                     espaceZoom: espaceZoom,
-                    entete: recapVisible ? AnyView(recapCell) : nil
+                    entete: entete
                 )
             } else {
                 liste
@@ -274,7 +296,6 @@ struct VueiOS: View {
         }
         // Plein écran, barres système comprises : `.fullScreenCover` et non
         // `.sheet`, qui laisserait la fiche en carte avec ses coins arrondis.
-        .onPreferenceChange(CadresVignettes.self) { cadresVignettes = $0 }
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .background(Color.cremeFond)
         .navigationTitle(titre)
@@ -284,6 +305,11 @@ struct VueiOS: View {
             // que l'espacement par défaut d'un ToolbarItemGroup).
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
+
+                // 0. Filtre par type, en TÊTE de la capsule.
+                if filtreParType {
+                    MenuFiltreTypes(typeRetenu: $typeRetenu)
+                }
 
                 // 1. Vue Liste.
                 Button {
@@ -401,13 +427,13 @@ struct VueiOS: View {
     private var liste: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                if recapVisible {
-                    recapCell
+                if let entete {
+                    entete
                 } else {
-                    // Sans récapitulatif, la première ligne se collerait au
-                    // haut de la zone de défilement : on rend la marge que la
-                    // cellule apportait (voir le piège des marges portées par
-                    // un voisin, dans CLAUDE.md).
+                    // Sans en-tête, la première ligne se collerait au haut de
+                    // la zone de défilement : on rend la marge que la cellule
+                    // apportait (voir le piège des marges portées par un
+                    // voisin, dans CLAUDE.md).
                     Color.clear.frame(height: 8)
                 }
                 // Lazy : ne construit que les lignes visibles à l'écran.

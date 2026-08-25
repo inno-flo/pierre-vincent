@@ -229,7 +229,6 @@ struct VueGalerie: View {
         // Source de la transition de zoom : la vignette s'agrandit pour
         // devenir la visionneuse, au lieu d'un remplacement sec.
         .modifier(SourceZoom(identifiant: o.id, espace: espaceZoom))
-        .publieCadreVignette(o.id)
         #endif
         #if os(macOS)
         // Sur Mac : un clic sélectionne, un double-clic sélectionne PUIS ouvre

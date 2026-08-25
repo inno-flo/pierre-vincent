@@ -189,7 +189,10 @@ enum Categorie: Hashable, Identifiable {
     /// sans que la feuille les distingue.
     var filtreParType: Bool {
         if case .reserveTheme = self { return true }
-        return self == .oeuvresDonnees
+        switch self {
+        case .oeuvresDonnees, .reserveInventaire, .reserveCollection: return true
+        default:                                                     return false
+        }
     }
 
     /// Modes de vente dont la vignette de galerie n'affiche PAS de ligne de
@@ -514,6 +517,7 @@ struct ContentView: View {
                                types: cat.types,
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
+                               filtreParType: cat.filtreParType,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
                     }

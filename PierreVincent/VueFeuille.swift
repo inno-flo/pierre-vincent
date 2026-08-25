@@ -673,6 +673,11 @@ struct VueFeuille: View {
             }
         }
         ToolbarSpacer(.fixed)
+        // Alternative aux pastilles du bandeau : même filtre, même état.
+        // En TÊTE de la capsule, avant les boutons de présentation.
+        if filtreParType {
+            ToolbarItem { menuFiltreType }
+        }
         ToolbarItem {
             Button {
                 modeAffichage = "liste"
@@ -728,6 +733,40 @@ struct VueFeuille: View {
         case "dimensions": return "ruler"
         default:           return "eurosign"
         }
+    }
+
+    /// Menu de filtre par type — alternative aux pastilles du bandeau.
+    ///
+    /// Les deux pilotent le MÊME état `typeRetenu` : changer l'un met l'autre
+    /// à jour, il n'y a pas deux filtres à tenir d'accord.
+    private var menuFiltreType: some View {
+        Menu {
+            Button {
+                typeRetenu = nil
+            } label: {
+                Label(typeRetenu == nil ? "✓ Tous" : "Tous",
+                      systemImage: "square.grid.2x2")
+                    .labelStyle(.titleAndIcon)
+            }
+            ForEach(typesFiltrables, id: \.mot) { t in
+                Button {
+                    typeRetenu = t.mot
+                } label: {
+                    Label(typeRetenu == t.mot ? "✓ \(t.libelle)" : t.libelle,
+                          systemImage: symboleType(t.mot))
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+        } label: {
+            // L'icône dit le filtre actif, comme celle du menu de tri.
+            Image(systemName: typeRetenu.map(symboleType) ?? "line.3.horizontal.decrease")
+        }
+        .help("Filtrer par type")
+    }
+
+    /// Symbole d'un type, repris de ceux de la barre latérale.
+    private func symboleType(_ mot: String) -> String {
+        mot == "tableau" ? "paintpalette" : "pencil.and.outline"
     }
 
     /// Menu de choix du critère de tri (galerie).

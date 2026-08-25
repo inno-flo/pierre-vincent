@@ -17,17 +17,17 @@ enum TransitionVisionneuse {
     case zoomSysteme
     case ressortMaison
 
-    /// Méthode en vigueur : **celle d'Apple**.
+    /// Méthode en vigueur : **le ressort maison**.
     ///
-    /// Le ressort maison a été essayé pour gagner en vitesse, puisque la
-    /// transition système ne laisse pas régler sa durée. Il ouvre bien depuis
-    /// la vignette, mais reste en deçà : l'agrandissement système est plus
-    /// fluide, et il apporte le geste de retour interactif — celui qui suit le
-    /// doigt à la fermeture.
+    /// Depuis que l'ouverture passe par le menu contextuel, le point de départ
+    /// n'est plus la vignette mais l'APERÇU du menu — une taille intermédiaire,
+    /// au centre de l'écran. La transition système, elle, repart toujours de la
+    /// vignette : elle rejouait donc un agrandissement déjà joué par le menu,
+    /// d'où deux mouvements superposés.
     ///
-    /// Le chemin `.ressortMaison` reste COMPLET dans le code : changer ce seul
-    /// mot y ramène. Ne pas le supprimer sans raison.
-    static let choisie: TransitionVisionneuse = .zoomSysteme
+    /// Le ressort part de l'aperçu et va au plein écran : un seul mouvement,
+    /// dans la continuité de ce que le doigt vient de faire.
+    static let choisie: TransitionVisionneuse = .ressortMaison
 
     static var estRessort: Bool { choisie == .ressortMaison }
 
@@ -50,33 +50,13 @@ enum TransitionVisionneuse {
     /// Ressort d'ouverture. Court et peu rebondissant : l'effet doit paraître
     /// vif, pas élastique.
     static let ressort: Animation = .spring(response: 0.32, dampingFraction: 0.78)
-}
 
-/// Cadres des vignettes visibles, en coordonnées écran, collectés pour que la
-/// visionneuse sache d'où partir.
-///
-/// Passe par une `PreferenceKey` et non par un `@State` écrit depuis la
-/// vignette : écrire un état pendant le calcul de la mise en page relance le
-/// rendu en boucle. Seules les vignettes réellement construites y figurent —
-/// les grilles sont paresseuses.
-struct CadresVignettes: PreferenceKey {
-    static let defaultValue: [UUID: CGRect] = [:]
-    static func reduce(value: inout [UUID: CGRect],
-                       nextValue: () -> [UUID: CGRect]) {
-        value.merge(nextValue()) { $1 }
-    }
-}
-
-extension View {
-    /// Publie le cadre de cette vignette, pour servir de point de départ.
-    func publieCadreVignette(_ identifiant: UUID) -> some View {
-        background(
-            GeometryReader { geo in
-                Color.clear.preference(key: CadresVignettes.self,
-                                       value: [identifiant: geo.frame(in: .global)])
-            }
-        )
-    }
+    /// Taille de l'aperçu du menu contextuel, en points.
+    ///
+    /// Sert DEUX fois : à dimensionner l'aperçu lui-même, et à donner à la
+    /// visionneuse son point de départ. Les deux doivent rester d'accord,
+    /// sinon l'agrandissement partirait d'une taille qu'on n'a jamais vue.
+    static let taillePreview = CGSize(width: 320, height: 420)
 }
 
 /// Applique la transition d'ouverture retenue, et elle seule.
@@ -158,7 +138,7 @@ struct InteractionApercu: UIViewRepresentable {
                 hote.view.backgroundColor = .black
                 // Sans taille préférée, l'aperçu prend la dimension
                 // intrinsèque de l'image — plusieurs milliers de points.
-                hote.preferredContentSize = CGSize(width: 320, height: 420)
+                hote.preferredContentSize = TransitionVisionneuse.taillePreview
                 return hote
             } actionProvider: { _ in
                 UIMenu(children: [

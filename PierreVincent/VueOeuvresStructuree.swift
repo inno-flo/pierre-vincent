@@ -50,9 +50,6 @@ struct VueOeuvresStructuree: View {
     // haptique conservé puis préparé au contact — un générateur neuf déclenche
     // à froid, ce qui se ressent comme un choc mou. Même patron que `VueiOS`.
     @State private var indexVisionneuse: Int?
-    // Cadres des vignettes visibles, pour que la visionneuse sache d'où
-    // partir quand la transition est faite à la main.
-    @State private var cadresVignettes: [UUID: CGRect] = [:]
     // Espace de la transition de zoom : la vignette pressée s'agrandit pour
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
@@ -296,7 +293,6 @@ struct VueOeuvresStructuree: View {
                 }
             }
         }
-        .onPreferenceChange(CadresVignettes.self) { cadresVignettes = $0 }
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: o.feuille == .oeuvresDonnees,
@@ -414,7 +410,6 @@ struct VueOeuvresStructuree: View {
                     selection = [o.id]
                     oeuvreADefiler = o.id
                 },
-                cadreDepart: cadresVignettes[oeuvresAvecPhoto[min(i, oeuvresAvecPhoto.count - 1)].id],
                 onFermer: { indexVisionneuse = nil })
             // Une seule des deux transitions s'applique. Avec le ressort
             // maison, on coupe AUSSI l'animation de présentation : sinon la
@@ -493,7 +488,6 @@ struct VueOeuvresStructuree: View {
 
         // Source de la transition de zoom vers la visionneuse.
         .matchedTransitionSource(id: o.id, in: espaceZoom)
-        .publieCadreVignette(o.id)
         // Tap et appui prolongé pris par une vue UIKit en overlay :
         // elle seule peut prévenir d'un tap sur l'aperçu du menu contextuel,
         // le geste de Photos, que SwiftUI n'expose pas.

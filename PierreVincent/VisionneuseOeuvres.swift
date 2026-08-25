@@ -20,9 +20,9 @@ struct VisionneuseOeuvres: View {
     /// liste en arrière-plan suive. Sans cela l'index reste enfermé ici
     /// (`@State`) et fermer la visionneuse ramenait sur l'œuvre de départ.
     var onNaviguer: (Oeuvre) -> Void = { _ in }
-    /// Cadre écran de la vignette d'où l'on vient, quand la transition est
-    /// faite à la main (`TransitionVisionneuse.ressortMaison`). Nul avec la
-    /// transition système, qui s'en charge elle-même.
+    /// Cadre de départ de l'agrandissement, s'il diffère de l'aperçu du menu.
+    /// Nul dans le cas courant : l'ouverture vient du menu contextuel, donc
+    /// d'un aperçu centré dont la taille est connue.
     var cadreDepart: CGRect? = nil
     let onFermer: () -> Void
 
@@ -63,14 +63,25 @@ struct VisionneuseOeuvres: View {
     }
 
     /// Échelle et décalage de l'ANIMATION D'OUVERTURE, distincts du zoom que
-    /// l'utilisateur applique ensuite. À l'état fermé, l'image est réduite et
-    /// déplacée pour coïncider avec la vignette de départ.
+    /// l'utilisateur applique ensuite.
+    ///
+    /// À l'état fermé, le contenu épouse **l'aperçu du menu contextuel** :
+    /// taille intermédiaire, au centre de l'écran. C'est de là que le doigt
+    /// vient de lâcher, et c'est donc de là que l'agrandissement doit partir —
+    /// non de la vignette, dont l'aperçu s'est déjà éloigné.
     private func ouvertureDepuisVignette(_ ecran: CGSize) -> (CGFloat, CGSize) {
         guard TransitionVisionneuse.estRessort, !ouverte,
-              let cadre = cadreDepart, ecran.width > 0, ecran.height > 0
+              ecran.width > 0, ecran.height > 0
         else { return (1, .zero) }
-        let facteur = min(cadre.width / ecran.width, cadre.height / ecran.height)
-        return (facteur,
+
+        // Sans cadre explicite, on part de l'aperçu : centré, donc sans
+        // décalage à appliquer.
+        guard let cadre = cadreDepart else {
+            let taille = TransitionVisionneuse.taillePreview
+            return (min(taille.width / ecran.width,
+                        taille.height / ecran.height), .zero)
+        }
+        return (min(cadre.width / ecran.width, cadre.height / ecran.height),
                 CGSize(width: cadre.midX - ecran.width / 2,
                        height: cadre.midY - ecran.height / 2))
     }
