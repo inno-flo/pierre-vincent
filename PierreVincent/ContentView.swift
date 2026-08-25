@@ -633,9 +633,10 @@ struct ContentView: View {
                             .id(cat)
                     } else if cat.estVenteRealisee {
                         // `estVenteRealisee` couvre AUSSI les sous-rubriques
-                        // de mode de vente, dont `typesFiltre` est vide : la
-                        // même ligne donne trois pastilles à Ventes et aucune
-                        // à Expositions ou Vente privée.
+                        // de mode de vente : la même ligne s'applique aux
+                        // trois, chacune recevant les pastilles que dit
+                        // `Categorie.typesFiltre` — trois pour Ventes et
+                        // Vente privée, deux pour Exposition.
                         VueOeuvresStructuree(modesVente: cat.modesVente,
                                              filtreParVendeur: cat.filtreParVendeur,
                                              estModeVentes: true,

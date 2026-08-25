@@ -784,6 +784,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   annoncerait un nombre introuvable à l'écran.
   Implémenté via `HStack` + `Spacer()` dans la fonction `lien()`, calculé
   par `compteurPourCategorie(_ cat:)`.
+  - **ESSAI VISUEL en cours** : dans la section Réserve (Favoris exclue), le
+    contour au repos est retiré — seul le fond plein de la sélection reste.
+    Piloté par `Categorie.estSectionReserve`, testé explicitement plutôt que
+    déduit de la feuille ou de l'accent : Favoris partage `.reserve` et le
+    bleu ardoise sans faire partie de la section, un test sur l'un ou l'autre
+    l'aurait donc incluse par erreur.
+    Même essai, même critère, sur le **compteur du bandeau de pastilles**
+    (`pastilleCompteur` dans `VueFeuille.swift`, `BandeauTypes` sur iOS) : les
+    pastilles de filtre gardent leur contour, qui dit qu'on peut cliquer
+    dessus — seul le chiffre en perd un.
 - **Filtre par vendeur — les DEUX plateformes.** `Categorie.filtreParVendeur`
   (booléen, adossé à `modesAvecFiltreVendeur`) dit où le filtre apparaît :
   bandeau de pastilles sur Mac, menu de barre d'outils sur iPhone. Les
