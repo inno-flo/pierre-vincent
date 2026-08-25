@@ -42,8 +42,13 @@ struct PierreVincentApp: App {
     }
 
     /// Arrangement de la barre latérale au lancement, identique sur les deux
-    /// plateformes : tout est déplié, sauf « Modes de vente » et le sous-groupe
-    /// « Catégories » de la Réserve.
+    /// plateformes : les DEUX GRANDS BLOCS sont dépliés, et les QUATRE
+    /// sous-groupes repliés — les deux « Catégories », « Modes de vente » et
+    /// « Thèmes ».
+    ///
+    /// L'ouverture montre ainsi les seules vues d'ensemble, une poignée de
+    /// rubriques au lieu d'une vingtaine. Les sous-groupes se déplient à la
+    /// demande.
     ///
     /// Écrit à CHAQUE lancement, et non posé comme simple valeur par défaut de
     /// `@AppStorage` : ces clés existent déjà chez qui a utilisé l'app, et une
@@ -54,10 +59,10 @@ struct PierreVincentApp: App {
         let reglages = UserDefaults.standard
         reglages.set(true,  forKey: "blocVentesOuvert")
         reglages.set(true,  forKey: "blocStockOuvert")
-        reglages.set(true,  forKey: "sousBlocCategoriesOuvert")
+        reglages.set(false, forKey: "sousBlocCategoriesOuvert")
         reglages.set(false, forKey: "sousBlocModesVenteOuvert")
         reglages.set(false, forKey: "sousBlocReserveCategoriesOuvert")
-        reglages.set(true,  forKey: "sousBlocReserveThemesOuvert")
+        reglages.set(false, forKey: "sousBlocReserveThemesOuvert")
     }
 
     /// Conteneur SwiftData : la base de données locale des œuvres.

@@ -129,6 +129,16 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
     contradictoire qu'aucune œuvre légitime ne peut porter et qui ne s'affiche
     nulle part. Une photo n'est effacée que si aucune œuvre conservée ne s'en
     sert.
+  - `rangerTapisDonnes` — **la rubrique Dons se définit par la FEUILLE, pas
+    par le statut.** Un tapis resté en « Tapis vendus » avec un statut
+    « Donné » n'y entrait donc jamais, et le filtre par type ne pouvait pas le
+    montrer faute de l'avoir dans sa liste ; l'éditeur ne propose aucun champ
+    pour changer de feuille, le correctif ne pouvait pas se faire à la main.
+    **Volontairement restreinte aux TAPIS**, alors que la contradiction
+    « statut Donné + feuille de vente » peut toucher n'importe quel type : un
+    balayage large aurait déplacé un nombre inconnu de tableaux et de dessins,
+    donc fait bouger plusieurs compteurs et le contenu des exports. Élargir la
+    portée demande une NOUVELLE passe, celle-ci ayant consommé son drapeau.
   - `purgerReserve` est **DÉBRANCHÉE** et doit le rester : écrite avant
     l'analyse d'un export, elle visait la feuille `.reserve`, c'est-à-dire la
     BONNE copie. La rebrancher détruirait la Réserve au premier lancement.
@@ -301,6 +311,19 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 
 ## Pièges déjà rencontrés (à ne pas refaire)
 
+- **Préchauffage des vignettes au lancement : ESSAYÉ, ABANDONNÉ.** Un cache de
+  vignettes sur disque (dossier « Vignettes », 640 px en HEIC) préparé en tâche
+  de fond dès l'ouverture, avec compteur et temps restant en pied de barre
+  latérale. Jugé à l'usage « plus de mal que de bien » et **entièrement
+  reverté** ; `CacheVignettes.swift` et `PhotoStore.swift` sont revenus à
+  l'identique. Ne pas le refaire sans une approche différente.
+  - Fait mesuré à retenir de l'essai : **un préchauffage en MÉMOIRE est hors
+    de portée.** Une vignette de galerie pèse près d'un mégaoctet une fois
+    décodée, et la base en compte plus d'un millier — plus d'un gigaoctet. Le
+    cache de `CacheVignettes` est un dictionnaire **sans borne** : il ne rend
+    jamais la mémoire, et parcourir un grand catalogue l'accumule déjà en
+    entier. C'est un point à traiter pour lui-même, indépendamment de tout
+    préchauffage.
 - **Animation galerie** : une tentative de recalcul du nombre de colonnes via
   `GeometryReader` + `onChange(largeur)` a **dégradé** le rendu (saccades au
   redimensionnement, vignettes qui se réordonnent de façon chaotique). **Abandonnée
@@ -433,6 +456,20 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     recouvre l'écran en permanence et intercepterait tous les touchers sans
     lui — l'app deviendrait impilotable. La scène est cherchée au premier
     affichage, pas à l'`init`, où elle n'existe pas encore.
+- **Un premier répondant sans vue de saisie fait remonter le CLAVIER.**
+  Sur iPhone, un appui prolongé sur une vignette ouvrait le clavier système en
+  même temps que l'aperçu du menu contextuel — alors que l'app ne contient
+  AUCUN champ de saisie. En cause, `ControleurSecousse` (`MasquagePrix.swift`),
+  seul premier répondant de l'app iOS : un `UIViewController` de taille nulle
+  qui prend le focus au seul titre de recevoir `motionEnded`. Le menu
+  contextuel présente son aperçu dans sa PROPRE fenêtre, le système réévalue
+  alors le premier répondant, et un contrôleur qui ne vend aucune vue de
+  saisie fait apparaître le clavier par défaut.
+  **Correctif** : `DetectionSecousse` suspend l'écoute le temps du menu et la
+  reprend ensuite — `InteractionApercu` prévient par `willDisplayMenuFor` et
+  `willEndFor`, la reprise passant par la complétion de l'animateur pour
+  couvrir TOUTES les issues, tap sur l'aperçu compris. Personne ne secoue son
+  téléphone pendant un appui prolongé : la fonction ne perd rien.
 - **`ObservableObject` et `@Published` réclament `import Combine`** depuis
   Swift 6 (`MemberImportVisibility`). Préférer le macro `@Observable`, qui
   n'en a pas besoin.
@@ -767,30 +804,47 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   puis sa valeur** — l'inverse se lisait mal, « Natures mortes carton 2 » seul
   ne disant pas de quel champ il relève. Même chose dans la liste iPhone ; le
   mode liste macOS a sa colonne dans `tableReserve`.
-- **macOS — bandeau de pastilles filtrant par TYPE, dans Dons**
-  (`Categorie.filtreParType`) : deux pastilles, Tableaux et Dessins, plus le
-  compteur. Même apparence et même `safeAreaInset` que le bandeau des
-  vendeurs, avec lequel il partage `bandeauFiltres`.
+- **Filtre par TYPE — trois pastilles, Tableaux · Dessins · Tapis**, sur les
+  deux plateformes. En place dans Catalogue, Ventes, Dons, et dans la Réserve.
+  - **La rubrique dit lesquelles elle propose** : `Categorie.typesFiltre`,
+    une LISTE de mots, qui a remplacé le booléen `filtreParType`. C'est ce qui
+    permet à la Réserve de n'en afficher que deux — il n'y reste aucun tapis
+    disponible, et une troisième pastille n'y filtrerait jamais que vers une
+    liste vide. Une liste vide = pas de filtre du tout ; c'est le cas des
+    sous-rubriques de mode de vente, qui ont déjà celui par vendeur.
+  - **Libellés, symboles et filtrage sont dans `TriEtTotaux.swift`**
+    (`motsTypesFiltrables`, `libelleTypeFiltrable`, `symboleTypeFiltrable`,
+    `filtrerParType`). Ils ont existé en DEUX exemplaires — un enum côté iOS,
+    une propriété privée dans `VueFeuille` — qui auraient divergé au premier
+    ajout : c'est exactement ce qui est arrivé au filet de sélection.
   - **Fixes, et non déduites des données** — contrairement aux pastilles de
     vendeur. Le champ `type` porte encore des libellés composés
     (« Tableau — huile sur toile ») : collecter les valeurs distinctes
-    donnerait des dizaines de pastilles, pas deux.
+    donnerait des dizaines de pastilles, pas trois.
   - Filtrage par **inclusion** du mot. Corollaire à garder en tête : une œuvre
-    dont le type ne nomme ni l'un ni l'autre n'est retenue par AUCUNE pastille,
-    et les deux comptes ne totalisent alors pas la rubrique. Sans filtre elle
-    reste visible, ce qui est l'état par défaut.
-- **iOS — pendant du filtre par type** (`BandeauTypes.swift`) : `BandeauTypes`
-  (les pastilles), `MenuFiltreTypes` (le menu de barre d'outils) et
-  `TypesFiltrables` (la liste des deux types, leurs symboles et la fonction
-  `filtrer`). Les deux commandes pilotent le **MÊME** état : il n'y a pas deux
-  filtres à tenir d'accord.
-  - **Écrit une seule fois** pour les deux vues qui en ont besoin — `VueiOS`
-    pour la Réserve, `VueDonsStructuree` pour les Dons —, chacune ayant son
-    propre rendu de vignettes : deux copies auraient divergé, comme cela s'est
-    déjà produit sur le filet de sélection.
-  - Corps **sémantiques** (`.subheadline`, `.caption`) et non des points,
-    contrairement au bandeau macOS : figer une taille casserait le Dynamic
-    Type.
+    dont le type n'en nomme aucun n'est retenue par AUCUNE pastille, et les
+    comptes ne totalisent alors pas la rubrique. Sans filtre elle reste
+    visible, ce qui est l'état par défaut.
+  - *macOS* : bandeau de pastilles, même apparence et même `safeAreaInset` que
+    celui des vendeurs, avec lequel il partage `bandeauFiltres`.
+  - *iOS* (`BandeauTypes.swift`) : `BandeauTypes` (les pastilles) et
+    `MenuFiltreTypes` (le menu de barre d'outils) pilotent le **MÊME** état —
+    il n'y a pas deux filtres à tenir d'accord. Corps **sémantiques**
+    (`.subheadline`, `.caption`) et non des points, contrairement au bandeau
+    macOS : figer une taille casserait le Dynamic Type.
+  - *iOS, trois vues à servir* : `VueiOS` (Réserve), `VueDonsStructuree`
+    (Dons) et `VueOeuvresStructuree` (Catalogue et Ventes), chacune ayant son
+    propre rendu de vignettes.
+    **Dans `VueOeuvresStructuree`, le filtre s'applique APRÈS `baseVentes`**,
+    d'où se déduisent les vendeurs du menu : les calculer sur une liste déjà
+    filtrée par type ferait disparaître des entrées, sans retour possible.
+    Même précaution que pour le filtre par vendeur.
+  - **L'icône du menu dit le CRITÈRE ACTIF**, exactement comme celle du menu
+    de tri : le type retenu quand il y en a un, et sinon celle de l'entrée
+    « Tous ». Cette dernière est **l'icône de la rubrique elle-même**
+    (`Categorie.symboleFiltreTous`) — « Tous » y désigne la rubrique entière.
+    Seuls les **thèmes** gardent la grille générique : leur icône vaut pour
+    TOUS les thèmes et ne distingue donc pas une rubrique d'une autre.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
@@ -941,10 +995,12 @@ JavaScript, inexploitables par extraction) :
   1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
 - **Sidebar — DÉROGATION assumée : aucune mémoire entre les sessions.**
   Une sidebar système mémorise ses blocs repliés ; celle-ci non.
-  `PierreVincentApp.arrangerSidebar()` **réécrit** les cinq clés à chaque
-  lancement — tout déplié, sauf « Modes de vente » et le sous-groupe
-  « Catégories » de la Réserve. Les replis faits à la main ne valent donc que
-  pour la session.
+  `PierreVincentApp.arrangerSidebar()` **réécrit** les six clés à chaque
+  lancement — les deux grands blocs dépliés, les **quatre sous-groupes
+  repliés** (les deux « Catégories », « Modes de vente », « Thèmes »).
+  L'ouverture montre ainsi les seules vues d'ensemble, six rubriques au lieu
+  d'une vingtaine. Les replis faits à la main ne valent donc que pour la
+  session.
   - **Ce n'est pas un oubli, ne pas « réparer »** en remettant la
     mémorisation. Décision prise le 22 août 2026.
   - Réécrire, et non poser des valeurs par défaut sur `@AppStorage` : un
@@ -1011,7 +1067,7 @@ JavaScript, inexploitables par extraction) :
     quoi la navigation clavier ↑↓ saute la rubrique, et la liste des
     **pastilles de comptage**, dont l'écart avec la vue avait déjà produit un
     « 9 » au-dessus d'une rubrique vide.
-  - `filtreParType` y reste **faux** : filtrer par type une rubrique déjà
+  - `typesFiltre` y reste **vide** : filtrer par type une rubrique déjà
     filtrée par type n'aurait pas de sens.
 
 - **Sous-catégories dynamiques par thème, dans la Réserve**
@@ -1055,6 +1111,14 @@ JavaScript, inexploitables par extraction) :
     au pluriel** dans `titre` ; la valeur stockée sur l'œuvre reste au
     singulier, et c'est elle que voient l'éditeur, l'inspecteur et le filtre.
 
+- **iOS — pas de récapitulatif dans Ventes** : sa seule ligne (« Nombre de
+  ventes ») annonçait un nombre que le compteur du bandeau de pastilles donne
+  déjà, juste en dessous. Le retrait est conditionné à la **présence du
+  bandeau** (`estModeVentes && !typesFiltre.isEmpty`) et non au seul mode
+  Ventes : les sous-rubriques de mode de vente partagent cette vue avec le même
+  `estModeVentes` mais n'ont pas de pastilles, et le nombre d'œuvres n'y
+  serait plus affiché nulle part. Le bandeau devient le premier élément et
+  porte ses propres 8 pt en haut, ceux qu'avait le récapitulatif.
 - **iOS — le récapitulatif défile avec le contenu** dans toutes les vues.
   Placé au-dessus du `ScrollView` (ce qu'il était dans `VueiOS`), il restait
   ancré et la barre de navigation ne prenait pas sa transparence. En mode

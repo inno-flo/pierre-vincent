@@ -309,6 +309,43 @@ enum RepriseDonnees {
         return compte
     }
 
+    /// Range dans la feuille « Œuvres données » les TAPIS dont le statut dit
+    /// « Donné ».
+    ///
+    /// **Pourquoi une passe est nécessaire.** La rubrique Dons se définit par
+    /// la FEUILLE, pas par le statut : un tapis resté en « Tapis vendus » avec
+    /// un statut « Donné » n'y entre jamais — et le filtre par type ne pouvait
+    /// donc pas le montrer, faute de l'avoir dans sa liste. L'éditeur ne
+    /// propose aucun champ pour changer de feuille, le correctif ne pouvait
+    /// pas se faire à la main.
+    ///
+    /// **Volontairement RESTREINTE AUX TAPIS**, alors que la contradiction
+    /// « statut Donné + feuille de vente » pourrait toucher n'importe quel
+    /// type. Un balayage large aurait déplacé un nombre inconnu de tableaux et
+    /// de dessins, donc fait bouger les compteurs de plusieurs rubriques et le
+    /// contenu des exports, sans qu'on puisse le vérifier avant. Étendre la
+    /// portée se fait en retirant le test sur le type — mais demande une
+    /// nouvelle passe, celle-ci ayant consommé son drapeau.
+    ///
+    /// Elle ÉCRASE la feuille, comme `remplirFeuilleReserve` : c'est tout son
+    /// objet. Rejouable sans danger — une fois la bascule faite, plus aucun
+    /// tapis ne porte la combinaison visée.
+    @discardableResult
+    @MainActor
+    static func rangerTapisDonnes(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes where o.feuille != .oeuvresDonnees
+            && o.statut.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare("Donné") == .orderedSame
+            && o.type.localizedCaseInsensitiveContains("tapis") {
+            o.feuille = .oeuvresDonnees
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
     /// Rattrape les œuvres au statut VIDE, invisibles dans toutes les vues.
     ///
     /// Cas rencontré après un import de photos sans mots-clés IPTC : l'œuvre

@@ -78,7 +78,14 @@ final class ControleurSecousse: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if !isFirstResponder { becomeFirstResponder() }
+        DetectionSecousse.controleur = self
+        reprendreEcoute()
+    }
+
+    /// Redevient premier répondant, sauf si l'écoute est suspendue.
+    func reprendreEcoute() {
+        guard !DetectionSecousse.suspendue, !isFirstResponder else { return }
+        becomeFirstResponder()
     }
 
     override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
@@ -86,6 +93,35 @@ final class ControleurSecousse: UIViewController {
         // Bascule l'état persistant : masqué <-> visible.
         let actuel = UserDefaults.standard.bool(forKey: MasquagePrix.cle)
         UserDefaults.standard.set(!actuel, forKey: MasquagePrix.cle)
+    }
+}
+
+/// Interrupteur de la détection de secousse.
+///
+/// **Pourquoi il existe.** `ControleurSecousse` est le SEUL premier répondant
+/// de l'app iOS : il n'affiche rien, il ne sert qu'à recevoir `motionEnded`.
+/// Or un menu contextuel présente son aperçu dans sa PROPRE fenêtre, et le
+/// système réévalue alors le premier répondant — un contrôleur qui ne vend
+/// aucune vue de saisie fait remonter le clavier système, qu'on voyait
+/// apparaître en même temps que l'aperçu.
+///
+/// On suspend donc l'écoute le temps du menu, puis on la reprend. Personne ne
+/// secoue son téléphone pendant un appui prolongé : la fonction ne perd rien.
+@MainActor
+enum DetectionSecousse {
+    fileprivate static weak var controleur: ControleurSecousse?
+    fileprivate private(set) static var suspendue = false
+
+    /// À appeler quand un menu contextuel s'affiche.
+    static func suspendre() {
+        suspendue = true
+        controleur?.resignFirstResponder()
+    }
+
+    /// À appeler quand il se referme.
+    static func reprendre() {
+        suspendue = false
+        controleur?.reprendreEcoute()
     }
 }
 

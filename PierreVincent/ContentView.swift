@@ -195,14 +195,39 @@ enum Categorie: Hashable, Identifiable {
     /// revenir sur tout ou partie des rubriques.
     var visionneuseIntegree: Bool { true }
 
-    /// Vrai si la rubrique propose un bandeau de pastilles filtrant par TYPE
-    /// d'œuvre (Tableaux / Dessins). Réservé aux Dons, qui mêlent les deux
-    /// sans que la feuille les distingue.
-    var filtreParType: Bool {
-        if case .reserveTheme = self { return true }
+    /// Symbole de l'entrée « Tous » du menu de filtre par type.
+    ///
+    /// **L'icône de la rubrique elle-même** : « Tous » y désigne la rubrique
+    /// entière, et son icône le dit mieux qu'une grille générique. Vaut aussi
+    /// pour le bouton du menu quand aucun type n'est retenu, exactement comme
+    /// l'icône du menu de tri suit le critère actif.
+    ///
+    /// Seuls les **thèmes** gardent la grille : leur icône est celle de TOUS
+    /// les thèmes (`paintbrush.pointed`), elle ne distingue pas une rubrique
+    /// d'une autre et ne dirait donc rien ici.
+    var symboleFiltreTous: String {
+        if case .reserveTheme = self { return "square.grid.2x2" }
+        return symbole
+    }
+
+    /// Pastilles de type proposées par la rubrique — vide = pas de filtre.
+    ///
+    /// Concerne les rubriques qui **mêlent plusieurs types** sans que la
+    /// feuille les distingue. Une rubrique déjà restreinte à un type
+    /// (Réserve › Dessins, Tableaux vendus…) n'en a évidemment pas besoin.
+    ///
+    /// **La Réserve n'en propose que DEUX** : il n'y reste aucun tapis
+    /// disponible, et une troisième pastille n'y filtrerait jamais que vers
+    /// une liste vide. Le jour où un tapis y entre, c'est ici qu'on l'ajoute.
+    var typesFiltre: [String] {
+        if case .reserveTheme = self { return ["tableau", "dessin"] }
         switch self {
-        case .oeuvresDonnees, .reserveInventaire, .reserveCollection: return true
-        default:                                                     return false
+        case .oeuvres, .ventesRealisees, .oeuvresDonnees:
+            return motsTypesFiltrables
+        case .reserveInventaire, .reserveCollection:
+            return ["tableau", "dessin"]
+        default:
+            return []
         }
     }
 
@@ -320,17 +345,20 @@ struct ContentView: View {
     @AppStorage("doublonsImportSupprimes") private var doublonsImportSupprimes = false
     // `collectionNormalisee` : le champ Collection personnelle devient binaire.
     @AppStorage("collectionNormalisee") private var collectionNormalisee = false
+    // `tapisDonnesRanges` : les tapis au statut « Donné » rejoignent la
+    // feuille des dons, seule façon pour eux d'apparaître dans la rubrique.
+    @AppStorage("tapisDonnesRanges") private var tapisDonnesRanges = false
     // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
     // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
-    // clés à chaque lancement — tout déplié, sauf « Modes de vente » et les
-    // « Catégories » de la Réserve. Les valeurs ci-dessous ne servent donc que
-    // de garde-fou, et suivent le même arrangement.
+    // clés à chaque lancement — les deux grands blocs dépliés, les quatre
+    // sous-groupes repliés. Les valeurs ci-dessous ne servent donc que de
+    // garde-fou, et suivent le même arrangement.
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
     @AppStorage("blocStockOuvert") private var blocStockOuvert = true
-    @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = true
+    @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = false
     @AppStorage("sousBlocModesVenteOuvert") private var sousBlocModesVenteOuvert = false
     @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = false
-    @AppStorage("sousBlocReserveThemesOuvert") private var sousBlocReserveThemesOuvert = true
+    @AppStorage("sousBlocReserveThemesOuvert") private var sousBlocReserveThemesOuvert = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
@@ -513,7 +541,8 @@ struct ContentView: View {
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
                                filtreParVendeur: cat.filtreParVendeur,
-                               filtreParType: cat.filtreParType,
+                               typesFiltre: cat.typesFiltre,
+                               symboleFiltreTous: cat.symboleFiltreTous,
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
                                nbSelection: $nbSelection)
@@ -529,17 +558,25 @@ struct ContentView: View {
                     // La vue « Œuvres » a une présentation structurée
                     // (récapitulatif + sections Ventes et Dons).
                     if cat == .oeuvres {
-                        VueOeuvresStructuree()
+                        VueOeuvresStructuree(typesFiltre: cat.typesFiltre,
+                                             symboleFiltreTous: cat.symboleFiltreTous)
                             .id(cat)
                     } else if cat.estVenteRealisee {
+                        // `estVenteRealisee` couvre AUSSI les sous-rubriques
+                        // de mode de vente, dont `typesFiltre` est vide : la
+                        // même ligne donne trois pastilles à Ventes et aucune
+                        // à Expositions ou Vente privée.
                         VueOeuvresStructuree(modesVente: cat.modesVente,
                                              filtreParVendeur: cat.filtreParVendeur,
                                              estModeVentes: true,
                                              titre: cat.titre,
-                                             nomEnGalerie: cat.nomEnGalerie)
+                                             nomEnGalerie: cat.nomEnGalerie,
+                                             typesFiltre: cat.typesFiltre,
+                                             symboleFiltreTous: cat.symboleFiltreTous)
                             .id(cat)
                     } else if cat == .oeuvresDonnees {
-                        VueDonsStructuree()
+                        VueDonsStructuree(typesFiltre: cat.typesFiltre,
+                                          symboleFiltreTous: cat.symboleFiltreTous)
                             .id(cat)
                     } else {
                         VueiOS(feuille: cat.feuille, titre: cat.titre,
@@ -549,7 +586,8 @@ struct ContentView: View {
                                types: cat.types,
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
-                               filtreParType: cat.filtreParType,
+                               typesFiltre: cat.typesFiltre,
+                               symboleFiltreTous: cat.symboleFiltreTous,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
                     }
@@ -643,6 +681,14 @@ struct ContentView: View {
             if !collectionNormalisee {
                 RepriseDonnees.normaliserCollectionPersonnelle(context: context)
                 collectionNormalisee = true
+            }
+
+            // Reprise ponctuelle : un tapis donné doit être dans la FEUILLE
+            // des dons, la rubrique se définissant par elle et non par le
+            // statut. Restreinte aux tapis, voir `rangerTapisDonnes`.
+            if !tapisDonnesRanges {
+                RepriseDonnees.rangerTapisDonnes(context: context)
+                tapisDonnesRanges = true
             }
 
             // Suppression des doublons d'import : feuille « Tableaux vendus »

@@ -15,6 +15,15 @@ import UIKit
 /// Un découpage par test d'appartenance doit toujours prévoir le reste, ou
 /// n'exister qu'une fois le champ garanti fermé (voir `typesOeuvre`).
 struct VueDonsStructuree: View {
+    /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
+    /// rubrique, voir `Categorie.typesFiltre` — elle en compte TROIS ici :
+    /// un tapis figure parmi les dons.
+    let typesFiltre: [String]
+    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
+    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
+    let symboleFiltreTous: String
+
+
     @Query private var toutes: [Oeuvre]
 
     @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
@@ -48,7 +57,7 @@ struct VueDonsStructuree: View {
         // celles encore disponibles relèvent de la section « Réserve ».
         let retenus = toutes.filter { $0.feuille == .oeuvresDonnees }
             .filter(estVenduOuDonne)
-        return trier(TypesFiltrables.filtrer(retenus, mot: typeRetenu))
+        return trier(filtrerParType(retenus, mot: typeRetenu))
     }
 
     /// Icône du bouton de menu selon le critère actif.
@@ -85,7 +94,8 @@ struct VueDonsStructuree: View {
                     // Le compteur du bandeau ferait double emploi avec le
                     // récapitulatif juste au-dessus, qui annonce déjà le
                     // nombre affiché : les deux comptent la même chose.
-                    BandeauTypes(typeRetenu: $typeRetenu,
+                    BandeauTypes(mots: typesFiltre,
+                                 typeRetenu: $typeRetenu,
                                  nombreAffiche: dons.count)
 
                     // --- 3. La liste, sans découpage ---
@@ -118,7 +128,9 @@ struct VueDonsStructuree: View {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
                     // Filtre par type, en TÊTE de la capsule.
-                    MenuFiltreTypes(typeRetenu: $typeRetenu)
+                    MenuFiltreTypes(mots: typesFiltre,
+                                    symboleTous: symboleFiltreTous,
+                                    typeRetenu: $typeRetenu)
                     Button { modeAffichage = "liste" } label: {
                         Image(systemName: "list.bullet")
                             .padding(6)

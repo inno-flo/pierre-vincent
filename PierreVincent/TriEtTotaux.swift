@@ -44,6 +44,51 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String],
 /// aucune rubrique de catégorie.
 let typesOeuvre: [String] = ["Dessin", "Tableau", "Tapis"]
 
+/// Pastilles de filtre par type : les mots cherchés dans le champ `type`, dans
+/// l'ordre d'affichage.
+///
+/// **Fixes, et non déduites des données** — contrairement aux pastilles de
+/// vendeur. Le champ `type` porte encore, sur les données anciennes, des
+/// libellés composés (« Tableau — huile sur toile ») : collecter les valeurs
+/// distinctes donnerait des dizaines de pastilles, pas trois.
+///
+/// La rubrique dit lesquelles elle propose (`Categorie.typesFiltre`) : la
+/// Réserve n'en affiche que deux, aucun tapis n'y étant disponible.
+let motsTypesFiltrables: [String] = ["tableau", "dessin", "tapis"]
+
+/// Libellé d'une pastille de type — au PLURIEL, comme les rubriques de la
+/// barre latérale. La valeur stockée sur l'œuvre reste au singulier.
+func libelleTypeFiltrable(_ mot: String) -> String {
+    switch mot {
+    case "tableau": return "Tableaux"
+    case "dessin":  return "Dessins"
+    case "tapis":   return "Tapis"
+    default:        return mot.capitalized
+    }
+}
+
+/// Symbole d'une pastille de type, repris de ceux de la barre latérale.
+func symboleTypeFiltrable(_ mot: String) -> String {
+    switch mot {
+    case "tableau": return "paintpalette"
+    case "dessin":  return "pencil.and.outline"
+    case "tapis":   return "square.grid.3x3.square"
+    default:        return "tag"
+    }
+}
+
+/// Applique le filtre par type. Test par **inclusion** : le champ peut être
+/// composé.
+///
+/// Corollaire à garder en tête : une œuvre dont le type ne nomme aucun des
+/// trois n'est retenue par AUCUNE pastille, et les comptes ne totalisent alors
+/// pas la rubrique. Sans filtre elle reste visible, ce qui est l'état par
+/// défaut.
+func filtrerParType(_ liste: [Oeuvre], mot: String?) -> [Oeuvre] {
+    guard let mot else { return liste }
+    return liste.filter { $0.type.localizedCaseInsensitiveContains(mot) }
+}
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

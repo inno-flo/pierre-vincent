@@ -23,15 +23,29 @@ struct VueOeuvresStructuree: View {
     /// Ligne de nom en tête de légende de vignette (fausse pour les enchères
     /// et les expositions, où l'acheteur ne renseigne pas).
     let nomEnGalerie: Bool
+    /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
+    /// rubrique, voir `Categorie.typesFiltre` : trois pour Catalogue et
+    /// Ventes, aucune pour les sous-rubriques de mode de vente, qui ont déjà
+    /// leur filtre par vendeur.
+    let typesFiltre: [String]
+    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
+    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
+    let symboleFiltreTous: String
 
+
+    // Cette vue déclare un init EXPLICITE : ajouter une propriété ne suffit
+    // pas à pouvoir la passer à l'appel, il faut aussi l'étendre ici.
     init(modesVente: [String] = [], filtreParVendeur: Bool = false,
          estModeVentes: Bool = false, titre: String = "Catalogue",
-         nomEnGalerie: Bool = true) {
+         nomEnGalerie: Bool = true, typesFiltre: [String] = [],
+         symboleFiltreTous: String = "square.grid.2x2") {
         self.modesVente = modesVente
         self.filtreParVendeur = filtreParVendeur
         self.estModeVentes = estModeVentes
         self.titre = titre
         self.nomEnGalerie = nomEnGalerie
+        self.typesFiltre = typesFiltre
+        self.symboleFiltreTous = symboleFiltreTous
     }
 
     @Query private var toutes: [Oeuvre]
@@ -57,6 +71,9 @@ struct VueOeuvresStructuree: View {
 
 
     @State private var vendeurFiltre: String = "Tout"
+    // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
+    // c'est un filtre de consultation, pas un réglage.
+    @State private var typeRetenu: String?
 
     // Identifiants d'ancrage pour le défilement vers une section.
     private let ancreVentes = "ancre-ventes"
@@ -133,14 +150,17 @@ struct VueOeuvresStructuree: View {
                 $0.vendeur.caseInsensitiveCompare(vendeurFiltre) == .orderedSame
             }
         }
-        return trier(base)
+        // Après le filtre par vendeur, et surtout après `baseVentes`, d'où se
+        // déduisent les vendeurs du menu : les calculer sur une liste déjà
+        // filtrée par type ferait disparaître des entrées.
+        return trier(filtrerParType(base, mot: typeRetenu))
     }
 
     /// Œuvres données (masquées en mode « filtre modeVente »).
     private var dons: [Oeuvre] {
         let base = toutes.filter { $0.feuille == .oeuvresDonnees }
             .filter(estVenduOuDonne)
-        return trier(base)
+        return trier(filtrerParType(base, mot: typeRetenu))
     }
 
     /// Applique le tri choisi (prix décroissant, ou acheteur alphabétique).
@@ -181,6 +201,17 @@ struct VueOeuvresStructuree: View {
                     // --- 1. En-tête récapitulatif ---
                     recapitulatif(proxy: proxy)
 
+                    // --- 1 bis. Filtre par type ---
+                    // Rendu DANS la zone de défilement, comme le
+                    // récapitulatif : ancré au-dessus, la barre de navigation
+                    // perdrait sa translucidité.
+                    if !typesFiltre.isEmpty {
+                        BandeauTypes(mots: typesFiltre,
+                                     typeRetenu: $typeRetenu,
+                                     nombreAffiche: ventes.count
+                                                  + (estModeVentes ? 0 : dons.count))
+                    }
+
                     // --- 2. Section Ventes ---
                     // En mode Inventaire, le titre distingue la section "Ventes" des "Œuvres données".
                     // En mode Ventes, il est redondant avec le titre de navigation → masqué.
@@ -219,6 +250,13 @@ struct VueOeuvresStructuree: View {
             // Regroupés dans un HStack pour maîtriser l'espacement.
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
+
+                // 0. Filtre par type, en TÊTE de la capsule.
+                if !typesFiltre.isEmpty {
+                    MenuFiltreTypes(mots: typesFiltre,
+                                    symboleTous: symboleFiltreTous,
+                                    typeRetenu: $typeRetenu)
+                }
 
                 // 1. Vue Liste.
                 Button {
@@ -314,7 +352,18 @@ struct VueOeuvresStructuree: View {
 
     /// Deux lignes « Ventes » et « Œuvres données » avec leur nombre.
     /// Un tap fait défiler la vue jusqu'à la section correspondante.
+    /// Vrai quand le récapitulatif n'a plus rien à apprendre : en mode Ventes,
+    /// sa seule ligne annonce un nombre que le compteur du bandeau de
+    /// pastilles donne déjà, juste en dessous.
+    ///
+    /// Les sous-rubriques de mode de vente, elles, n'ont PAS de bandeau
+    /// (`typesFiltre` y est vide) : elles gardent leur ligne, faute de quoi
+    /// le nombre d'œuvres ne s'afficherait plus nulle part.
+    private var recapInutile: Bool { estModeVentes && !typesFiltre.isEmpty }
+
+    @ViewBuilder
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {
+        if !recapInutile {
         VStack(spacing: 0) {
             ligneRecap(titre: estModeVentes ? "Nombre de ventes" : "Ventes",
                        nombre: ventes.count) {
@@ -331,6 +380,7 @@ struct VueOeuvresStructuree: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        }
     }
 
     private func ligneRecap(titre: String, nombre: Int,

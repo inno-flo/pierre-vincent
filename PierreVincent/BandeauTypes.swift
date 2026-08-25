@@ -1,8 +1,8 @@
 #if os(iOS)
 import SwiftUI
 
-/// Bandeau de pastilles filtrant par TYPE d'œuvre — Tableaux, Dessins — avec
-/// le compteur des œuvres affichées à droite.
+/// Bandeau de pastilles filtrant par TYPE d'œuvre — Tableaux, Dessins, Tapis —
+/// avec le compteur des œuvres affichées à droite.
 ///
 /// Pendant iPhone du `bandeauFiltres` de `VueFeuille` (macOS), même apparence :
 /// contour orange au repos, fond orange plein et texte blanc une fois retenu.
@@ -17,6 +17,10 @@ struct BandeauTypes: View {
     /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
     @Environment(\.accentRubrique) private var accent
 
+    /// Pastilles à proposer, décidées par la rubrique (`Categorie.typesFiltre`)
+    /// et non par cette vue : la Réserve n'en veut que deux, « Ventes et
+    /// dons » les trois.
+    let mots: [String]
     /// Mot cherché dans le champ `type`, ou nil si aucun filtre.
     @Binding var typeRetenu: String?
     /// Nombre d'œuvres réellement affichées, filtre appliqué.
@@ -24,8 +28,8 @@ struct BandeauTypes: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(TypesFiltrables.tous, id: \.mot) { t in
-                pastille(libelle: t.libelle, mot: t.mot)
+            ForEach(mots, id: \.self) { mot in
+                pastille(libelle: libelleTypeFiltrable(mot), mot: mot)
             }
             Spacer()
             compteur
@@ -71,33 +75,11 @@ struct BandeauTypes: View {
     }
 }
 
-/// Les deux pastilles proposées, et le mot cherché dans le champ `type`.
-///
-/// **Fixes, et non déduites des données** — contrairement aux pastilles de
-/// vendeur. Le champ `type` porte encore, sur les données anciennes, des
-/// libellés composés (« Tableau — huile sur toile ») : collecter les valeurs
-/// distinctes donnerait des dizaines de pastilles, pas deux.
-enum TypesFiltrables {
-    static let tous: [(libelle: String, mot: String)] = [
-        ("Tableaux", "tableau"),
-        ("Dessins", "dessin"),
-    ]
-
-    /// Symbole d'un type, repris de ceux de la barre latérale.
-    static func symbole(_ mot: String) -> String {
-        mot == "tableau" ? "paintpalette" : "pencil.and.outline"
-    }
-
-    /// Applique le filtre. Test par **inclusion** : le type peut être composé.
-    ///
-    /// Corollaire à garder en tête : une œuvre dont le type ne nomme ni l'un ni
-    /// l'autre n'est retenue par AUCUNE pastille, et les deux comptes ne
-    /// totalisent alors pas la rubrique.
-    static func filtrer(_ liste: [Oeuvre], mot: String?) -> [Oeuvre] {
-        guard let mot else { return liste }
-        return liste.filter { $0.type.localizedCaseInsensitiveContains(mot) }
-    }
-}
+// Les pastilles elles-mêmes — libellés, symboles et fonction de filtrage —
+// vivent dans `TriEtTotaux.swift` (`motsTypesFiltrables`,
+// `libelleTypeFiltrable`, `symboleTypeFiltrable`, `filtrerParType`), avec le
+// reste des prédicats partagés : le bandeau macOS de `VueFeuille` s'en sert
+// aussi, et ce fichier est réservé à iOS.
 
 /// Menu de filtre par type, pour la barre d'outils — **alternative** aux
 /// pastilles du bandeau.
@@ -109,6 +91,12 @@ struct MenuFiltreTypes: View {
     /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
     @Environment(\.accentRubrique) private var accent
 
+    /// Mêmes pastilles que le bandeau : les deux commandes proposent
+    /// exactement les mêmes entrées.
+    let mots: [String]
+    /// Symbole de l'entrée « Tous » — l'icône de la rubrique dans les deux
+    /// Catalogue, la grille générique ailleurs.
+    var symboleTous: String = "square.grid.2x2"
     @Binding var typeRetenu: String?
 
     var body: some View {
@@ -117,20 +105,24 @@ struct MenuFiltreTypes: View {
                 typeRetenu = nil
             } label: {
                 Label(typeRetenu == nil ? "✓ Tous" : "Tous",
-                      systemImage: "square.grid.2x2")
+                      systemImage: symboleTous)
             }
-            ForEach(TypesFiltrables.tous, id: \.mot) { t in
+            ForEach(mots, id: \.self) { mot in
+                let libelle = libelleTypeFiltrable(mot)
                 Button {
-                    typeRetenu = t.mot
+                    typeRetenu = mot
                 } label: {
-                    Label(typeRetenu == t.mot ? "✓ \(t.libelle)" : t.libelle,
-                          systemImage: TypesFiltrables.symbole(t.mot))
+                    Label(typeRetenu == mot ? "✓ \(libelle)" : libelle,
+                          systemImage: symboleTypeFiltrable(mot))
                 }
             }
         } label: {
-            // L'icône dit le filtre actif, comme celle du menu de tri.
-            Image(systemName: typeRetenu.map(TypesFiltrables.symbole)
-                              ?? "line.3.horizontal.decrease")
+            // L'icône dit le CRITÈRE ACTIF, exactement comme celle du menu
+            // de tri : le type retenu quand il y en a un, et sinon l'icône de
+            // l'entrée « Tous » — donc celle de la rubrique dans les deux
+            // Catalogue.
+            Image(systemName: typeRetenu.map(symboleTypeFiltrable)
+                              ?? symboleTous)
         }
     }
 }

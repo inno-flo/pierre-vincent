@@ -19,7 +19,13 @@ struct VueiOS: View {
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
     let collectionSeule: Bool      // ne recenser que la collection personnelle
-    let filtreParType: Bool        // bandeau de pastilles Tableaux / Dessins
+    /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
+    /// rubrique, voir `Categorie.typesFiltre`.
+    let typesFiltre: [String]
+    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
+    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
+    let symboleFiltreTous: String
+
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
@@ -28,7 +34,8 @@ struct VueiOS: View {
          types: [String] = [],
          themes: [String] = [],
          collectionSeule: Bool = false,
-         filtreParType: Bool = false,
+         typesFiltre: [String] = [],
+         symboleFiltreTous: String = "square.grid.2x2",
          visionneuseIntegree: Bool = false) {
         self.feuille = feuille
         self.titre = titre
@@ -38,7 +45,8 @@ struct VueiOS: View {
         self.types = types
         self.themes = themes
         self.collectionSeule = collectionSeule
-        self.filtreParType = filtreParType
+        self.typesFiltre = typesFiltre
+        self.symboleFiltreTous = symboleFiltreTous
         self.visionneuseIntegree = visionneuseIntegree
     }
 
@@ -93,7 +101,7 @@ struct VueiOS: View {
             correspond($0, statuts: statuts, types: types, themes: themes,
                        collectionSeule: collectionSeule)
         }
-        return TypesFiltrables.filtrer(retenues, mot: typeRetenu)
+        return filtrerParType(retenues, mot: typeRetenu)
     }
 
     /// Vendeurs réellement présents dans la rubrique, par ordre alphabétique.
@@ -180,12 +188,13 @@ struct VueiOS: View {
     /// barre de navigation garde sa translucidité. Ancré au-dessus, elle
     /// deviendrait pleine.
     private var entete: AnyView? {
-        guard recapVisible || filtreParType else { return nil }
+        guard recapVisible || !typesFiltre.isEmpty else { return nil }
         return AnyView(
             VStack(spacing: 0) {
                 if recapVisible { recapCell }
-                if filtreParType {
-                    BandeauTypes(typeRetenu: $typeRetenu,
+                if !typesFiltre.isEmpty {
+                    BandeauTypes(mots: typesFiltre,
+                                 typeRetenu: $typeRetenu,
                                  nombreAffiche: oeuvresGalerie.count)
                 }
             }
@@ -311,8 +320,10 @@ struct VueiOS: View {
                 HStack(spacing: 8) {
 
                 // 0. Filtre par type, en TÊTE de la capsule.
-                if filtreParType {
-                    MenuFiltreTypes(typeRetenu: $typeRetenu)
+                if !typesFiltre.isEmpty {
+                    MenuFiltreTypes(mots: typesFiltre,
+                                    symboleTous: symboleFiltreTous,
+                                    typeRetenu: $typeRetenu)
                 }
 
                 // 1. Vue Liste.

@@ -22,7 +22,13 @@ struct VueFeuille: View {
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
     let collectionSeule: Bool      // ne recenser que la collection personnelle
     let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
-    let filtreParType: Bool        // bandeau de pastilles filtrant par type
+    /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
+    /// rubrique, voir `Categorie.typesFiltre`.
+    let typesFiltre: [String]
+    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
+    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
+    let symboleFiltreTous: String
+
     let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
     let visionneuseIntegree: Bool  // barre d'espace : visionneuse maison au lieu de Quick Look
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
@@ -35,7 +41,8 @@ struct VueFeuille: View {
          themes: [String] = [],
          collectionSeule: Bool = false,
          filtreParVendeur: Bool = false,
-         filtreParType: Bool = false,
+         typesFiltre: [String] = [],
+         symboleFiltreTous: String = "square.grid.2x2",
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
          nbSelection: Binding<Int>) {
@@ -48,7 +55,8 @@ struct VueFeuille: View {
         self.themes = themes
         self.collectionSeule = collectionSeule
         self.filtreParVendeur = filtreParVendeur
-        self.filtreParType = filtreParType
+        self.typesFiltre = typesFiltre
+        self.symboleFiltreTous = symboleFiltreTous
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
         self._nbSelection = nbSelection
@@ -166,14 +174,11 @@ struct VueFeuille: View {
     /// le type ne nomme ni l'un ni l'autre n'est retenue par AUCUNE des deux
     /// pastilles. Sans filtre, elle reste visible — c'est l'état par défaut.
     private func appliquerFiltreType(_ liste: [Oeuvre]) -> [Oeuvre] {
-        guard let t = typeRetenu else { return liste }
-        return liste.filter { $0.type.localizedCaseInsensitiveContains(t) }
+        filtrerParType(liste, mot: typeRetenu)
     }
 
-    /// Les deux pastilles de type des Dons : libellé affiché, mot cherché.
-    private var typesFiltrables: [(libelle: String, mot: String)] {
-        [("Tableaux", "tableau"), ("Dessins", "dessin")]
-    }
+    /// Vrai si la rubrique affiche le bandeau et le menu de filtre par type.
+    private var filtreParType: Bool { !typesFiltre.isEmpty }
 
     /// Vendeurs présents dans la rubrique, pour construire les pastilles.
     ///
@@ -750,29 +755,32 @@ struct VueFeuille: View {
                 typeRetenu = nil
             } label: {
                 Label(typeRetenu == nil ? "✓ Tous" : "Tous",
-                      systemImage: "square.grid.2x2")
+                      systemImage: symboleFiltreTous)
                     .labelStyle(.titleAndIcon)
             }
-            ForEach(typesFiltrables, id: \.mot) { t in
+            ForEach(typesFiltre, id: \.self) { mot in
+                let libelle = libelleTypeFiltrable(mot)
                 Button {
-                    typeRetenu = t.mot
+                    typeRetenu = mot
                 } label: {
-                    Label(typeRetenu == t.mot ? "✓ \(t.libelle)" : t.libelle,
-                          systemImage: symboleType(t.mot))
+                    Label(typeRetenu == mot ? "✓ \(libelle)" : libelle,
+                          systemImage: symboleTypeFiltrable(mot))
                         .labelStyle(.titleAndIcon)
                 }
             }
         } label: {
-            // L'icône dit le filtre actif, comme celle du menu de tri.
-            Image(systemName: typeRetenu.map(symboleType) ?? "line.3.horizontal.decrease")
+            // L'icône dit le CRITÈRE ACTIF, exactement comme celle du menu
+            // de tri : le type retenu quand il y en a un, et sinon l'icône de
+            // l'entrée « Tous » — donc celle de la rubrique dans les deux
+            // Catalogue. Un symbole de filtre générique ne disait rien de
+            // l'état courant.
+            Image(systemName: typeRetenu.map(symboleTypeFiltrable)
+                              ?? symboleFiltreTous)
         }
         .help("Filtrer par type")
     }
 
-    /// Symbole d'un type, repris de ceux de la barre latérale.
-    private func symboleType(_ mot: String) -> String {
-        mot == "tableau" ? "paintpalette" : "pencil.and.outline"
-    }
+
 
     /// Menu de choix du critère de tri (galerie).
     private var menuTri: some View {
@@ -987,8 +995,9 @@ struct VueFeuille: View {
                         }
                     }
                     if filtreParType {
-                        ForEach(typesFiltrables, id: \.mot) { t in
-                            pastilleType(libelle: t.libelle, mot: t.mot)
+                        ForEach(typesFiltre, id: \.self) { mot in
+                            pastilleType(libelle: libelleTypeFiltrable(mot),
+                                         mot: mot)
                         }
                     }
                 }
@@ -1054,7 +1063,7 @@ struct VueFeuille: View {
         .help(retenu ? "Afficher tous les vendeurs" : "N'afficher que « \(vendeur) »")
     }
 
-    /// Pastille de type des Dons — même apparence que celle de vendeur.
+    /// Pastille de type — même apparence que celle de vendeur.
     private func pastilleType(libelle: String, mot: String) -> some View {
         let retenu = typeRetenu?.caseInsensitiveCompare(mot) == .orderedSame
         return Button {
