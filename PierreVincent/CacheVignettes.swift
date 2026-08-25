@@ -43,11 +43,20 @@ final class CacheVignettes {
         let url = PhotoStore.dossierPhotos.appendingPathComponent(nom)
         let cotePixels = cote * 2   // un peu plus fin que l'affichage (écrans Retina)
 
-        Task.detached(priority: .userInitiated) {
+        // File SÉRIE dédiée, et non `Task.detached` : en galerie, des dizaines
+        // de vignettes sont demandées d'un coup. Autant de tâches détachées
+        // saturent le vivier coopératif, et Xcode signale alors un risque de
+        // blocage — « priority inversion », un fil de priorité haute attendant
+        // un fil de priorité plus basse. Une file sérialisée à une seule
+        // qualité de service supprime le mélange.
+        //
+        // Conséquence voulue : les vignettes se préparent l'une après l'autre,
+        // dans l'ordre où elles ont été demandées, donc de haut en bas.
+        Self.filePreparation.async {
             let vignette = preserverRatio
                 ? Self.fabriquerVignetteRatio(url: url, coteMaxPixels: cotePixels)
                 : Self.fabriquerVignette(url: url, cotePixels: cotePixels)
-            await MainActor.run {
+            Task { @MainActor in
                 self.enCours.remove(cle)
                 if let v = vignette {
                     self.cache[cle] = v
@@ -56,6 +65,13 @@ final class CacheVignettes {
             }
         }
     }
+
+    /// File unique de fabrication des vignettes.
+    ///
+    /// `nonisolated` : elle est touchée depuis le fil principal comme depuis
+    /// elle-même, et n'a pas à passer par l'acteur principal.
+    nonisolated private static let filePreparation = DispatchQueue(
+        label: "PierreVincent.vignettes", qos: .userInitiated)
 
     /// Renvoie une vignette déjà en cache si présente (sans en déclencher).
     func vignettePrete(nom: String, preserverRatio: Bool = false) -> ImagePlateforme? {
