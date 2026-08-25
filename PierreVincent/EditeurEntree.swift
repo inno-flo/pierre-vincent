@@ -64,6 +64,7 @@ struct EditeurEntree: View {
     @State private var destinataire = ""
     @State private var statut = ""
     @State private var theme = ""
+    @State private var collectionPersonnelle = ""
     @State private var lieuStockage = ""
     @State private var emplacement = ""
     @State private var remarques = ""
@@ -267,6 +268,10 @@ struct EditeurEntree: View {
         destinataire = pourSaisie(o.destinataire)
         statut       = pourSaisie(o.statut)
         theme        = pourSaisie(o.theme)
+        // Normalisé à la LECTURE aussi : une valeur ancienne ou vide doit
+        // trouver son équivalent dans le menu, sinon celui-ci s'ouvre sans
+        // sélection.
+        collectionPersonnelle = normaliserCollectionPersonnelle(o.collectionPersonnelle)
         lieuStockage = pourSaisie(o.lieuStockage)
         emplacement  = pourSaisie(o.emplacement)
         remarques    = pourSaisie(o.remarques)
@@ -291,7 +296,8 @@ struct EditeurEntree: View {
     /// Concatène tous les champs : sert à comparer l'état courant à l'initial.
     private var instantaneCourant: String {
         [photoNom, type, dimensions, format, vendeur, modeVente,
-         acheteur, date, destinataire, statut, theme, lieuStockage, emplacement,
+         acheteur, date, destinataire, statut, theme,
+         collectionPersonnelle, lieuStockage, emplacement,
          remarques, prixTexte].joined(separator: "␟")
     }
 
@@ -321,6 +327,7 @@ struct EditeurEntree: View {
         o.destinataire = pourBase(destinataire)
         o.statut       = pourBase(statut)
         o.theme        = pourBase(theme)
+        o.collectionPersonnelle = normaliserCollectionPersonnelle(collectionPersonnelle)
         o.lieuStockage = pourBase(lieuStockage)
         o.emplacement  = pourBase(emplacement)
         o.remarques    = pourBase(remarques)
@@ -380,12 +387,7 @@ struct EditeurEntree: View {
     private var blocSuivi: some View {
         champTexte("Statut", $statut, champ: .statut)
         champTexte("Thème", $theme, champ: .theme)
-        // En LECTURE SEULE : la valeur est posée à l'import par les mots-clés
-        // « à garder », et la saisir à la main ferait diverger la base de ce
-        // que disent les fichiers.
-        champLectureSeule("Collection personnelle",
-                          oeuvre.collectionPersonnelle.isEmpty
-                          ? "Non" : oeuvre.collectionPersonnelle)
+        champCollectionPersonnelle()
         // Modifiable, contrairement à « Collection personnelle » : c'est un
         // renseignement de rangement, qu'on peut vouloir corriger à la main
         // comme l'emplacement juste en dessous.
@@ -418,6 +420,25 @@ struct EditeurEntree: View {
         var choix = typesOeuvre
         if !type.isEmpty, !choix.contains(type) { choix.insert(type, at: 0) }
         return choix
+    }
+
+    /// Champ Collection personnelle : menu à DEUX valeurs.
+    ///
+    /// Modifiable — l'import le renseigne d'après les mots-clés « à garder »,
+    /// mais on doit pouvoir le corriger. Un menu fermé plutôt qu'une saisie
+    /// libre : le champ est binaire, et le filtre de la rubrique repose sur
+    /// l'égalité exacte avec « Oui ».
+    private func champCollectionPersonnelle() -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Collection personnelle")
+                .font(.body).fontWeight(.bold).foregroundStyle(.secondary)
+            Picker("", selection: $collectionPersonnelle) {
+                Text(valeurCollectionPersonnelle).tag(valeurCollectionPersonnelle)
+                Text(valeurHorsCollection).tag(valeurHorsCollection)
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+        }
     }
 
     /// Champ Type : menu déroulant et non saisie libre, pour garantir la règle

@@ -82,10 +82,8 @@ enum CleColonne {
     /// Vrai si cette colonne est éditable directement au clavier (pas la photo).
     var editable: Bool {
         switch self {
-        // La photo ne se saisit pas au clavier, et la collection personnelle
-        // vient des mots-clés de l'import : la modifier à la main ferait
-        // diverger la base de ce que disent les fichiers.
-        case .photo, .collectionPersonnelle: return false
+        // Seule la photo ne se saisit pas au clavier.
+        case .photo: return false
         default:                             return true
         }
     }

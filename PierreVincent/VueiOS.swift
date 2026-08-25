@@ -464,16 +464,18 @@ struct VueiOS: View {
                                                 .lineLimit(1)
                                         }
                                     } else if o.feuille == .reserve {
-                                        // Réserve : l'emplacement remplace le
+                                        // Réserve : le rangement remplace le
                                         // couple acheteur / prix. L'intitulé
                                         // vient EN PREMIER, en gris, la valeur
                                         // ensuite — seule, elle ne dit pas de
-                                        // quel champ elle relève.
-                                        Text("Emplacement")
+                                        // quel champ elle relève. Le champ
+                                        // montré dépend du type, voir
+                                        // `rangementVignette`.
+                                        Text(rangementVignette(o).intitule)
                                             .font(.subheadline)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
-                                        Text(afficher(o.emplacement))
+                                        Text(rangementVignette(o).valeur)
                                             .font(.headline).lineLimit(1)
                                     } else if !o.destinataire.isEmpty {
                                         Text(o.destinataire)

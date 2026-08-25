@@ -119,6 +119,11 @@ enum ImportPhotos {
                                              nomFichier: nomFichier,
                                              sur: oeuvre)
 
+            // Le champ est binaire : sans mot-clé « à garder », c'est « Non »
+            // et non un vide, qui laisserait un troisième état à l'affichage.
+            oeuvre.collectionPersonnelle =
+                normaliserCollectionPersonnelle(oeuvre.collectionPersonnelle)
+
             // Filet : sans mot-clé de statut, l'œuvre resterait avec un statut
             // vide et n'apparaîtrait dans aucune rubrique (voir
             // `statutParDefautImport`). Les photos prises à l'atelier ne

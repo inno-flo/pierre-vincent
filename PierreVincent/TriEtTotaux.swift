@@ -48,6 +48,34 @@ let typesOeuvre: [String] = ["Dessin", "Tableau", "Tapis"]
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"
 
+/// Champ de rangement à montrer sur la vignette d'une œuvre de la Réserve :
+/// son intitulé et sa valeur.
+///
+/// **Un tableau ne se range pas comme un dessin.** Les dessins sont classés
+/// par carton, d'où l'emplacement ; les tableaux, eux, sont simplement
+/// entreposés quelque part, et c'est le lieu de stockage qui renseigne.
+///
+/// Défini ICI et non dans chaque vignette : la galerie et la liste iPhone ont
+/// leur propre rendu, et deux copies auraient divergé.
+func rangementVignette(_ o: Oeuvre) -> (intitule: String, valeur: String) {
+    o.type.localizedCaseInsensitiveContains("tableau")
+        ? ("Lieu de stockage", afficher(o.lieuStockage))
+        : ("Emplacement", afficher(o.emplacement))
+}
+
+/// Valeur du champ quand l'œuvre n'en relève pas.
+let valeurHorsCollection = "Non"
+
+/// Ramène le champ à l'une des DEUX valeurs admises.
+///
+/// Tout ce qui n'est pas « Oui » vaut « Non » : le champ est binaire, et un
+/// vide ou une saisie approximative ne doivent pas créer un troisième état.
+func normaliserCollectionPersonnelle(_ valeur: String) -> String {
+    valeur.trimmingCharacters(in: .whitespacesAndNewlines)
+        .caseInsensitiveCompare(valeurCollectionPersonnelle) == .orderedSame
+        ? valeurCollectionPersonnelle : valeurHorsCollection
+}
+
 /// Vrai si l'œuvre relève de la collection personnelle.
 func estEnCollectionPersonnelle(_ o: Oeuvre) -> Bool {
     o.collectionPersonnelle.caseInsensitiveCompare(valeurCollectionPersonnelle) == .orderedSame

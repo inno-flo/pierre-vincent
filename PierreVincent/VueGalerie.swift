@@ -171,7 +171,8 @@ struct VueGalerie: View {
                     // valeur — l'inverse se lisait mal, la valeur seule
                     // (« Natures mortes carton 2 ») ne disant pas de quoi il
                     // s'agit tant qu'on n'a pas lu la ligne suivante.
-                    Text("Emplacement")
+                    // Le champ montré dépend du type : voir `rangementVignette`.
+                    Text(rangementVignette(o).intitule)
                         .font(policeLegende)
                         .foregroundStyle(Color.texteLegende.opacity(0.6))
                         .lineLimit(1)
@@ -197,7 +198,7 @@ struct VueGalerie: View {
                             .foregroundStyle(Color.texteLegende.opacity(0.6))
                     } else if o.feuille == .reserve {
                         // La valeur, sous son intitulé.
-                        Text(afficher(o.emplacement))
+                        Text(rangementVignette(o).valeur)
                             .foregroundStyle(Color.texteLegende)
                             .lineLimit(1)
                         Spacer()

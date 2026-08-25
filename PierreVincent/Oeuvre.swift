@@ -261,6 +261,27 @@ enum RepriseDonnees {
         return compte
     }
 
+    /// Ramène `collectionPersonnelle` à « Oui » ou « Non ».
+    ///
+    /// Les œuvres entrées avant l'existence du champ, ou avant qu'il ne
+    /// devienne binaire, portent un vide — qui s'affichait « Inconnu ». Le
+    /// champ n'admet que deux réponses ; il n'y a pas d'état intermédiaire.
+    @discardableResult
+    @MainActor
+    static func normaliserCollectionPersonnelle(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes {
+            let voulu = PierreVincent.normaliserCollectionPersonnelle(o.collectionPersonnelle)
+            if o.collectionPersonnelle != voulu {
+                o.collectionPersonnelle = voulu
+                compte += 1
+            }
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
     /// Convertit le statut « À garder » en « Disponible ».
     ///
     /// La table de correspondance de l'import fait désormais converger les six

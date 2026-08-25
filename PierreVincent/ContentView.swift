@@ -307,6 +307,8 @@ struct ContentView: View {
     @AppStorage("reservePurgee") private var reservePurgee = false
     // `doublonsImportSupprimes` : suppression des doublons d'un import répété.
     @AppStorage("doublonsImportSupprimes") private var doublonsImportSupprimes = false
+    // `collectionNormalisee` : le champ Collection personnelle devient binaire.
+    @AppStorage("collectionNormalisee") private var collectionNormalisee = false
     // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
     // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
     // clés à chaque lancement — tout déplié, sauf « Modes de vente » et les
@@ -624,6 +626,12 @@ struct ContentView: View {
             if !aGarderConverti {
                 RepriseDonnees.convertirAGarderEnDisponible(context: context)
                 aGarderConverti = true
+            }
+
+            // Reprise ponctuelle : « Oui » ou « Non », jamais un vide.
+            if !collectionNormalisee {
+                RepriseDonnees.normaliserCollectionPersonnelle(context: context)
+                collectionNormalisee = true
             }
 
             // Suppression des doublons d'import : feuille « Tableaux vendus »
