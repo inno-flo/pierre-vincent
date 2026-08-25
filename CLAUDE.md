@@ -465,11 +465,19 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   contextuel présente son aperçu dans sa PROPRE fenêtre, le système réévalue
   alors le premier répondant, et un contrôleur qui ne vend aucune vue de
   saisie fait apparaître le clavier par défaut.
-  **Correctif** : `DetectionSecousse` suspend l'écoute le temps du menu et la
-  reprend ensuite — `InteractionApercu` prévient par `willDisplayMenuFor` et
-  `willEndFor`, la reprise passant par la complétion de l'animateur pour
-  couvrir TOUTES les issues, tap sur l'aperçu compris. Personne ne secoue son
-  téléphone pendant un appui prolongé : la fonction ne perd rien.
+  **Première correction, qui a AGGRAVÉ le mal** : suspendre l'écoute le temps
+  du menu, puis la reprendre. Rétablir le premier répondant après chaque menu
+  le rendait actif bien plus souvent qu'avant, et le clavier s'est mis à
+  surgir à l'ouverture de **n'importe quel menu de barre d'outils** — un
+  défaut qui n'existait pas. Toute présentation fait réévaluer le premier
+  répondant, pas seulement un menu contextuel.
+  **Correctif retenu** : la détection ne passe plus par la chaîne des
+  répondants du tout. `DetecteurSecousse` (`MasquagePrix.swift`) lit
+  l'accéléromètre via **CoreMotion** — seuil 2,2 g, une bascule par seconde au
+  plus — et l'app n'a désormais **AUCUN premier répondant**, ce qui supprime
+  la cause au lieu de la contourner. Ne pas réintroduire de `UIViewController`
+  premier répondant pour capter un événement : c'est le montage qui a produit
+  les deux défauts.
 - **`ObservableObject` et `@Published` réclament `import Combine`** depuis
   Swift 6 (`MemberImportVisibility`). Préférer le macro `@Observable`, qui
   n'en a pas besoin.
@@ -807,11 +815,19 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - **Filtre par TYPE — trois pastilles, Tableaux · Dessins · Tapis**, sur les
   deux plateformes. En place dans Catalogue, Ventes, Dons, et dans la Réserve.
   - **La rubrique dit lesquelles elle propose** : `Categorie.typesFiltre`,
-    une LISTE de mots, qui a remplacé le booléen `filtreParType`. C'est ce qui
-    permet à la Réserve de n'en afficher que deux — il n'y reste aucun tapis
-    disponible, et une troisième pastille n'y filtrerait jamais que vers une
-    liste vide. Une liste vide = pas de filtre du tout ; c'est le cas des
-    sous-rubriques de mode de vente, qui ont déjà celui par vendeur.
+    une LISTE de mots, qui a remplacé le booléen `filtreParType`. Une liste
+    vide = pas de filtre du tout.
+    - La **Réserve** n'en affiche que deux : il n'y reste aucun tapis
+      disponible, et une troisième pastille n'y filtrerait jamais que vers une
+      liste vide.
+    - **Expositions** non plus, pour la même raison — aucun tapis n'y a été
+      exposé. Le test porte sur la valeur STOCKÉE, au singulier
+      (« Exposition ») ; « Expositions » n'est qu'un rendu de `titre`, et
+      comparer dessus ne retiendrait jamais rien.
+    - Les **modes de vente** ont les trois, comme Ventes dont ils sont des
+      sous-ensembles, et cumulent donc DEUX filtres — vendeur puis type. Les
+      vendeurs se calculent toujours AVANT, sinon en retenir un ferait
+      disparaître les autres.
   - **Libellés, symboles et filtrage sont dans `TriEtTotaux.swift`**
     (`motsTypesFiltrables`, `libelleTypeFiltrable`, `symboleTypeFiltrable`,
     `filtrerParType`). Ils ont existé en DEUX exemplaires — un enum côté iOS,
@@ -839,9 +855,13 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     d'où se déduisent les vendeurs du menu : les calculer sur une liste déjà
     filtrée par type ferait disparaître des entrées, sans retour possible.
     Même précaution que pour le filtre par vendeur.
+  - **Le libellé de l'entrée sans filtre est « Tout »**, dans le menu de type
+    comme dans celui des vendeurs : les deux menus d'une même barre d'outils
+    l'annonçaient avec deux mots différents. Les identifiants gardent leur nom
+    (`symboleFiltreTous`), qui désigne l'icône et non le libellé.
   - **L'icône du menu dit le CRITÈRE ACTIF**, exactement comme celle du menu
     de tri : le type retenu quand il y en a un, et sinon celle de l'entrée
-    « Tous ». Cette dernière est **l'icône de la rubrique elle-même**
+    « Tout ». Cette dernière est **l'icône de la rubrique elle-même**
     (`Categorie.symboleFiltreTous`), sans exception — « Tous » y désigne la
     rubrique entière. Les cinq rubriques de Thèmes reçoivent donc le même
     `paintbrush.pointed` : il ne les distingue pas entre elles, mais il dit
@@ -871,6 +891,13 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - `oeuvres` et `oeuvresGalerie` dérivent d'un `baseRubrique` commun. Les
     vendeurs présents s'y calculent **avant** le filtre : après, retenir une
     pastille ferait disparaître toutes les autres, sans retour possible.
+  - **Sur iPhone, une SEULE vue le sert : `VueOeuvresStructuree`.**
+    `Categorie.filtreParVendeur` n'est vrai que pour un mode de vente, et ce
+    cas part vers elle par `estVenteRealisee`. `VueiOS` en avait une seconde
+    copie, qui ne s'affichait donc JAMAIS — et divergeait déjà de celle qui
+    vit, faute d'être vue. Supprimée, avec le paramètre `filtreParVendeur` de
+    cette vue ; un commentaire dit sur place pourquoi il n'y en a pas, sans
+    quoi la prochaine lecture y verra un oubli.
 - **Champ « Image »** en fin d'inspecteur et d'éditeur : poids, définition et
   nom du fichier stocké, via `PhotoStore.infosImage`. Sert à vérifier que la
   compression a tenu ses 450 Ko. Dans l'éditeur il est en lecture seule et
@@ -1018,16 +1045,36 @@ JavaScript, inexploitables par extraction) :
   ▼ VENTES ET DONS               ▼ RÉSERVE
        Catalogue                      Catalogue
        Ventes                         Collection personnelle
-       Dons                         ▼ Catégories
-       Synthèse                          Tableaux
-     ▼ Modes de vente                    Dessins
-          Expositions               ▼ Thèmes
-          Ventes aux enchères            …déduits des données
+       Dons                         ▼ Thèmes
+       Synthèse                          …déduits des données
+     ▼ Modes de vente               ▼ Catégories
+          Expositions                    Tableaux
+          Ventes aux enchères            Dessins
           Vente privée
-          …tout mode inédit
+          …tout mode inédit           Favoris
      ▼ Catégories
           Tableaux · Dessins · Tapis
   ```
+
+  - **Thèmes avant Catégories dans la Réserve**, l'inverse de « Ventes et
+    dons » : c'est le thème qui range les cartons. `categoriesSidebar` doit
+    suivre le MÊME ordre, sans quoi ↑↓ sauterait d'une rubrique à l'autre
+    dans un ordre que rien à l'écran n'explique.
+  - **Favoris est une rubrique ISOLÉE**, dans sa propre section sans en-tête
+    ni repli, détachée des deux blocs : un favori pourra venir de l'un comme
+    de l'autre. Elle ne dépend d'aucun repli et figure donc toujours dans
+    `categoriesSidebar`.
+    - **Vide pour l'instant, et c'est sa liste de `statuts` VIDE qui l'y
+      tient** : `correspond` exige que le statut de l'œuvre figure dans cette
+      liste, qu'aucune ne satisfait quand elle est vide. Plus franc que d'y
+      afficher tout le catalogue en attendant.
+    - Sa `feuille` vaut `.reserve` **par provision**, pour hériter de la vue
+      du Catalogue de la Réserve — pas de récapitulatif, pas de prix, pas de
+      menu de tri, tout cela se déduisant de la feuille. **À revoir** le jour
+      où le champ « favori » existera : la rubrique devra devenir une vue
+      agrégée (`nil`) filtrée sur ce champ. Conséquence en attendant : le
+      bouton « Ajouter » de macOS y créerait une œuvre en Réserve, invisible
+      aussitôt.
 
   - Deux grands blocs **repliables**, avec leurs sous-groupes. Le premier
     niveau réunit les **vues d'ensemble**, les sous-groupes les **types
@@ -1112,14 +1159,20 @@ JavaScript, inexploitables par extraction) :
     au pluriel** dans `titre` ; la valeur stockée sur l'œuvre reste au
     singulier, et c'est elle que voient l'éditeur, l'inspecteur et le filtre.
 
-- **iOS — pas de récapitulatif dans Ventes** : sa seule ligne (« Nombre de
-  ventes ») annonçait un nombre que le compteur du bandeau de pastilles donne
-  déjà, juste en dessous. Le retrait est conditionné à la **présence du
-  bandeau** (`estModeVentes && !typesFiltre.isEmpty`) et non au seul mode
-  Ventes : les sous-rubriques de mode de vente partagent cette vue avec le même
-  `estModeVentes` mais n'ont pas de pastilles, et le nombre d'œuvres n'y
-  serait plus affiché nulle part. Le bandeau devient le premier élément et
-  porte ses propres 8 pt en haut, ceux qu'avait le récapitulatif.
+- **iOS — pas de récapitulatif dans Ventes ni dans Dons** : leur seule ligne
+  (« Nombre de ventes », « Nombre de dons ») annonçait un nombre que le
+  compteur du bandeau de pastilles donne déjà, à côté. Le bandeau devient le
+  premier élément et porte ses propres 8 pt en haut, ceux qu'avait le
+  récapitulatif.
+  - Dans Ventes, le retrait est conditionné à la **présence du bandeau**
+    (`estModeVentes && !typesFiltre.isEmpty`) et non au seul mode Ventes : les
+    sous-rubriques de mode de vente partagent cette vue avec le même
+    `estModeVentes`. Elles n'avaient pas de pastilles quand la règle a été
+    écrite — elles en ont depuis, et perdent donc leur ligne elles aussi.
+  - **Dans Catalogue, les capsules sont AU-DESSUS du récapitulatif** : le
+    filtre d'abord, ce qu'il donne ensuite. Le récapitulatif porte depuis lors
+    sa propre marge basse, que le bandeau lui donnait tant qu'il le suivait —
+    encore un cas de marge tenue par le voisin.
 - **iOS — le récapitulatif défile avec le contenu** dans toutes les vues.
   Placé au-dessus du `ScrollView` (ce qu'il était dans `VueiOS`), il restait
   ancré et la barre de navigation ne prenait pas sa transparence. En mode

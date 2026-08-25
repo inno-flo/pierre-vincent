@@ -289,12 +289,20 @@ struct VueOeuvresStructuree: View {
                 // 3. Filtre vendeur (vue Ventes) ou critère de tri standard.
                 if filtreParVendeur {
                     Menu {
+                        // « Tout » porte l'icône de la RUBRIQUE, même
+                        // convention que le « Tous » du menu de type : il y
+                        // désigne la rubrique entière. Les entrées de vendeur
+                        // prennent la leur dans la même famille que l'icône du
+                        // bouton (`person.3` / `person.fill`), sans quoi une
+                        // seule ligne du menu serait illustrée.
                         Button { vendeurFiltre = "Tout" } label: {
-                            Text(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout")
+                            Label(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout",
+                                  systemImage: symboleFiltreTous)
                         }
                         ForEach(vendeursPresents, id: \.self) { vendeur in
                             Button { vendeurFiltre = vendeur } label: {
-                                Text(vendeurFiltre == vendeur ? "✓ \(vendeur)" : vendeur)
+                                Label(vendeurFiltre == vendeur ? "✓ \(vendeur)" : vendeur,
+                                      systemImage: "person")
                             }
                         }
                     } label: {

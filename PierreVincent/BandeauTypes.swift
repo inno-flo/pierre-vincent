@@ -104,7 +104,7 @@ struct MenuFiltreTypes: View {
             Button {
                 typeRetenu = nil
             } label: {
-                Label(typeRetenu == nil ? "✓ Tous" : "Tous",
+                Label(typeRetenu == nil ? "✓ Tout" : "Tout",
                       systemImage: symboleTous)
             }
             ForEach(mots, id: \.self) { mot in

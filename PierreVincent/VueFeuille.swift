@@ -754,7 +754,7 @@ struct VueFeuille: View {
             Button {
                 typeRetenu = nil
             } label: {
-                Label(typeRetenu == nil ? "✓ Tous" : "Tous",
+                Label(typeRetenu == nil ? "✓ Tout" : "Tout",
                       systemImage: symboleFiltreTous)
                     .labelStyle(.titleAndIcon)
             }

@@ -14,7 +14,6 @@ struct VueiOS: View {
     let feuille: Feuille?
     let titre: String
     let modesVente: [String]
-    let filtreParVendeur: Bool     // filtre par vendeur au lieu du menu de tri
     let statuts: [String]          // statuts recensés par la rubrique
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
@@ -29,7 +28,6 @@ struct VueiOS: View {
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
-         filtreParVendeur: Bool = false,
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          themes: [String] = [],
@@ -40,7 +38,6 @@ struct VueiOS: View {
         self.feuille = feuille
         self.titre = titre
         self.modesVente = modesVente
-        self.filtreParVendeur = filtreParVendeur
         self.statuts = statuts
         self.types = types
         self.themes = themes
@@ -64,8 +61,6 @@ struct VueiOS: View {
     @State private var detail: Oeuvre?
     // Œuvre vers laquelle défiler à la fermeture de la fiche Détails.
     @State private var oeuvreADefiler: UUID?
-    // Filtre vendeur actif (uniquement quand filtreParVendeur est vrai).
-    @State private var vendeurFiltre: String = "Tout"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
     // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
@@ -78,11 +73,7 @@ struct VueiOS: View {
 
 
     /// Œuvres retenues par la rubrique (feuille, mode de vente, statut, type),
-    /// AVANT le filtre par vendeur et avant tri.
-    ///
-    /// Mis en commun pour que `vendeursPresents` se calcule sur la rubrique
-    /// entière : après le filtre, retenir un vendeur ferait disparaître tous
-    /// les autres du menu, sans retour possible.
+    /// avant tri.
     private var baseRubrique: [Oeuvre] {
         var base: [Oeuvre]
         if let f = feuille {
@@ -103,37 +94,9 @@ struct VueiOS: View {
         }
         return filtrerParType(retenues, mot: typeRetenu)
     }
-
-    /// Vendeurs réellement présents dans la rubrique, par ordre alphabétique.
-    ///
-    /// **Déduits des données, aucune liste en dur.** Le menu proposait quatre
-    /// entrées figées, dont « RempART » et « Vente privée », qui n'ont rien
-    /// vendu aux enchères : elles filtraient donc vers une liste vide. Un lieu
-    /// inédit obtient au contraire son entrée dès qu'une œuvre le porte.
-    /// Les valeurs vides et « Inconnu » sont écartées.
-    private var vendeursPresents: [String] {
-        var vus: [String: String] = [:]
-        for o in baseRubrique {
-            let brut = o.vendeur.trimmingCharacters(in: .whitespacesAndNewlines)
-            let cle = brut.lowercased()
-            guard !brut.isEmpty,
-                  brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
-                  vus[cle] == nil else { continue }
-            vus[cle] = brut
-        }
-        return vus.values.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    }
-
-    /// Applique le filtre par vendeur. La comparaison porte sur le seul champ
-    /// Vendeur : les entrées du menu en sont issues.
-    private func appliquerFiltreVendeur(_ liste: [Oeuvre]) -> [Oeuvre] {
-        guard filtreParVendeur, vendeurFiltre != "Tout" else { return liste }
-        return liste.filter { $0.vendeur.caseInsensitiveCompare(vendeurFiltre) == .orderedSame }
-    }
-
     /// Œuvres de cette catégorie, filtrées et triées.
     private var oeuvres: [Oeuvre] {
-        appliquerFiltreVendeur(baseRubrique).sorted(using: tri)
+        baseRubrique.sorted(using: tri)
     }
 
     private var estFeuilleDon: Bool { feuille == .oeuvresDonnees }
@@ -146,7 +109,7 @@ struct VueiOS: View {
 
     /// Œuvres triées pour la galerie, selon le critère choisi (prix ou acheteur).
     private var oeuvresGalerie: [Oeuvre] {
-        let base = appliquerFiltreVendeur(baseRubrique)
+        let base = baseRubrique
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille (ex. prix dans les dons,
         // dimensions dans les tapis).
@@ -277,9 +240,6 @@ struct VueiOS: View {
 
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
-        if filtreParVendeur {
-            return vendeurFiltre == "Tout" ? "person.3" : "person.fill"
-        }
         switch triGalerie {
         case "acheteur":   return "person"
         case "dimensions": return "ruler"
@@ -352,27 +312,15 @@ struct VueiOS: View {
                 }
                 .buttonStyle(.plain)
 
-                // 3. Filtre vendeur (Ventes réalisées) ou critère de tri standard.
-                if filtreParVendeur {
-                    // Mode filtre par vendeur : Tout + chaque vendeur de la liste.
-                    Menu {
-                        Button {
-                            vendeurFiltre = "Tout"
-                        } label: {
-                            Label(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout",
-                                  systemImage: "tray.full")
-                        }
-                        ForEach(vendeursPresents, id: \.self) { vendeur in
-                            Button {
-                                vendeurFiltre = vendeur
-                            } label: {
-                                Text(vendeurFiltre == vendeur ? "✓ \(vendeur)" : vendeur)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: iconeMenu)
-                    }
-                } else if feuille != .reserve {
+                // 3. Critère de tri.
+                //
+                // PAS de filtre par vendeur ici : cette vue ne sert QUE les
+                // rubriques par type et la Réserve. `Categorie.filtreParVendeur`
+                // n'est vrai que pour un mode de vente, et ce cas part vers
+                // `VueOeuvresStructuree` par `estVenteRealisee`. La branche qui
+                // s'était écrite ici ne s'affichait donc jamais — et divergeait
+                // déjà de celle qui vit, faute d'être vue.
+                if feuille != .reserve {
                     // Mode tri standard : Prix, Acheteur, Dimensions.
                     // Absent de la Réserve : ces œuvres n'ont ni prix ni
                     // acheteur, et le menu n'y proposerait que Dimensions.

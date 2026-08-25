@@ -92,9 +92,13 @@ struct VueDonsStructuree: View {
                     // donne déjà, juste à droite. Même retrait que dans la
                     // vue Ventes. Le bandeau devient donc le premier élément
                     // et porte ses propres 8 pt en haut.
-                    BandeauTypes(mots: typesFiltre,
-                                 typeRetenu: $typeRetenu,
-                                 nombreAffiche: dons.count)
+                    // Gardé comme dans les deux autres vues : sans pastille
+                    // à proposer, le bandeau ne montrerait qu'un compteur.
+                    if !typesFiltre.isEmpty {
+                        BandeauTypes(mots: typesFiltre,
+                                     typeRetenu: $typeRetenu,
+                                     nombreAffiche: dons.count)
+                    }
 
                     // --- 2. La liste, sans découpage ---
                     // Marge haute portée ICI, par la cellule qui en a besoin :
@@ -125,10 +129,14 @@ struct VueDonsStructuree: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
-                    // Filtre par type, en TÊTE de la capsule.
-                    MenuFiltreTypes(mots: typesFiltre,
-                                    symboleTous: symboleFiltreTous,
-                                    typeRetenu: $typeRetenu)
+                    // Filtre par type, en TÊTE de la capsule — gardé comme
+                    // dans les deux autres vues : une rubrique passée à zéro
+                    // type y afficherait sinon un menu vide.
+                    if !typesFiltre.isEmpty {
+                        MenuFiltreTypes(mots: typesFiltre,
+                                        symboleTous: symboleFiltreTous,
+                                        typeRetenu: $typeRetenu)
+                    }
                     Button { modeAffichage = "liste" } label: {
                         Image(systemName: "list.bullet")
                             .padding(6)

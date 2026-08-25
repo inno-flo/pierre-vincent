@@ -650,7 +650,6 @@ struct ContentView: View {
                     } else {
                         VueiOS(feuille: cat.feuille, titre: cat.titre,
                                modesVente: cat.modesVente,
-                               filtreParVendeur: cat.filtreParVendeur,
                                statuts: cat.statuts,
                                types: cat.types,
                                themes: cat.themes,
