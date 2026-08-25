@@ -49,7 +49,6 @@ struct VueDonsStructuree: View {
     // navigation faite dans la fiche de détail (même mécanisme que VueiOS).
     @State private var oeuvreADefiler: UUID?
 
-    private let ancreDons = "ancre-dons"
 
     /// Tous les dons, triés.
     private var dons: [Oeuvre] {
@@ -87,27 +86,26 @@ struct VueDonsStructuree: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
 
-                    // --- 1. Bloc récapitulatif ---
-                    recapitulatif(proxy: proxy)
-
-                    // --- 2. Filtre par type ---
-                    // Le compteur du bandeau ferait double emploi avec le
-                    // récapitulatif juste au-dessus, qui annonce déjà le
-                    // nombre affiché : les deux comptent la même chose.
+                    // --- 1. Filtre par type ---
+                    // PAS de récapitulatif : sa seule ligne (« Nombre de
+                    // dons ») annonçait le nombre que le compteur du bandeau
+                    // donne déjà, juste à droite. Même retrait que dans la
+                    // vue Ventes. Le bandeau devient donc le premier élément
+                    // et porte ses propres 8 pt en haut.
                     BandeauTypes(mots: typesFiltre,
                                  typeRetenu: $typeRetenu,
                                  nombreAffiche: dons.count)
 
-                    // --- 3. La liste, sans découpage ---
-                    // Marge haute portée ICI : elle l'était par le titre de
-                    // section (`padding(.top, 24)`), disparu avec le découpage
-                    // par type, et le récapitulatif s'est retrouvé collé à la
-                    // première rangée. Avec les 8 pt du récapitulatif, on
-                    // retrouve les 24 pt de `VueiOS`, où la grille apporte les
-                    // siens depuis `VueGalerie`.
+                    // --- 2. La liste, sans découpage ---
+                    // Marge haute portée ICI, par la cellule qui en a besoin :
+                    // elle l'était par le titre de section (`padding(.top,
+                    // 24)`), disparu avec le découpage par type, et le contenu
+                    // s'est alors retrouvé collé à ce qui le précède. Avec les
+                    // 8 pt du bas du bandeau, on retrouve les 24 pt de
+                    // `VueiOS`, où la grille apporte les siens depuis
+                    // `VueGalerie`.
                     contenuSection(dons)
                         .padding(.top, 16)
-                        .id(ancreDons)
                 }
                 .padding(.bottom, 30)
             }
@@ -191,42 +189,6 @@ struct VueDonsStructuree: View {
                           oeuvreADefiler = stable.id
                       })
         }
-    }
-
-    // MARK: Récapitulatif
-
-    private func recapitulatif(proxy: ScrollViewProxy) -> some View {
-        VStack(spacing: 0) {
-            ligneRecap(titre: "Nombre de dons", nombre: dons.count) {
-                withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
-            }
-        }
-        .background(Color.fondLegende)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        // Même marge basse que `recapCell` dans `VueiOS` : le récapitulatif
-        // doit respirer, quoi qu'il y ait dessous.
-        .padding(.bottom, 8)
-    }
-
-    private func ligneRecap(titre: String, nombre: Int,
-                            action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Text(titre)
-                    .font(.headline)
-                    .foregroundStyle(Color.texteLegende)
-                Spacer()
-                Text("\(nombre)")
-                    .font(.headline.bold())
-                    .foregroundStyle(Color.orangeInternational)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: Sections

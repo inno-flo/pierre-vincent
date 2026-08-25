@@ -198,10 +198,7 @@ struct VueOeuvresStructuree: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
 
-                    // --- 1. En-tête récapitulatif ---
-                    recapitulatif(proxy: proxy)
-
-                    // --- 1 bis. Filtre par type ---
+                    // --- 1. Filtre par type, DIRECTEMENT sous le titre ---
                     // Rendu DANS la zone de défilement, comme le
                     // récapitulatif : ancré au-dessus, la barre de navigation
                     // perdrait sa translucidité.
@@ -212,7 +209,12 @@ struct VueOeuvresStructuree: View {
                                                   + (estModeVentes ? 0 : dons.count))
                     }
 
-                    // --- 2. Section Ventes ---
+                    // --- 2. Récapitulatif, SOUS les capsules ---
+                    // Les deux lignes Ventes et Dons se lisent après le filtre
+                    // qui les détermine, et non avant.
+                    recapitulatif(proxy: proxy)
+
+                    // --- 3. Section Ventes ---
                     // En mode Inventaire, le titre distingue la section "Ventes" des "Œuvres données".
                     // En mode Ventes, il est redondant avec le titre de navigation → masqué.
                     // L'ancre invisible garantit que le scroll du recap fonctionne dans les deux modes.
@@ -224,7 +226,7 @@ struct VueOeuvresStructuree: View {
                         .id(ancreVentes)
                     contenuSection(ventes, estDon: false)
 
-                    // --- 3. Section Œuvres données (masquée en mode filtre) ---
+                    // --- 4. Section Œuvres données (masquée en mode filtre) ---
                     if !estModeVentes {
                         titreSection("Dons")
                             .id(ancreDons)
@@ -380,6 +382,9 @@ struct VueOeuvresStructuree: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        // Marge basse portée ICI, par la cellule qui en a besoin : c'était le
+        // bandeau qui la tenait quand il suivait, et il le précède désormais.
+        .padding(.bottom, 8)
         }
     }
 

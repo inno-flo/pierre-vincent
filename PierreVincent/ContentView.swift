@@ -20,6 +20,11 @@ enum Categorie: Hashable, Identifiable {
     case reserveDessins   // Réserve : dessins encore disponibles
     case reserveTableaux  // Réserve : tableaux encore disponibles
     case reserveCollection // Réserve : œuvres rangées en collection personnelle
+    /// Rubrique isolée, sous la Réserve et hors de toute section : les œuvres
+    /// mises en favori. **Vide pour l'instant** — le champ qui les marquera
+    /// n'existe pas encore, et l'entrée « Ajouter aux favoris » du menu
+    /// contextuel iPhone reste inerte.
+    case favoris
     /// Sous-catégorie de la Réserve : un thème précis. Même principe que
     /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
     /// variable de rubriques déduites des données (voir `themesPresents`).
@@ -44,6 +49,7 @@ enum Categorie: Hashable, Identifiable {
         case .reserveDessins:   return "Dessins"
         case .reserveTableaux:  return "Tableaux"
         case .reserveCollection: return "Collection personnelle"
+        case .favoris:          return "Favoris"
         // Rendu au pluriel — et « Portraits » pour « Personnage » — comme les
         // modes de vente plus bas : la valeur STOCKÉE sur l'œuvre ne change
         // pas, c'est elle que voient l'éditeur, l'inspecteur et le filtre.
@@ -84,6 +90,8 @@ enum Categorie: Hashable, Identifiable {
         case .reserveDessins:   return "pencil.and.outline"
         case .reserveTableaux:  return "paintpalette"
         case .reserveCollection: return "person"
+        // Même étoile que l'entrée « Ajouter aux favoris » du menu contextuel.
+        case .favoris:          return "star"
         case .reserveTheme:     return "paintbrush.pointed"
         case .synthese:         return "chart.bar.doc.horizontal"
         // Les trois sous-rubriques de « Modes de vente » — et tout mode inédit
@@ -108,6 +116,15 @@ enum Categorie: Hashable, Identifiable {
         case .reserveDessins:   return .reserve
         case .reserveTableaux:  return .reserve
         case .reserveCollection: return .reserve
+        // `.reserve` **par provision**, pour que la vue soit en tous points
+        // celle du Catalogue de la Réserve : pas de récapitulatif, pas de
+        // prix, pas de menu de tri — tout cela se déduit de la feuille dans
+        // `VueiOS` comme dans `VueFeuille`.
+        //
+        // À revoir le jour où le champ « favori » existera : un favori pourra
+        // alors venir de n'importe quelle feuille, et la rubrique devra
+        // devenir une vue agrégée (`nil`) filtrée sur ce champ.
+        case .favoris:          return .reserve
         // Même feuille que le reste de la Réserve : c'est le THÈME qui
         // restreint, pas la feuille.
         case .reserveTheme:     return .reserve
@@ -141,6 +158,13 @@ enum Categorie: Hashable, Identifiable {
     /// encore détenues.
     var statuts: [String] {
         switch self {
+        // **Liste VIDE, et c'est délibéré** : `correspond` exige que le statut
+        // de l'œuvre figure dans cette liste, donc aucune œuvre ne satisfait
+        // une liste vide. C'est ce qui rend la rubrique Favoris vide tant que
+        // le champ qui marquera les favoris n'existe pas — plutôt que d'y
+        // afficher tout le catalogue en attendant.
+        case .favoris:
+            return []
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
              .reserveTheme, .reserveCollection:
             return statutsReserve
@@ -195,6 +219,19 @@ enum Categorie: Hashable, Identifiable {
     /// revenir sur tout ou partie des rubriques.
     var visionneuseIntegree: Bool { true }
 
+    /// Vrai pour les rubriques de la section « Réserve ».
+    ///
+    /// Favoris en est EXCLUE : elle est détachée des deux blocs, et n'a donc
+    /// pas à suivre les choix visuels de l'un d'eux.
+    var estSectionReserve: Bool {
+        if case .reserveTheme = self { return true }
+        switch self {
+        case .reserveInventaire, .reserveDessins, .reserveTableaux,
+             .reserveCollection: return true
+        default:                 return false
+        }
+    }
+
     /// Symbole de l'entrée « Tous » du menu de filtre par type.
     ///
     /// **L'icône de la rubrique elle-même, sans exception** : « Tous » y
@@ -220,12 +257,28 @@ enum Categorie: Hashable, Identifiable {
     /// **La Réserve n'en propose que DEUX** : il n'y reste aucun tapis
     /// disponible, et une troisième pastille n'y filtrerait jamais que vers
     /// une liste vide. Le jour où un tapis y entre, c'est ici qu'on l'ajoute.
+    ///
+    /// Les **sous-rubriques de mode de vente** en ont les trois, comme Ventes
+    /// dont elles sont des sous-ensembles. Elles cumulent donc deux filtres :
+    /// par vendeur (celles qui l'ont) et par type. Les deux se composent, et
+    /// se calculent dans cet ordre — voir `appliquerFiltres` côté Mac,
+    /// `ventes` côté iPhone.
     var typesFiltre: [String] {
         if case .reserveTheme = self { return ["tableau", "dessin"] }
+        if case .modeVente(let m) = self {
+            // **Exposition n'a pas de pastille Tapis** : aucun tapis n'y a
+            // été exposé, elle ne filtrerait que vers une liste vide. Le test
+            // porte sur la valeur STOCKÉE, au singulier — « Expositions » au
+            // pluriel n'est qu'un rendu de `titre`.
+            if m.caseInsensitiveCompare("Exposition") == .orderedSame {
+                return ["tableau", "dessin"]
+            }
+            return motsTypesFiltrables
+        }
         switch self {
         case .oeuvres, .ventesRealisees, .oeuvresDonnees:
             return motsTypesFiltrables
-        case .reserveInventaire, .reserveCollection:
+        case .reserveInventaire, .reserveCollection, .favoris:
             return ["tableau", "dessin"]
         default:
             return []
@@ -289,7 +342,7 @@ enum Categorie: Hashable, Identifiable {
     var accent: Color {
         switch self {
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection: return .bleuArdoise
+             .reserveTheme, .reserveCollection, .favoris: return .bleuArdoise
         default:                 return .orangeInternational
         }
     }
@@ -395,7 +448,15 @@ struct ContentView: View {
                     } header: {
                         Text("Réserve").font(policeGrandIntitule).fontWeight(.bold)
                     }
-                    #else
+                    // Rubrique ISOLÉE : une section sans en-tête et sans
+                    // repli, détachée des deux blocs. Elle ne relève ni des
+                    // ventes ni de la réserve — un favori peut venir de l'une
+                    // comme de l'autre.
+                    Section {
+                        lien(.favoris)
+                    }
+                    #endif
+                    #if os(iOS)
                     // Sur iOS, `Section(isExpanded:)` n'est honoré qu'avec
                     // `listStyle(.sidebar)` : en `.insetGrouped`, le paramètre
                     // est ignoré et la section n'est pas repliable. On passe
@@ -413,6 +474,13 @@ struct ContentView: View {
                         } label: {
                             Text("Réserve").font(policeGrandIntitule).fontWeight(.bold)
                         }
+                    }
+                    // Rubrique ISOLÉE, détachée des deux blocs : elle ne
+                    // relève ni des ventes ni de la réserve, un favori pouvant
+                    // venir de l'une comme de l'autre. Pas de repliement non
+                    // plus — elle n'a qu'une ligne.
+                    Section {
+                        lien(.favoris)
                     }
                     #endif
                 }
@@ -767,14 +835,19 @@ struct ContentView: View {
         if blocStockOuvert {
             liste.append(.reserveInventaire)
             liste.append(.reserveCollection)
+            // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
+            // rubrique dans un ordre qui ne correspond à rien de visible.
+            if sousBlocReserveThemesOuvert {
+                liste += themesPresents.map { Categorie.reserveTheme($0) }
+            }
             if sousBlocReserveCategoriesOuvert {
                 liste.append(.reserveTableaux)
                 liste.append(.reserveDessins)
             }
-            if sousBlocReserveThemesOuvert {
-                liste += themesPresents.map { Categorie.reserveTheme($0) }
-            }
         }
+        // Hors des deux blocs, et donc toujours présente : elle ne dépend
+        // d'aucun repli.
+        liste.append(.favoris)
         return liste
     }
 
@@ -836,7 +909,7 @@ struct ContentView: View {
         // on repart de `toutes`, pas de `recensees`.
         case .ventesRealisees, .modeVente,
              .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection:
+             .reserveTheme, .reserveCollection, .favoris:
             return toutes.filter { o in
                 // La FEUILLE aussi, sinon la pastille annonce des œuvres que
                 // la vue ne montre pas : c'est précisément ce qui affichait
@@ -1013,19 +1086,21 @@ struct ContentView: View {
         lien(.reserveCollection)
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
-        DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
-            lien(.reserveTableaux)
-            lien(.reserveDessins)
-        } label: {
-            Text("Catégories").fontWeight(.semibold)
-        }
-        // Sous-groupe des thèmes, construit d'après les données.
+        // Thèmes AVANT Catégories, contrairement à « Ventes et dons » : ici
+        // le thème est le critère de rangement principal des cartons.
+        // Sous-groupe construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocReserveThemesOuvert) {
             ForEach(themesPresents, id: \.self) { theme in
                 lien(.reserveTheme(theme))
             }
         } label: {
             Text("Thèmes").fontWeight(.semibold)
+        }
+        DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
+            lien(.reserveTableaux)
+            lien(.reserveDessins)
+        } label: {
+            Text("Catégories").fontWeight(.semibold)
         }
     }
 
@@ -1087,6 +1162,11 @@ struct ContentView: View {
                         // Même règle de graisse que le libellé de rubrique :
                         // normale au repos, grasse quand la rubrique est
                         // sélectionnée.
+                        // Même règle que tout ce qui est subordonné à un
+                        // libellé de sidebar : 11 pt, contre 13 au libellé.
+                        // Les essais à 15 puis 13 pt dans la Réserve sont
+                        // revenus ici — la taille ne distingue plus les deux
+                        // sections, seul le contour le fait.
                         .font(.system(size: 11))
                         .fontWeight(categorie == cat ? .bold : .regular)
                         .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
@@ -1095,7 +1175,11 @@ struct ContentView: View {
                         .background {
                             if categorie == cat {
                                 Capsule().fill(cat.accent)
-                            } else {
+                            } else if !cat.estSectionReserve {
+                                // ESSAI VISUEL : dans la Réserve, le chiffre
+                                // reste nu au repos — pas de contour. Le fond
+                                // plein de la rubrique sélectionnée, lui, est
+                                // conservé partout.
                                 Capsule().strokeBorder(cat.accent, lineWidth: 1)
                             }
                         }
@@ -1119,7 +1203,11 @@ struct ContentView: View {
                     // (12 pt) reste plus petit que le libellé (body, 17 pt),
                     // et suit les réglages système.
                     Text("\(n)")
-                        .font(.caption)
+                        // `.subheadline` vaut 15 pt à la taille « Large » —
+                        // l'équivalent iOS des 15 pt demandés. Un style
+                        // sémantique et NON une taille en points : figer les
+                        // points ici casserait le Dynamic Type.
+                        .font(cat.estSectionReserve ? .subheadline : .caption)
                         .fontWeight(categorie == cat ? .bold : .regular)
                         .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
                         .padding(.horizontal, 6)
@@ -1127,7 +1215,11 @@ struct ContentView: View {
                         .background {
                             if categorie == cat {
                                 Capsule().fill(cat.accent)
-                            } else {
+                            } else if !cat.estSectionReserve {
+                                // ESSAI VISUEL : dans la Réserve, le chiffre
+                                // reste nu au repos — pas de contour. Le fond
+                                // plein de la rubrique sélectionnée, lui, est
+                                // conservé partout.
                                 Capsule().strokeBorder(cat.accent, lineWidth: 1)
                             }
                         }

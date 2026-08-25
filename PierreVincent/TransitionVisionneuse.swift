@@ -150,28 +150,12 @@ struct InteractionApercu: UIViewRepresentable {
             }
         }
 
-        /// Le menu s'affiche : on suspend la détection de secousse, dont le
-        /// premier répondant fait sinon remonter le clavier système en même
-        /// temps que l'aperçu (voir `DetectionSecousse`).
-        func contextMenuInteraction(
-            _ interaction: UIContextMenuInteraction,
-            willDisplayMenuFor configuration: UIContextMenuConfiguration,
-            animator: UIContextMenuInteractionAnimating?
-        ) {
-            DetectionSecousse.suspendre()
-        }
-
-        /// Le menu se referme — quelle qu'en soit l'issue, tap sur l'aperçu
-        /// compris : l'écoute doit reprendre dans TOUS les cas.
-        func contextMenuInteraction(
-            _ interaction: UIContextMenuInteraction,
-            willEndFor configuration: UIContextMenuConfiguration,
-            animator: UIContextMenuInteractionAnimating?
-        ) {
-            animator?.addCompletion { DetectionSecousse.reprendre() }
-            // Sans animateur, rien ne rappellera : on reprend tout de suite.
-            if animator == nil { DetectionSecousse.reprendre() }
-        }
+        // PAS de suspension de la détection de secousse ici. Elle a existé,
+        // pour empêcher le clavier de remonter avec l'aperçu — mais le remède
+        // rendait le mal plus fréquent : rétablir le premier répondant après
+        // chaque menu le faisait ensuite surgir à l'ouverture de n'importe
+        // quel menu de barre d'outils. La détection ne passe plus par la
+        // chaîne des répondants du tout (voir `DetecteurSecousse`).
 
         /// Appelé quand on TAPE l'aperçu — le geste de Photos.
         func contextMenuInteraction(

@@ -61,74 +61,64 @@ struct PrixText: View {
 }
 
 #if os(iOS)
-import UIKit
+import SwiftUI
+import CoreMotion
 
 /// Détecte le secouement de l'appareil et bascule le masquage des prix.
-/// UIKit envoie l'événement `.motionShake` ; on passe par une petite vue
-/// UIKit hôte car SwiftUI ne l'expose pas directement.
-struct DetecteurSecousse: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> ControleurSecousse {
-        ControleurSecousse()
-    }
-    func updateUIViewController(_ uiViewController: ControleurSecousse, context: Context) {}
-}
-
-final class ControleurSecousse: UIViewController {
-    override var canBecomeFirstResponder: Bool { true }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        DetectionSecousse.controleur = self
-        reprendreEcoute()
-    }
-
-    /// Redevient premier répondant, sauf si l'écoute est suspendue.
-    func reprendreEcoute() {
-        guard !DetectionSecousse.suspendue, !isFirstResponder else { return }
-        becomeFirstResponder()
-    }
-
-    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
-        guard motion == .motionShake else { return }
-        // Bascule l'état persistant : masqué <-> visible.
-        let actuel = UserDefaults.standard.bool(forKey: MasquagePrix.cle)
-        UserDefaults.standard.set(!actuel, forKey: MasquagePrix.cle)
-    }
-}
-
-/// Interrupteur de la détection de secousse.
 ///
-/// **Pourquoi il existe.** `ControleurSecousse` est le SEUL premier répondant
-/// de l'app iOS : il n'affiche rien, il ne sert qu'à recevoir `motionEnded`.
-/// Or un menu contextuel présente son aperçu dans sa PROPRE fenêtre, et le
-/// système réévalue alors le premier répondant — un contrôleur qui ne vend
-/// aucune vue de saisie fait remonter le clavier système, qu'on voyait
-/// apparaître en même temps que l'aperçu.
+/// **Passe par CoreMotion, et NON par la chaîne des répondants.** La version
+/// précédente était un `UIViewController` de taille nulle qui se déclarait
+/// `canBecomeFirstResponder` et prenait le focus au seul titre de recevoir
+/// `motionEnded` — le SEUL premier répondant d'une app qui ne contient aucun
+/// champ de saisie.
 ///
-/// On suspend donc l'écoute le temps du menu, puis on la reprend. Personne ne
-/// secoue son téléphone pendant un appui prolongé : la fonction ne perd rien.
-@MainActor
-enum DetectionSecousse {
-    fileprivate static weak var controleur: ControleurSecousse?
-    fileprivate private(set) static var suspendue = false
+/// Ce montage faisait **remonter le clavier système**, d'abord à l'ouverture
+/// d'un menu contextuel, puis — dès qu'on a rétabli le focus après coup — à
+/// l'ouverture de n'importe quel menu de barre d'outils. Chaque présentation
+/// fait réévaluer le premier répondant, et un répondant qui ne vend aucune vue
+/// de saisie obtient le clavier par défaut.
+///
+/// Lire l'accéléromètre supprime la cause : l'app n'a plus de premier
+/// répondant du tout.
+final class DetecteurSecousse: @unchecked Sendable {
+    static let partage = DetecteurSecousse()
+    private init() {}
 
-    /// À appeler quand un menu contextuel s'affiche.
-    static func suspendre() {
-        suspendue = true
-        controleur?.resignFirstResponder()
-    }
+    private let moteur = CMMotionManager()
+    /// Dernière bascule, pour ne pas enchaîner plusieurs déclenchements sur
+    /// un même secouement — qui dure le temps de plusieurs mesures.
+    private var derniereBascule = Date.distantPast
 
-    /// À appeler quand il se referme.
-    static func reprendre() {
-        suspendue = false
-        controleur?.reprendreEcoute()
+    /// Seuil de déclenchement, en g. L'appareil au repos mesure 1 g (la
+    /// pesanteur) ; un secouement franc dépasse largement 2 g. Trop bas, une
+    /// marche rapide suffirait à masquer les prix.
+    private let seuil = 2.2
+    /// Délai minimal entre deux bascules.
+    private let repos: TimeInterval = 1.0
+
+    func demarrer() {
+        guard moteur.isAccelerometerAvailable, !moteur.isAccelerometerActive else { return }
+        moteur.accelerometerUpdateInterval = 1.0 / 50.0
+        // Livraison sur la file PRINCIPALE : la bascule met à jour un réglage
+        // que `@AppStorage` observe, donc l'interface.
+        moteur.startAccelerometerUpdates(to: .main) { [weak self] mesure, _ in
+            guard let self, let a = mesure?.acceleration else { return }
+            let intensite = (a.x * a.x + a.y * a.y + a.z * a.z).squareRoot()
+            guard intensite > self.seuil else { return }
+            let maintenant = Date()
+            guard maintenant.timeIntervalSince(self.derniereBascule) > self.repos else { return }
+            self.derniereBascule = maintenant
+
+            let actuel = UserDefaults.standard.bool(forKey: MasquagePrix.cle)
+            UserDefaults.standard.set(!actuel, forKey: MasquagePrix.cle)
+        }
     }
 }
 
 extension View {
     /// Active la détection du secouement pour basculer le masquage des prix.
     func detecteSecoussePourPrix() -> some View {
-        background(DetecteurSecousse().frame(width: 0, height: 0))
+        onAppear { DetecteurSecousse.partage.demarrer() }
     }
 }
 #endif
