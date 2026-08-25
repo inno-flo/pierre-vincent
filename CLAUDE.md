@@ -842,9 +842,10 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - **L'icône du menu dit le CRITÈRE ACTIF**, exactement comme celle du menu
     de tri : le type retenu quand il y en a un, et sinon celle de l'entrée
     « Tous ». Cette dernière est **l'icône de la rubrique elle-même**
-    (`Categorie.symboleFiltreTous`) — « Tous » y désigne la rubrique entière.
-    Seuls les **thèmes** gardent la grille générique : leur icône vaut pour
-    TOUS les thèmes et ne distingue donc pas une rubrique d'une autre.
+    (`Categorie.symboleFiltreTous`), sans exception — « Tous » y désigne la
+    rubrique entière. Les cinq rubriques de Thèmes reçoivent donc le même
+    `paintbrush.pointed` : il ne les distingue pas entre elles, mais il dit
+    bien « tous les thèmes ».
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu

@@ -197,18 +197,19 @@ enum Categorie: Hashable, Identifiable {
 
     /// Symbole de l'entrée « Tous » du menu de filtre par type.
     ///
-    /// **L'icône de la rubrique elle-même** : « Tous » y désigne la rubrique
-    /// entière, et son icône le dit mieux qu'une grille générique. Vaut aussi
-    /// pour le bouton du menu quand aucun type n'est retenu, exactement comme
-    /// l'icône du menu de tri suit le critère actif.
+    /// **L'icône de la rubrique elle-même, sans exception** : « Tous » y
+    /// désigne la rubrique entière, et son icône le dit mieux qu'une grille
+    /// générique. Vaut aussi pour le bouton du menu quand aucun type n'est
+    /// retenu, exactement comme l'icône du menu de tri suit le critère actif.
     ///
-    /// Seuls les **thèmes** gardent la grille : leur icône est celle de TOUS
-    /// les thèmes (`paintbrush.pointed`), elle ne distingue pas une rubrique
-    /// d'une autre et ne dirait donc rien ici.
-    var symboleFiltreTous: String {
-        if case .reserveTheme = self { return "square.grid.2x2" }
-        return symbole
-    }
+    /// Les cinq rubriques de Thèmes y reçoivent donc le même
+    /// `paintbrush.pointed`, leur cas n'ayant qu'une branche : l'icône ne les
+    /// distingue pas entre elles, mais elle dit bien « tous les thèmes ».
+    ///
+    /// Propriété conservée plutôt qu'un `cat.symbole` posé aux cinq points
+    /// d'appel : elle nomme l'intention, et une rubrique qui voudrait un jour
+    /// une autre icône pour « Tous » se traiterait ici seulement.
+    var symboleFiltreTous: String { symbole }
 
     /// Pastilles de type proposées par la rubrique — vide = pas de filtre.
     ///
