@@ -235,7 +235,17 @@ enum CorrespondanceMotsCles {
 
     /// Mot-clé → valeur du champ **Type**.
     private static let types: [String: String] = [
-        "dessin pierre innocente": "Dessin",
+        "dessin pierre innocente":  "Dessin",
+        "tableau pierre innocente": "Tableau",
+    ]
+
+    /// Mot-clé → valeur du champ **Lieu de stockage**.
+    ///
+    /// Contrairement aux mots-clés « à garder », ceux-ci ne renseignent QUE ce
+    /// champ : ils peuvent donc rester une branche de l'aiguillage.
+    private static let lieuxStockage: [String: String] = [
+        "stockage bourg-de-peage": "Bourg-de-Péage",
+        "stockage domicile":       "Domicile",
     ]
 
     /// Mots-clés recopiés **à l'identique** dans le champ **Emplacement**.
@@ -280,6 +290,8 @@ enum CorrespondanceMotsCles {
                 ecrire(v, dans: \.theme, sur: o)
             } else if let v = types[cle] {
                 ecrire(v, dans: \.type, sur: o)
+            } else if let v = lieuxStockage[cle] {
+                ecrire(v, dans: \.lieuStockage, sur: o)
             } else if emplacements.contains(cle) {
                 // Recopié tel quel, avec sa casse d'origine.
                 ecrire(mot.trimmingCharacters(in: .whitespacesAndNewlines),

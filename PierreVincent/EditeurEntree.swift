@@ -8,6 +8,10 @@ import SwiftData
 /// Saisie fluide : les champs sont des variables LOCALES (@State) ; on ne
 /// recopie dans l'objet de la base qu'à l'enregistrement.
 struct EditeurEntree: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     @Environment(\.dismiss) private var dismiss
 
     let feuille: Feuille
@@ -44,7 +48,7 @@ struct EditeurEntree: View {
     // Champs pour la navigation au clavier (Tab).
     private enum Champ: Hashable {
         case type, prix, dimensions, format, vendeur, modeVente, acheteur, date, destinataire, remarques
-        case statut, theme, emplacement
+        case statut, theme, lieuStockage, emplacement
     }
     @FocusState private var focus: Champ?
 
@@ -60,6 +64,7 @@ struct EditeurEntree: View {
     @State private var destinataire = ""
     @State private var statut = ""
     @State private var theme = ""
+    @State private var lieuStockage = ""
     @State private var emplacement = ""
     @State private var remarques = ""
     @State private var prixTexte = ""
@@ -262,6 +267,7 @@ struct EditeurEntree: View {
         destinataire = pourSaisie(o.destinataire)
         statut       = pourSaisie(o.statut)
         theme        = pourSaisie(o.theme)
+        lieuStockage = pourSaisie(o.lieuStockage)
         emplacement  = pourSaisie(o.emplacement)
         remarques    = pourSaisie(o.remarques)
         prixTexte    = o.prix == 0 ? "" : String(Int(o.prix.rounded()))
@@ -285,7 +291,7 @@ struct EditeurEntree: View {
     /// Concatène tous les champs : sert à comparer l'état courant à l'initial.
     private var instantaneCourant: String {
         [photoNom, type, dimensions, format, vendeur, modeVente,
-         acheteur, date, destinataire, statut, theme, emplacement,
+         acheteur, date, destinataire, statut, theme, lieuStockage, emplacement,
          remarques, prixTexte].joined(separator: "␟")
     }
 
@@ -315,6 +321,7 @@ struct EditeurEntree: View {
         o.destinataire = pourBase(destinataire)
         o.statut       = pourBase(statut)
         o.theme        = pourBase(theme)
+        o.lieuStockage = pourBase(lieuStockage)
         o.emplacement  = pourBase(emplacement)
         o.remarques    = pourBase(remarques)
         let net = prixTexte
@@ -362,7 +369,7 @@ struct EditeurEntree: View {
                 .fill(Color.fondLegende)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1)
+                        .strokeBorder(accent.opacity(0.4), lineWidth: 1)
                 )
         )
     }
@@ -379,6 +386,10 @@ struct EditeurEntree: View {
         champLectureSeule("Collection personnelle",
                           oeuvre.collectionPersonnelle.isEmpty
                           ? "Non" : oeuvre.collectionPersonnelle)
+        // Modifiable, contrairement à « Collection personnelle » : c'est un
+        // renseignement de rangement, qu'on peut vouloir corriger à la main
+        // comme l'emplacement juste en dessous.
+        champTexte("Lieu de stockage", $lieuStockage, champ: .lieuStockage)
         champTexte("Emplacement", $emplacement, champ: .emplacement)
     }
 
@@ -441,7 +452,7 @@ struct EditeurEntree: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 120)
                     .focused($focus, equals: .prix)
-                    .foregroundStyle(Color.orangeInternational)
+                    .foregroundStyle(accent)
                     // Masquage : flouté et non modifiable tant qu'il est actif.
                     // (le flou hérite de la couleur orange du texte)
                     .blur(radius: prixMasques ? 5 : 0)

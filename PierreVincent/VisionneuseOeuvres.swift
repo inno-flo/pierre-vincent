@@ -13,6 +13,10 @@ import UIKit
 /// En place dans TOUTES les rubriques (`Categorie.visionneuseIntegree`), comme
 /// sur Mac.
 struct VisionneuseOeuvres: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     /// Œuvres parcourables — celles qui ont réellement une photo.
     let oeuvres: [Oeuvre]
     @State var index: Int
@@ -232,7 +236,7 @@ struct VisionneuseOeuvres: View {
             .fill(.black.opacity(0.55))
             .overlay(
                 Circle().strokeBorder(
-                    Color.orangeInternational.opacity(actif ? 1 : 0.35),
+                    accent.opacity(actif ? 1 : 0.35),
                     lineWidth: 1)
             )
     }

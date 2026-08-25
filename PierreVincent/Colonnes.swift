@@ -24,6 +24,7 @@ enum CleColonne {
     case statut
     case theme
     case collectionPersonnelle
+    case lieuStockage
     case emplacement
     case remarques
 
@@ -44,6 +45,7 @@ enum CleColonne {
         case .statut:       return o.statut
         case .theme:        return o.theme
         case .collectionPersonnelle: return o.collectionPersonnelle
+        case .lieuStockage: return o.lieuStockage
         case .emplacement:  return o.emplacement
         case .remarques:    return o.remarques
         }
@@ -71,6 +73,7 @@ enum CleColonne {
         case .statut:       o.statut = valeur
         case .theme:        o.theme = valeur
         case .collectionPersonnelle: o.collectionPersonnelle = valeur
+        case .lieuStockage: o.lieuStockage = valeur
         case .emplacement:  o.emplacement = valeur
         case .remarques:    o.remarques = valeur
         }
@@ -123,6 +126,7 @@ enum SchemaFeuille {
         Colonne(titre: "Statut",     cle: .statut),
         Colonne(titre: "Thème",      cle: .theme),
         Colonne(titre: "Collection personnelle", cle: .collectionPersonnelle),
+        Colonne(titre: "Lieu de stockage", cle: .lieuStockage),
         Colonne(titre: "Emplacement", cle: .emplacement),
         Colonne(titre: "Remarques",  cle: .remarques),
     ]
@@ -136,6 +140,7 @@ enum SchemaFeuille {
         Colonne(titre: "Statut",       cle: .statut),
         Colonne(titre: "Thème",        cle: .theme),
         Colonne(titre: "Collection personnelle", cle: .collectionPersonnelle),
+        Colonne(titre: "Lieu de stockage", cle: .lieuStockage),
         Colonne(titre: "Emplacement",  cle: .emplacement),
         Colonne(titre: "Remarques",    cle: .remarques),
     ]
@@ -150,6 +155,7 @@ enum SchemaFeuille {
         Colonne(titre: "Statut",       cle: .statut),
         Colonne(titre: "Thème",        cle: .theme),
         Colonne(titre: "Collection personnelle", cle: .collectionPersonnelle),
+        Colonne(titre: "Lieu de stockage", cle: .lieuStockage),
         Colonne(titre: "Emplacement",  cle: .emplacement),
         Colonne(titre: "Remarques",    cle: .remarques),
     ]

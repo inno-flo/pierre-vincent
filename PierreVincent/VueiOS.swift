@@ -7,6 +7,10 @@ import UIKit
 /// Affiche les entrées d'une catégorie en liste ou en galerie, avec accès
 /// à une fiche de détail (photo, prix, informations) au toucher.
 struct VueiOS: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     let feuille: Feuille?
     let titre: String
     let modesVente: [String]
@@ -251,7 +255,7 @@ struct VueiOS: View {
             Spacer()
             Text("\(oeuvresGalerie.count)")
                 .font(.headline.bold())
-                .foregroundStyle(Color.orangeInternational)
+                .foregroundStyle(accent)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -453,7 +457,7 @@ struct VueiOS: View {
                                             .lineLimit(1)
                                         PrixText(o.prix)
                                             .font(.subheadline)
-                                            .foregroundStyle(Color.orangeInternational)
+                                            .foregroundStyle(accent)
                                         if !o.modeVente.isEmpty {
                                             Text(o.modeVente)
                                                 .font(.body).foregroundStyle(.secondary)
@@ -493,7 +497,7 @@ struct VueiOS: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .strokeBorder(selection.contains(o.id)
-                                                  ? Color.orangeInternational : Color.clear,
+                                                  ? accent : Color.clear,
                                                   lineWidth: 3)
                             )
                         }
@@ -530,6 +534,10 @@ struct VueiOS: View {
 
 /// Fiche de détail d'une entrée (lecture seule) pour iPhone/iPad.
 struct DetailiOS: View {
+
+    /// Accent de la rubrique — hérité de la vue qui présente cette fiche.
+    @Environment(\.accentRubrique) private var accent
+
     let oeuvre: Oeuvre
     let estFeuilleDon: Bool
     /// Liste ordonnée pour naviguer Précédent / Suivant (ordre d'affichage).
@@ -670,7 +678,7 @@ struct DetailiOS: View {
             if aUnPrix(oeuvre) {
                 cellule {
                     ligne("Prix", formaterEuros(oeuvre.prix),
-                          couleur: Color.orangeInternational, estPrix: true)
+                          couleur: accent, estPrix: true)
                 }
             }
 
@@ -692,6 +700,7 @@ struct DetailiOS: View {
                 // Placé AVANT l'emplacement : il dit à quel ensemble l'œuvre
                 // appartient, l'emplacement où la trouver.
                 ligne("Collection personnelle", oeuvre.collectionPersonnelle)
+                ligne("Lieu de stockage", oeuvre.lieuStockage)
                 ligne("Emplacement", oeuvre.emplacement)
             }
 
@@ -771,7 +780,7 @@ struct DetailiOS: View {
                 .fill(Color.fondLegende)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1)
+                        .strokeBorder(accent.opacity(0.4), lineWidth: 1)
                 )
         )
     }

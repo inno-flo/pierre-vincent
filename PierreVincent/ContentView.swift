@@ -243,6 +243,20 @@ enum Categorie: Hashable, Identifiable {
         }
     }
 
+    /// Accent de la rubrique : **bleu ardoise dans la Réserve**, orange
+    /// ailleurs. La couleur dit d'un coup d'œil dans quelle section on se
+    /// trouve, sans avoir à lire le titre.
+    ///
+    /// Descend ensuite par l'environnement (`accentRubrique`) jusqu'aux
+    /// vignettes, pastilles, prix et boutons de la visionneuse.
+    var accent: Color {
+        switch self {
+        case .reserveInventaire, .reserveDessins, .reserveTheme,
+             .reserveCollection: return .bleuArdoise
+        default:                 return .orangeInternational
+        }
+    }
+
     /// Vrai pour la vue tableau de bord (affichage spécifique).
     var estSynthese: Bool { self == .synthese }
 }
@@ -467,6 +481,11 @@ struct ContentView: View {
         } detail: {
             // --- Zone de contenu (canvas) ---
             if let cat = categorie {
+                // Accent posé ICI, une seule fois : il descend ensuite dans
+                // toute la colonne — vignettes, pastilles, prix, éditeur,
+                // visionneuse — y compris à travers les feuilles et les
+                // présentations plein écran, qui héritent de l'environnement.
+                Group {
                 if cat.estSynthese {
                     VueSynthese(toutes: toutes)
                 } else {
@@ -523,6 +542,8 @@ struct ContentView: View {
                     }
                     #endif
                 }
+                }
+                .environment(\.accentRubrique, cat.accent)
             } else {
                 Text("Choisissez une catégorie")
                     .foregroundStyle(.secondary)
@@ -972,7 +993,7 @@ struct ContentView: View {
                 Image(systemName: cat.symbole)
                     .foregroundStyle(categorie == cat
                                      ? Color.texteSelectionSidebarMac
-                                     : Color.orangeInternational)
+                                     : cat.accent)
                 // Rubrique sélectionnée : libellé gras sur le fond marron —
                 // noir en mode clair, blanc en mode sombre (le marron y est
                 // assombri). Voir Color.texteSelectionSidebarMac.
@@ -1004,9 +1025,9 @@ struct ContentView: View {
                         .padding(.vertical, 2)
                         .background {
                             if categorie == cat {
-                                Capsule().fill(Color.orangeInternational)
+                                Capsule().fill(cat.accent)
                             } else {
-                                Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                                Capsule().strokeBorder(cat.accent, lineWidth: 1)
                             }
                         }
                 }
@@ -1017,7 +1038,7 @@ struct ContentView: View {
                     Text(cat.titre)
                 } icon: {
                     Image(systemName: cat.symbole)
-                        .foregroundStyle(Color.orangeInternational)
+                        .foregroundStyle(cat.accent)
                 }
                 if let n = compteurPourCategorie(cat) {
                     Spacer()
@@ -1036,9 +1057,9 @@ struct ContentView: View {
                         .padding(.vertical, 2)
                         .background {
                             if categorie == cat {
-                                Capsule().fill(Color.orangeInternational)
+                                Capsule().fill(cat.accent)
                             } else {
-                                Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                                Capsule().strokeBorder(cat.accent, lineWidth: 1)
                             }
                         }
                 }

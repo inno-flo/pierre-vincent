@@ -9,6 +9,10 @@ import UniformTypeIdentifiers
 /// et grille gérés nativement. L'édition d'une entrée se fait via une fiche
 /// (double-clic sur une ligne, ou bouton Modifier).
 struct VueFeuille: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     let feuille: Feuille?          // nil = vue compilée « Œuvres »
     let lectureSeule: Bool
     let titre: String
@@ -272,7 +276,7 @@ struct VueFeuille: View {
                     if aUnPrix(o) {
                         celluleInspecteur {
                             ligneInspecteur("Prix", formaterEuros(o.prix),
-                                            couleur: Color.orangeInternational, estPrix: true)
+                                            couleur: accent, estPrix: true)
                         }
                     }
 
@@ -295,6 +299,7 @@ struct VueFeuille: View {
                         // l'œuvre appartient, l'emplacement où la trouver.
                         ligneInspecteur("Collection personnelle",
                                         o.collectionPersonnelle)
+                        ligneInspecteur("Lieu de stockage", o.lieuStockage)
                         ligneInspecteur("Emplacement", o.emplacement)
                     }
 
@@ -344,7 +349,7 @@ struct VueFeuille: View {
                     }
                     celluleInspecteur {
                         ligneInspecteur("Total des prix", formaterEuros(total),
-                                        couleur: Color.orangeInternational, estPrix: true)
+                                        couleur: accent, estPrix: true)
                     }
                 }
                 .padding()
@@ -378,7 +383,7 @@ struct VueFeuille: View {
                 .fill(Color.cremeFond)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1)
+                        .strokeBorder(accent.opacity(0.4), lineWidth: 1)
                 )
         )
     }
@@ -818,7 +823,7 @@ struct VueFeuille: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(.regularMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.orangeInternational.opacity(0.4), lineWidth: 1))
+            .overlay(Capsule().strokeBorder(accent.opacity(0.4), lineWidth: 1))
             .shadow(radius: 10)
             .padding(.top, 18)
             .transition(.opacity)
@@ -1014,7 +1019,7 @@ struct VueFeuille: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .background {
-                Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                Capsule().strokeBorder(accent, lineWidth: 1)
             }
             .help("Nombre d'œuvres affichées")
     }
@@ -1039,9 +1044,9 @@ struct VueFeuille: View {
                 .padding(.vertical, 5)
                 .background {
                     if retenu {
-                        Capsule().fill(Color.orangeInternational)
+                        Capsule().fill(accent)
                     } else {
-                        Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                        Capsule().strokeBorder(accent, lineWidth: 1)
                     }
                 }
         }
@@ -1064,9 +1069,9 @@ struct VueFeuille: View {
                 .padding(.vertical, 5)
                 .background {
                     if retenu {
-                        Capsule().fill(Color.orangeInternational)
+                        Capsule().fill(accent)
                     } else {
-                        Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                        Capsule().strokeBorder(accent, lineWidth: 1)
                     }
                 }
         }
@@ -1202,7 +1207,7 @@ struct VueFeuille: View {
             .width(96)
             TableColumn("Prix", value: \Oeuvre.prix) { o in
                 Text(formaterEuros(o.prix))
-                    .foregroundStyle(Color.orangeInternational)
+                    .foregroundStyle(accent)
                     .blur(radius: prixMasques ? 5 : 0)
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }

@@ -59,8 +59,20 @@ private func couleurTheme(
 
 extension Color {
 
-    /// Accent orange — identique dans tous les thèmes.
+    /// Accent orange — celui de « Ventes et dons », et la valeur par défaut.
     static let orangeInternational = Color(red: 1.0, green: 0.31, blue: 0.0)
+
+    /// Accent bleu ardoise — celui de la section « Réserve ».
+    ///
+    /// Deux accents cohabitent : la couleur dit d'un coup d'œil dans quelle
+    /// section on se trouve, sans lire le titre. Éclairci en mode sombre, où
+    /// le bleu profond se confondrait avec le fond.
+    static var bleuArdoise: Color {
+        couleurTheme(
+            cremeClair: (70, 100, 135), cremeSombre: (132, 168, 205),
+            grisClair:  (70, 100, 135), grisSombre:  (132, 168, 205),
+            vertClair:  (70, 100, 135), vertSombre:  (132, 168, 205))
+    }
 
     /// Fond général de l'app.
     static var cremeFond: Color {
@@ -158,5 +170,28 @@ extension Color {
             cremeClair: (237, 235, 227), cremeSombre: (51, 51, 56),
             grisClair:  (234, 239, 243), grisSombre:  (26, 32, 39),
             vertClair:  (233, 239, 234), vertSombre:  (25, 33, 27))
+    }
+}
+
+
+/// Accent de la rubrique affichée, transporté par l'environnement.
+///
+/// **Pourquoi l'environnement plutôt qu'un paramètre.** L'accent sert dans une
+/// dizaine de vues imbriquées — vignettes, pastilles, prix, boutons de la
+/// visionneuse, éditeur —, dont plusieurs sont partagées entre les deux
+/// sections. Le passer de main en main aurait demandé un paramètre à chaque
+/// étage ; posé une fois sur la colonne de contenu, il descend tout seul, y
+/// compris dans les feuilles et les présentations plein écran.
+///
+/// Valeur par défaut : l'orange. Une vue qui ne déclare rien reste donc dans
+/// la teinte de « Ventes et dons ».
+private struct CleAccentRubrique: EnvironmentKey {
+    static let defaultValue = Color.orangeInternational
+}
+
+extension EnvironmentValues {
+    var accentRubrique: Color {
+        get { self[CleAccentRubrique.self] }
+        set { self[CleAccentRubrique.self] = newValue }
     }
 }

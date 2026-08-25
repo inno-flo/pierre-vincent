@@ -7,6 +7,10 @@ import AppKit
 /// Vue « galerie » (par icône) : chaque entrée est une vignette de l'image
 /// (200×200 max), avec en dessous le prix et les dimensions.
 struct VueGalerie: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     let oeuvres: [Oeuvre]
     @Binding var selection: Set<UUID>
     /// Double-clic sur une carte : ouvre la fiche d'édition.
@@ -187,7 +191,7 @@ struct VueGalerie: View {
                 HStack {
                     if aUnPrix(o) {
                         PrixText(o.prix)
-                            .foregroundStyle(Color.orangeInternational)
+                            .foregroundStyle(accent)
                         Spacer()
                         Text(o.dimensions)
                             .foregroundStyle(Color.texteLegende.opacity(0.6))
@@ -220,7 +224,7 @@ struct VueGalerie: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(selection.contains(o.id) ? Color.orangeInternational : Color.filetVignette,
+                .strokeBorder(selection.contains(o.id) ? accent : Color.filetVignette,
                               lineWidth: selection.contains(o.id) ? 3 : 1)
         )
         .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)

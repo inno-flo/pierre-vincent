@@ -58,6 +58,10 @@ final class Oeuvre {
     /// booléen, pour rester homogène avec les autres champs et voyager tel
     /// quel dans les exports.
     var collectionPersonnelle: String = ""
+    /// Où l'œuvre est entreposée — « Bourg-de-Péage », « Domicile ».
+    /// Renseigné à l'import par les mots-clés « Stockage … ».
+    /// Distinct d'`emplacement`, qui nomme le carton à l'intérieur du lieu.
+    var lieuStockage: String = ""
     var emplacement: String = ""
 
     // Date technique de création de l'entrée (pour l'ordre par défaut)

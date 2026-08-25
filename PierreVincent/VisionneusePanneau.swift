@@ -13,6 +13,10 @@ import AppKit
 /// se présente au-dessus de TOUTE la fenêtre, sidebar et barre d'outils
 /// comprises, alors qu'on veut rester dans les limites du panneau.
 struct VisionneusePanneau: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     /// Œuvres parcourables — celles qui ont réellement une photo.
     let oeuvres: [Oeuvre]
     /// Position courante dans `oeuvres`.
@@ -217,7 +221,7 @@ struct VisionneusePanneau: View {
             .fill(.black.opacity(0.55))
             .overlay(
                 Circle().strokeBorder(
-                    Color.orangeInternational.opacity(actif ? 1 : 0.35),
+                    accent.opacity(actif ? 1 : 0.35),
                     lineWidth: 1)
             )
     }

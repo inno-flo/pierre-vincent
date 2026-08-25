@@ -13,6 +13,10 @@ import SwiftUI
 /// rendu de vignettes, et se seraient retrouvées avec deux copies vouées à
 /// diverger, comme cela s'est déjà produit sur le filet de sélection.
 struct BandeauTypes: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     /// Mot cherché dans le champ `type`, ou nil si aucun filtre.
     @Binding var typeRetenu: String?
     /// Nombre d'œuvres réellement affichées, filtre appliqué.
@@ -47,9 +51,9 @@ struct BandeauTypes: View {
                 .padding(.vertical, 5)
                 .background {
                     if retenu {
-                        Capsule().fill(Color.orangeInternational)
+                        Capsule().fill(accent)
                     } else {
-                        Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1)
+                        Capsule().strokeBorder(accent, lineWidth: 1)
                     }
                 }
         }
@@ -63,7 +67,7 @@ struct BandeauTypes: View {
             .foregroundStyle(Color.textePrincipal)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background { Capsule().strokeBorder(Color.orangeInternational, lineWidth: 1) }
+            .background { Capsule().strokeBorder(accent, lineWidth: 1) }
     }
 }
 
@@ -101,6 +105,10 @@ enum TypesFiltrables {
 /// Les deux pilotent le MÊME état : changer l'un met l'autre à jour, il n'y a
 /// pas deux filtres à tenir d'accord.
 struct MenuFiltreTypes: View {
+    /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
+    /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
+    @Environment(\.accentRubrique) private var accent
+
     @Binding var typeRetenu: String?
 
     var body: some View {

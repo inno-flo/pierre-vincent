@@ -44,6 +44,7 @@ enum EchangeBase {
         /// synthétisé n'applique pas les valeurs par défaut aux clés absentes,
         /// et un fichier exporté avant l'ajout deviendrait illisible.
         var collectionPersonnelle: String?
+        var lieuStockage: String?
         var emplacement: String?
         // Image encodée en base64 (vide si aucune photo).
         var imageBase64: String
@@ -87,6 +88,7 @@ enum EchangeBase {
                 statut: o.statut,
                 theme: o.theme,
                 collectionPersonnelle: o.collectionPersonnelle,
+                lieuStockage: o.lieuStockage,
                 emplacement: o.emplacement,
                 imageBase64: b64,
                 imageExtension: ext))
@@ -141,6 +143,7 @@ enum EchangeBase {
             o.statut       = e.statut ?? ""
             o.theme        = e.theme ?? ""
             o.collectionPersonnelle = e.collectionPersonnelle ?? ""
+            o.lieuStockage = e.lieuStockage ?? ""
             o.emplacement  = e.emplacement ?? ""
 
             // Filet : le statut fait foi sur l'appartenance à la Réserve.
