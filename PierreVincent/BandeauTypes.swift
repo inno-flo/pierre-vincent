@@ -25,6 +25,9 @@ struct BandeauTypes: View {
     @Binding var typeRetenu: String?
     /// Nombre d'œuvres réellement affichées, filtre appliqué.
     let nombreAffiche: Int
+    /// ESSAI VISUEL : le compteur reste nu, sans contour. Vrai dans les
+    /// rubriques de la Réserve, comme leur pastille de barre latérale.
+    var compteurSansContour: Bool = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -71,7 +74,11 @@ struct BandeauTypes: View {
             .foregroundStyle(Color.textePrincipal)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background { Capsule().strokeBorder(accent, lineWidth: 1) }
+            .background {
+                if !compteurSansContour {
+                    Capsule().strokeBorder(accent, lineWidth: 1)
+                }
+            }
     }
 }
 

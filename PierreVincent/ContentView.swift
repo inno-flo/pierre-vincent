@@ -611,6 +611,7 @@ struct ContentView: View {
                                collectionSeule: cat.collectionSeule,
                                filtreParVendeur: cat.filtreParVendeur,
                                typesFiltre: cat.typesFiltre,
+                               sectionReserve: cat.estSectionReserve,
                                symboleFiltreTous: cat.symboleFiltreTous,
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
@@ -655,6 +656,7 @@ struct ContentView: View {
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
                                typesFiltre: cat.typesFiltre,
+                               sectionReserve: cat.estSectionReserve,
                                symboleFiltreTous: cat.symboleFiltreTous,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)

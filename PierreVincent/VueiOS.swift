@@ -21,6 +21,11 @@ struct VueiOS: View {
     /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
     /// rubrique, voir `Categorie.typesFiltre`.
     let typesFiltre: [String]
+    /// Vrai dans les rubriques de la section « Réserve » (Favoris exclue).
+    /// ESSAI VISUEL : le compteur du bandeau y perd son contour, comme la
+    /// pastille de comptage de la barre latérale.
+    let sectionReserve: Bool
+
     /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
     /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
     let symboleFiltreTous: String
@@ -33,6 +38,7 @@ struct VueiOS: View {
          themes: [String] = [],
          collectionSeule: Bool = false,
          typesFiltre: [String] = [],
+         sectionReserve: Bool = false,
          symboleFiltreTous: String = "square.grid.2x2",
          visionneuseIntegree: Bool = false) {
         self.feuille = feuille
@@ -43,6 +49,7 @@ struct VueiOS: View {
         self.themes = themes
         self.collectionSeule = collectionSeule
         self.typesFiltre = typesFiltre
+        self.sectionReserve = sectionReserve
         self.symboleFiltreTous = symboleFiltreTous
         self.visionneuseIntegree = visionneuseIntegree
     }
@@ -158,7 +165,8 @@ struct VueiOS: View {
                 if !typesFiltre.isEmpty {
                     BandeauTypes(mots: typesFiltre,
                                  typeRetenu: $typeRetenu,
-                                 nombreAffiche: oeuvresGalerie.count)
+                                 nombreAffiche: oeuvresGalerie.count,
+                                 compteurSansContour: sectionReserve)
                 }
             }
         )

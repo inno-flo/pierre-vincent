@@ -25,6 +25,11 @@ struct VueFeuille: View {
     /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
     /// rubrique, voir `Categorie.typesFiltre`.
     let typesFiltre: [String]
+    /// Vrai dans les rubriques de la section « Réserve » (Favoris exclue).
+    /// ESSAI VISUEL : le compteur du bandeau y perd son contour, comme la
+    /// pastille de comptage de la barre latérale.
+    let sectionReserve: Bool
+
     /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
     /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
     let symboleFiltreTous: String
@@ -42,6 +47,7 @@ struct VueFeuille: View {
          collectionSeule: Bool = false,
          filtreParVendeur: Bool = false,
          typesFiltre: [String] = [],
+         sectionReserve: Bool = false,
          symboleFiltreTous: String = "square.grid.2x2",
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
@@ -56,6 +62,7 @@ struct VueFeuille: View {
         self.collectionSeule = collectionSeule
         self.filtreParVendeur = filtreParVendeur
         self.typesFiltre = typesFiltre
+        self.sectionReserve = sectionReserve
         self.symboleFiltreTous = symboleFiltreTous
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
@@ -1028,7 +1035,10 @@ struct VueFeuille: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .background {
-                Capsule().strokeBorder(accent, lineWidth: 1)
+                // ESSAI VISUEL : dans la Réserve, le compteur reste nu.
+                if !sectionReserve {
+                    Capsule().strokeBorder(accent, lineWidth: 1)
+                }
             }
             .help("Nombre d'œuvres affichées")
     }
