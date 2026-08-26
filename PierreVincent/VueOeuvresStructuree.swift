@@ -254,7 +254,8 @@ struct VueOeuvresStructuree: View {
                 HStack(spacing: 8) {
 
                 // 0. Filtre par type, en TÊTE de la capsule.
-                if !typesFiltre.isEmpty {
+                // Retiré pour l'instant : voir `afficherMenuFiltreTypeToolbar`.
+                if afficherMenuFiltreTypeToolbar && !typesFiltre.isEmpty {
                     MenuFiltreTypes(mots: typesFiltre,
                                     symboleTous: symboleFiltreTous,
                                     typeRetenu: $typeRetenu)

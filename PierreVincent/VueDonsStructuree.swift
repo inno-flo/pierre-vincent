@@ -132,7 +132,8 @@ struct VueDonsStructuree: View {
                     // Filtre par type, en TÊTE de la capsule — gardé comme
                     // dans les deux autres vues : une rubrique passée à zéro
                     // type y afficherait sinon un menu vide.
-                    if !typesFiltre.isEmpty {
+                    // Retiré pour l'instant : voir `afficherMenuFiltreTypeToolbar`.
+                    if afficherMenuFiltreTypeToolbar && !typesFiltre.isEmpty {
                         MenuFiltreTypes(mots: typesFiltre,
                                         symboleTous: symboleFiltreTous,
                                         typeRetenu: $typeRetenu)

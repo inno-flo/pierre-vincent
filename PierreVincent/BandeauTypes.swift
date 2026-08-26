@@ -1,6 +1,15 @@
 #if os(iOS)
 import SwiftUI
 
+/// Bouton de menu de filtre par type dans la barre d'outils : à retirer sans
+/// supprimer le code, faute de quoi il faudrait le réécrire s'il revient.
+///
+/// **Retiré des trois vues qui le posaient** (`VueiOS`, `VueDonsStructuree`,
+/// `VueOeuvresStructuree`), le bandeau de pastilles (`BandeauTypes`) restant
+/// seul moyen de filtrer par type sur iPhone. Repasser à `true` le restaure
+/// aux trois endroits d'un coup, un seul drapeau les gouvernant tous.
+let afficherMenuFiltreTypeToolbar = false
+
 /// Bandeau de pastilles filtrant par TYPE d'œuvre — Tableaux, Dessins, Tapis —
 /// avec le compteur des œuvres affichées à droite.
 ///
@@ -25,12 +34,13 @@ struct BandeauTypes: View {
     @Binding var typeRetenu: String?
     /// Nombre d'œuvres réellement affichées, filtre appliqué.
     let nombreAffiche: Int
-    /// ESSAI VISUEL : le compteur reste nu, sans contour. Vrai dans les
-    /// rubriques de la Réserve, comme leur pastille de barre latérale.
-    var compteurSansContour: Bool = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        // Alignement explicite : même pattern que `bandeauFiltres` sur Mac,
+        // pour que pastilles (des `Button`) et compteur (un `Text` nu)
+        // partagent la même ligne de base, quelle que soit la vue qui les
+        // compose.
+        HStack(alignment: .center, spacing: 8) {
             ForEach(mots, id: \.self) { mot in
                 pastille(libelle: libelleTypeFiltrable(mot), mot: mot)
             }
@@ -49,9 +59,10 @@ struct BandeauTypes: View {
             typeRetenu = retenu ? nil : mot
         } label: {
             Text(libelle)
-                // Corps SÉMANTIQUE et non une taille en points : figer une
-                // taille casserait le Dynamic Type.
-                .font(.subheadline)
+                // `.body` : même corps que les libellés de rubrique de la
+                // sidebar. Style SÉMANTIQUE et non une taille en points :
+                // figer une taille casserait le Dynamic Type.
+                .font(.body)
                 .fontWeight(retenu ? .bold : .regular)
                 .foregroundStyle(retenu ? Color.white : Color.textePrincipal)
                 .padding(.horizontal, 12)
@@ -70,15 +81,15 @@ struct BandeauTypes: View {
     /// Compteur, non interactif : une indication, pas un bouton.
     private var compteur: some View {
         Text("\(nombreAffiche)")
-            .font(.subheadline)
-            .foregroundStyle(Color.textePrincipal)
+            // Même corps que les pastilles, donc que les libellés de sidebar.
+            .font(.body)
+            // Toujours rempli de l'accent de la section, texte blanc — comme
+            // sur macOS, contrairement aux pastilles de filtre qui ne se
+            // remplissent qu'une fois retenues.
+            .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background {
-                if !compteurSansContour {
-                    Capsule().strokeBorder(accent, lineWidth: 1)
-                }
-            }
+            .background { Capsule().fill(accent) }
     }
 }
 

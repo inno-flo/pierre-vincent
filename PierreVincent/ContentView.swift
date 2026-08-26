@@ -219,19 +219,6 @@ enum Categorie: Hashable, Identifiable {
     /// revenir sur tout ou partie des rubriques.
     var visionneuseIntegree: Bool { true }
 
-    /// Vrai pour les rubriques de la section « Réserve ».
-    ///
-    /// Favoris en est EXCLUE : elle est détachée des deux blocs, et n'a donc
-    /// pas à suivre les choix visuels de l'un d'eux.
-    var estSectionReserve: Bool {
-        if case .reserveTheme = self { return true }
-        switch self {
-        case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveCollection: return true
-        default:                 return false
-        }
-    }
-
     /// Symbole de l'entrée « Tous » du menu de filtre par type.
     ///
     /// **L'icône de la rubrique elle-même, sans exception** : « Tous » y
@@ -611,7 +598,6 @@ struct ContentView: View {
                                collectionSeule: cat.collectionSeule,
                                filtreParVendeur: cat.filtreParVendeur,
                                typesFiltre: cat.typesFiltre,
-                               sectionReserve: cat.estSectionReserve,
                                symboleFiltreTous: cat.symboleFiltreTous,
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
@@ -657,7 +643,6 @@ struct ContentView: View {
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
                                typesFiltre: cat.typesFiltre,
-                               sectionReserve: cat.estSectionReserve,
                                symboleFiltreTous: cat.symboleFiltreTous,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
@@ -1164,25 +1149,22 @@ struct ContentView: View {
                         // Même règle de graisse que le libellé de rubrique :
                         // normale au repos, grasse quand la rubrique est
                         // sélectionnée.
-                        // Même règle que tout ce qui est subordonné à un
-                        // libellé de sidebar : 11 pt, contre 13 au libellé.
-                        // Les essais à 15 puis 13 pt dans la Réserve sont
-                        // revenus ici — la taille ne distingue plus les deux
-                        // sections, seul le contour le fait.
-                        .font(.system(size: 11))
+                        // ESSAI VISUEL, aux DEUX sections : 13 pt, à égalité
+                        // avec le libellé qu'il accompagne — et non plus
+                        // au-dessus (15 pt) ni en dessous (11 pt, la valeur
+                        // d'origine).
+                        .font(.system(size: 13))
                         .fontWeight(categorie == cat ? .bold : .regular)
                         .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background {
+                            // ESSAI VISUEL, désormais harmonisé aux DEUX
+                            // sections : le chiffre reste nu au repos, sans
+                            // contour. Le fond plein de la rubrique
+                            // sélectionnée, lui, est conservé partout.
                             if categorie == cat {
                                 Capsule().fill(cat.accent)
-                            } else if !cat.estSectionReserve {
-                                // ESSAI VISUEL : dans la Réserve, le chiffre
-                                // reste nu au repos — pas de contour. Le fond
-                                // plein de la rubrique sélectionnée, lui, est
-                                // conservé partout.
-                                Capsule().strokeBorder(cat.accent, lineWidth: 1)
                             }
                         }
                 }
@@ -1205,24 +1187,23 @@ struct ContentView: View {
                     // (12 pt) reste plus petit que le libellé (body, 17 pt),
                     // et suit les réglages système.
                     Text("\(n)")
-                        // `.subheadline` vaut 15 pt à la taille « Large » —
-                        // l'équivalent iOS des 15 pt demandés. Un style
-                        // sémantique et NON une taille en points : figer les
-                        // points ici casserait le Dynamic Type.
-                        .font(cat.estSectionReserve ? .subheadline : .caption)
+                        // ESSAI VISUEL, aux DEUX sections : `.subheadline`
+                        // vaut 15 pt à la taille de texte « Large », pendant
+                        // iOS des 15 pt fixés sur macOS. Style sémantique et
+                        // non une taille en points : figer 15 casserait le
+                        // Dynamic Type.
+                        .font(.subheadline)
                         .fontWeight(categorie == cat ? .bold : .regular)
                         .foregroundStyle(categorie == cat ? Color.white : Color.textePrincipal)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background {
+                            // ESSAI VISUEL, désormais harmonisé aux DEUX
+                            // sections : le chiffre reste nu au repos, sans
+                            // contour. Le fond plein de la rubrique
+                            // sélectionnée, lui, est conservé partout.
                             if categorie == cat {
                                 Capsule().fill(cat.accent)
-                            } else if !cat.estSectionReserve {
-                                // ESSAI VISUEL : dans la Réserve, le chiffre
-                                // reste nu au repos — pas de contour. Le fond
-                                // plein de la rubrique sélectionnée, lui, est
-                                // conservé partout.
-                                Capsule().strokeBorder(cat.accent, lineWidth: 1)
                             }
                         }
                 }

@@ -25,10 +25,6 @@ struct VueFeuille: View {
     /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
     /// rubrique, voir `Categorie.typesFiltre`.
     let typesFiltre: [String]
-    /// Vrai dans les rubriques de la section « Réserve » (Favoris exclue).
-    /// ESSAI VISUEL : le compteur du bandeau y perd son contour, comme la
-    /// pastille de comptage de la barre latérale.
-    let sectionReserve: Bool
 
     /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
     /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
@@ -47,7 +43,6 @@ struct VueFeuille: View {
          collectionSeule: Bool = false,
          filtreParVendeur: Bool = false,
          typesFiltre: [String] = [],
-         sectionReserve: Bool = false,
          symboleFiltreTous: String = "square.grid.2x2",
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
@@ -62,7 +57,6 @@ struct VueFeuille: View {
         self.collectionSeule = collectionSeule
         self.filtreParVendeur = filtreParVendeur
         self.typesFiltre = typesFiltre
-        self.sectionReserve = sectionReserve
         self.symboleFiltreTous = symboleFiltreTous
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
@@ -992,7 +986,7 @@ struct VueFeuille: View {
     /// Le bandeau s'affiche dès que la rubrique le déclare, même sans aucune
     /// pastille : le compteur, lui, a toujours du sens.
     private var bandeauFiltres: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
             // Les pastilles défilent si elles débordent…
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -1009,6 +1003,14 @@ struct VueFeuille: View {
                     }
                 }
             }
+            // `ScrollView` réserve sinon une hauteur légèrement supérieure à
+            // celle de son contenu (place laissée à la barre de défilement,
+            // même masquée) : le texte des pastilles se retrouvait alors
+            // centré un peu plus haut que celui du compteur, posé lui
+            // directement dans le HStack. `.fixedSize` force le ScrollView à
+            // prendre exactement la hauteur de son contenu, et le
+            // centrage du HStack aligne alors les deux textes.
+            .fixedSize(horizontal: false, vertical: true)
             // …tandis que le compteur reste ancré à droite, hors du défilement.
             pastilleCompteur
         }
@@ -1030,16 +1032,15 @@ struct VueFeuille: View {
     /// indication, pas un bouton.
     private var pastilleCompteur: some View {
         Text("\(listeAffichee.count)")
+            // Même corps que les libellés de rubrique de la sidebar : 13 pt.
             .font(.system(size: 13))
-            .foregroundStyle(Color.textePrincipal)
+            // Toujours rempli de l'accent de la section (orange ou bleu
+            // ardoise), texte blanc — contrairement aux pastilles de filtre,
+            // qui ne se remplissent qu'une fois retenues.
+            .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background {
-                // ESSAI VISUEL : dans la Réserve, le compteur reste nu.
-                if !sectionReserve {
-                    Capsule().strokeBorder(accent, lineWidth: 1)
-                }
-            }
+            .background { Capsule().fill(accent) }
             .help("Nombre d'œuvres affichées")
     }
 
