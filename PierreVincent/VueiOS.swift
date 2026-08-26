@@ -209,11 +209,17 @@ struct VueiOS: View {
     @ViewBuilder
     private var boutonSupprimerFavoris: some View {
         if favoriSeul && !tousLesFavoris.isEmpty {
+            // Style standard iOS pour une action destructive : bouton plein,
+            // teinté rouge par le rôle `.destructive` — pas un simple texte.
             Button(role: .destructive) {
                 confirmerSuppressionFavoris = true
             } label: {
                 Text("Supprimer les favoris…")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
     }
@@ -320,7 +326,20 @@ struct VueiOS: View {
                 // disparaissent déjà tout seuls, voir `typesFiltreAffiches`),
                 // et la galerie/liste laisserait un écran vide sans dire
                 // pourquoi.
-                ContentUnavailableView("Aucun favori", systemImage: "star")
+                //
+                // Style DISCRET et non `ContentUnavailableView` (son icône
+                // par défaut est bien plus grosse qu'une icône de sidebar) :
+                // même taille d'icône que dans la barre latérale (`.body`,
+                // aucune taille imposée), même corps que les libellés de
+                // rubrique, le tout en gris — un état vide, pas une alerte.
+                VStack(spacing: 8) {
+                    Image(systemName: "star")
+                        .font(.body)
+                    Text("Aucun favori")
+                        .font(.body)
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if modeAffichage == "icone" {
                 VueGalerie(
                     oeuvres: oeuvresGalerie,
@@ -340,9 +359,11 @@ struct VueiOS: View {
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         // Confirmation avant de retirer TOUS les favoris — une opération
         // large et sans retour simple, comme la suppression d'entrées.
-        .confirmationDialog("Supprimer tous les favoris ?",
-                            isPresented: $confirmerSuppressionFavoris,
-                            titleVisibility: .visible) {
+        // `.alert` et non `.confirmationDialog` : ce dernier s'affiche en
+        // feuille au bas de l'écran, alors qu'une alerte standard iOS
+        // apparaît au centre.
+        .alert("Supprimer tous les favoris ?",
+              isPresented: $confirmerSuppressionFavoris) {
             Button("Supprimer les favoris", role: .destructive) {
                 for o in tousLesFavoris { o.favori = false }
                 try? context.save()

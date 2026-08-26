@@ -1232,16 +1232,26 @@ JavaScript, inexploitables par extraction) :
       un critère commun (prix, acheteur…) n'a pas de sens sur un mélange de
       vendus/donnés/réservés. Galerie et Liste restent les seules
       présentations.
-    - **Vide, elle affiche `ContentUnavailableView("Aucun favori", ...)`**
-      à la place de la galerie/liste (`VueiOS.swift`), et masque pastilles
-      et compteur du même geste (ils dépendent tous deux de la présence
-      réelle de favoris).
+    - **Vide, elle affiche un état DISCRET** à la place de la galerie/liste
+      (`VueiOS.swift`), et masque pastilles et compteur du même geste (ils
+      dépendent tous deux de la présence réelle de favoris). **PAS de
+      `ContentUnavailableView`** — essayé, son icône par défaut est bien
+      plus grosse qu'une icône de sidebar et le rendu se lisait comme une
+      alerte plutôt qu'un simple vide. Un `VStack` maison reprend la même
+      taille d'icône que la sidebar (`.font(.body)`, aucune taille imposée),
+      le même corps que les libellés de rubrique, en gris (`.secondary`).
     - **« Supprimer les favoris… »**, en pied de galerie ET de liste dès
       qu'il existe au moins un favori (`VueGalerie` a gagné un paramètre
-      `piedDePage`, nul partout ailleurs). Confirmation par
-      `.confirmationDialog` avant d'agir : démarque TOUS les favoris de
-      l'app, quel que soit le filtre de type actif — « Supprimer » désigne
-      la mise en favori, pas les œuvres, qui ne sont jamais effacées.
+      `piedDePage`, nul partout ailleurs). Bouton `.buttonStyle(.borderedProminent)`
+      pleine largeur — pas du texte nu, qui ne se lisait pas comme un vrai
+      contrôle — teinté rouge automatiquement par `role: .destructive`, le
+      style standard d'une action destructive sur iOS.
+      Confirmation par **`.alert`, et non `.confirmationDialog`** : ce
+      dernier s'affiche en feuille au bas de l'écran (le style d'un menu
+      d'action), alors qu'une alerte standard apparaît au centre. Démarque
+      TOUS les favoris de l'app, quel que soit le filtre de type actif —
+      « Supprimer » désigne la mise en favori, pas les œuvres, qui ne sont
+      jamais effacées.
     - Le bouton « Ajouter » en est retiré (voir `feuilleAjout` ci-dessous) :
       une vue agrégée n'a pas de feuille cible unique où créer une œuvre.
 
