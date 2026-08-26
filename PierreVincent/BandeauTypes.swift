@@ -1,15 +1,6 @@
 #if os(iOS)
 import SwiftUI
 
-/// Bouton de menu de filtre par type dans la barre d'outils : à retirer sans
-/// supprimer le code, faute de quoi il faudrait le réécrire s'il revient.
-///
-/// **Retiré des trois vues qui le posaient** (`VueiOS`, `VueDonsStructuree`,
-/// `VueOeuvresStructuree`), le bandeau de pastilles (`BandeauTypes`) restant
-/// seul moyen de filtrer par type sur iPhone. Repasser à `true` le restaure
-/// aux trois endroits d'un coup, un seul drapeau les gouvernant tous.
-let afficherMenuFiltreTypeToolbar = false
-
 /// Bandeau de pastilles filtrant par TYPE d'œuvre — Tableaux, Dessins, Tapis —
 /// avec le compteur des œuvres affichées à droite.
 ///

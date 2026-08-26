@@ -749,12 +749,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   changé). Piste : depuis le retrait du `.id(cat)`, le MÊME `NSTableView` sert
   dans toutes les rubriques — un réglage posé une fois y demeure.
 - **iOS — photo en plein écran depuis la fiche détail d'une œuvre**
-  (`DetailiOS` dans `VueiOS.swift` + nouveau fichier
-  `VisionneuseImagePleinEcran.swift`) : tap prolongé sur la photo (0,5 s,
-  retour haptique `UIImpactFeedbackGenerator(.medium)`, comme un appui long
-  sur une icône d'écran d'accueil) → ouverture en plein écran avec
-  pinch-to-zoom (1x-5x), glissement pour se déplacer une fois zoomé,
-  double-tap pour réinitialiser, croix en haut à droite pour fermer.
+  (`DetailiOS` dans `VueiOS.swift` + `VisionneuseImagePleinEcran.swift`) :
+  appui prolongé sur la photo — un « Long Press Gesture » dans la
+  terminologie Apple, retour haptique `UIImpactFeedbackGenerator(.medium)` —
+  → ouverture en plein écran avec pinch-to-zoom (1x-5x), glissement pour se
+  déplacer une fois zoomé, double-tap pour réinitialiser.
+  **Croix et fermeture par glissement calquées sur `VisionneuseOeuvres`** :
+  même pastille (cercle sombre cerclé de l'accent de la rubrique, et non plus
+  un disque blanc uni), même position (20 pt du coin supérieur droit, contre
+  le padding par défaut qui la plaçait plus haut), même seuil de fermeture
+  par glissement vertical (120 pt), neutralisé pendant le zoom. Les deux
+  visionneuses plein écran d'une photo doivent se manipuler et se refermer de
+  façon identique.
 - **iOS — transition de glissement latéral entre œuvres** (`DetailiOS`,
   swipe gauche/droite ou chevrons) : le contenu de la fiche est enveloppé
   dans un `ZStack` (indispensable pour que `.transition(.move(edge:))` se
@@ -876,6 +882,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     rubrique entière. Les cinq rubriques de Thèmes reçoivent donc le même
     `paintbrush.pointed` : il ne les distingue pas entre elles, mais il dit
     bien « tous les thèmes ».
+  - **Ce menu est RETIRÉ de la barre d'outils, sur les DEUX plateformes** —
+    `menuFiltreType` (macOS), `MenuFiltreTypes` dans les trois vues iOS —
+    gouvernés par le même drapeau `afficherMenuFiltreTypeToolbar`
+    (`TriEtTotaux.swift`). Le bandeau ou la rangée de pastilles reste seul
+    moyen de filtrer par type. Code conservé plutôt que supprimé : repasser
+    le drapeau à `true` restaure le bouton partout d'un coup.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu

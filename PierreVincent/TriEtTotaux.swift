@@ -89,6 +89,17 @@ func filtrerParType(_ liste: [Oeuvre], mot: String?) -> [Oeuvre] {
     return liste.filter { $0.type.localizedCaseInsensitiveContains(mot) }
 }
 
+/// Bouton de menu de filtre par type dans la barre d'outils, sur les DEUX
+/// plateformes : à retirer sans supprimer le code, faute de quoi il faudrait
+/// le réécrire s'il revient.
+///
+/// **Retiré partout où il apparaissait** — `menuFiltreType` dans
+/// `VueFeuille.swift` (macOS), `MenuFiltreTypes` dans `VueiOS`,
+/// `VueDonsStructuree` et `VueOeuvresStructuree` (iOS) — le bandeau ou la
+/// rangée de pastilles restant seul moyen de filtrer par type. Repasser à
+/// `true` le restaure partout d'un coup, un seul drapeau les gouvernant tous.
+let afficherMenuFiltreTypeToolbar = false
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

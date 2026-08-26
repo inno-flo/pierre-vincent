@@ -686,7 +686,8 @@ struct VueFeuille: View {
         ToolbarSpacer(.fixed)
         // Alternative aux pastilles du bandeau : même filtre, même état.
         // En TÊTE de la capsule, avant les boutons de présentation.
-        if filtreParType {
+        // Retiré pour l'instant, comme sur iOS : voir `afficherMenuFiltreTypeToolbar`.
+        if afficherMenuFiltreTypeToolbar && filtreParType {
             ToolbarItem { menuFiltreType }
         }
         ToolbarItem {
