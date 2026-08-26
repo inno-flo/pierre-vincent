@@ -50,7 +50,7 @@ struct VueOeuvresStructuree: View {
 
     @Query private var toutes: [Oeuvre]
 
-    @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).
     @AppStorage("triCroissant") private var triCroissant: Bool = false
@@ -261,20 +261,8 @@ struct VueOeuvresStructuree: View {
                                     typeRetenu: $typeRetenu)
                 }
 
-                // 1. Vue Liste.
-                Button {
-                    modeAffichage = "liste"
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .padding(6)
-                        .background(
-                            Circle().fill(modeAffichage == "liste"
-                                          ? Color.primary.opacity(0.12) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-
-                // 2. Vue Galerie.
+                // 1. Vue Galerie — en tête : présentation par défaut à la
+                // première ouverture (`modeAffichage` vaut "icone").
                 Button {
                     modeAffichage = "icone"
                 } label: {
@@ -282,6 +270,19 @@ struct VueOeuvresStructuree: View {
                         .padding(6)
                         .background(
                             Circle().fill(modeAffichage == "icone"
+                                          ? Color.primary.opacity(0.12) : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                // 2. Vue Liste.
+                Button {
+                    modeAffichage = "liste"
+                } label: {
+                    Image(systemName: "list.bullet")
+                        .padding(6)
+                        .background(
+                            Circle().fill(modeAffichage == "liste"
                                           ? Color.primary.opacity(0.12) : Color.clear)
                         )
                 }

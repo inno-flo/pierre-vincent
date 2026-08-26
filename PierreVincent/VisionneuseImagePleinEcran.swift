@@ -35,6 +35,16 @@ struct VisionneuseImagePleinEcran: View {
     @State private var glissementFermeture: CGFloat = 0
 
     var body: some View {
+        // **PAS de `.ignoresSafeArea()` sur le contenu.** Essayé, et
+        // RÉGRESSÉ : cette visionneuse s'ouvre en `.fullScreenCover` DEPUIS
+        // un `.sheet` (`DetailiOS`) — une présentation modale IMBRIQUÉE, où
+        // `.statusBarHidden()` n'obtient pas fiablement la main sur la barre
+        // système. La croix, positionnée en croyant la barre masquée,
+        // cognait alors contre l'affichage réel de la batterie. Seul le
+        // FOND ignore la zone sûre (il doit couvrir l'encoche) ; la croix,
+        // elle, reste mesurée depuis la zone sûre — quitte à s'écarter de
+        // quelques points de la position de `VisionneuseOeuvres`, qui
+        // s'ouvre elle depuis la racine, sans présentation imbriquée.
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
                 // Le fond s'estompe à mesure qu'on tire vers le bas, ce qui
@@ -52,6 +62,7 @@ struct VisionneuseImagePleinEcran: View {
                 .onTapGesture(count: 2) { reinitialiserZoom() }
 
             boutonFermer
+                .padding(20)
         }
         // Le contenu suit le doigt pendant le glissement de fermeture.
         .offset(y: glissementFermeture)
@@ -78,7 +89,6 @@ struct VisionneuseImagePleinEcran: View {
                         .overlay(Circle().strokeBorder(accent, lineWidth: 1))
                 }
         }
-        .padding(20)
         .accessibilityLabel("Fermer")
     }
 

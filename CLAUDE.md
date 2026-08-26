@@ -87,6 +87,11 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
     pour un **Tableau**, l'emplacement sinon, les cartons étant un rangement
     de dessins. Fonction PARTAGÉE par `VueGalerie` et `VueiOS` : le test écrit
     dans chaque vignette aurait divergé, comme les rendus l'ont déjà fait.
+  - **`favori`** (`Bool`, défaut `false`) : indépendant de la feuille et du
+    statut — un favori peut venir de n'importe où, et y reste ; il apparaît
+    EN PLUS dans la rubrique Favoris, jamais déplacé ni dupliqué. Bascule
+    par le menu contextuel des vignettes sur iOS (voir plus bas, section
+    « Favoris »), pas encore de UI sur macOS.
 - **Le statut pilote la visibilité.** Les rubriques de « Ventes et dons »
   (Inventaire, Tableaux, Dessins, Tapis, Dons, Ventes) ne recensent que les
   œuvres **sorties du fonds** : statut « Vendu » ou « Donné ». Prédicat unique
@@ -623,9 +628,17 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     filet de sécurité, pour une œuvre créée hors de ce circuit.
 - **Les trois surfaces qui affichent une œuvre doivent proposer les mêmes
   champs, dans le même ordre** : éditeur (boîte de dialogue), inspecteur
-  (colonne) et fiche iPhone. Ordre de référence : Prix · Type ·
-  Dimensions/Format · Statut/Thème/Emplacement · Vendeur-Acheteur-Mode de
-  vente (ou Destinataire-Mode de vente) · Date · Remarques.
+  (colonne) et fiche iPhone. Ordre de référence : Prix · Type/Thème ·
+  Dimensions/Format · Statut/Collection personnelle/Lieu de stockage/
+  Emplacement · Vendeur-Acheteur-Mode de vente (ou Destinataire-Mode de
+  vente) · Date · Remarques.
+  - **Type et Thème partagent le même encadré, CÔTE À CÔTE** — le genre
+    d'objet et son sujet se lisent ensemble. Thème n'est donc plus dans
+    l'encadré Statut. Même présentation que Dimensions/Format, déjà côte à
+    côte : les deux paires utilisent une `HStack` à l'intérieur de la
+    cellule, au lieu de piler les champs. La fiche iPhone avait encore
+    Dimensions/Format superposés — corrigée pour rejoindre les deux autres
+    surfaces, qui doivent rester identiques.
 - **Le caractère « don » se lit sur l'ŒUVRE (`o.feuille`), jamais sur la
   rubrique affichée.** Dans les vues agrégées (Inventaire, Ventes), la feuille
   de la rubrique vaut `nil` : l'inspecteur affichait donc Prix/Vendeur/
@@ -748,6 +761,21 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   son marron, et restreindre sa recherche au nombre de colonnes n'a rien
   changé). Piste : depuis le retrait du `.id(cat)`, le MÊME `NSTableView` sert
   dans toutes les rubriques — un réglage posé une fois y demeure.
+- **`.statusBarHidden()` n'obtient pas fiablement la main sur la barre système
+  dans une présentation MODALE IMBRIQUÉE.** `VisionneuseImagePleinEcran`
+  s'ouvre en `.fullScreenCover` DEPUIS un `.sheet` (`DetailiOS`) —
+  contrairement à `VisionneuseOeuvres`, qui s'ouvre directement depuis la
+  racine. Faire ignorer la zone sûre à TOUTE la vue (comme le fait
+  `VisionneuseOeuvres`, via `.ignoresSafeArea()` sur l'ensemble) suppose que
+  la barre système est bien masquée ; dans le cas imbriqué elle ne l'est pas
+  fiablement, et la croix — positionnée en le croyant — venait cogner contre
+  l'affichage réel de la batterie. **Correctif** : seul le FOND ignore la
+  zone sûre (il doit couvrir l'encoche) ; la croix reste mesurée depuis la
+  zone sûre, comme avant. Conséquence acceptée : sa position n'est plus
+  pixel pour pixel identique à celle de `VisionneuseOeuvres`. Piste non
+  explorée pour un alignement parfait : forcer le masquage de la barre
+  autrement pour une présentation imbriquée (le délégué de fenêtre plutôt que
+  le modificateur SwiftUI).
 - **iOS — photo en plein écran depuis la fiche détail d'une œuvre**
   (`DetailiOS` dans `VueiOS.swift` + `VisionneuseImagePleinEcran.swift`) :
   appui prolongé sur la photo — un « Long Press Gesture » dans la
@@ -756,10 +784,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   déplacer une fois zoomé, double-tap pour réinitialiser.
   **Croix et fermeture par glissement calquées sur `VisionneuseOeuvres`** :
   même pastille (cercle sombre cerclé de l'accent de la rubrique, et non plus
-  un disque blanc uni), même position (20 pt du coin supérieur droit, contre
-  le padding par défaut qui la plaçait plus haut), même seuil de fermeture
-  par glissement vertical (120 pt), neutralisé pendant le zoom. Les deux
-  visionneuses plein écran d'une photo doivent se manipuler et se refermer de
+  un disque blanc uni), même seuil de fermeture par glissement vertical
+  (120 pt), neutralisé pendant le zoom.
+  **La position de la croix N'EST PAS pixel pour pixel identique**, et c'est
+  volontaire — voir le piège ci-dessous sur les présentations imbriquées.
+  Les deux visionneuses plein écran d'une photo doivent se manipuler et se refermer de
   façon identique.
 - **iOS — transition de glissement latéral entre œuvres** (`DetailiOS`,
   swipe gauche/droite ou chevrons) : le contenu de la fiche est enveloppé
@@ -1022,6 +1051,67 @@ JavaScript, inexploitables par extraction) :
   (jamais au-dessus de la colonne Inspecteur). L'icône du menu de tri
   change dynamiquement selon le critère actif (eurosign / person / ruler),
   comme sur iOS.
+  - **Bouton Galerie AVANT Liste**, dans les cinq endroits qui proposent ce
+    choix (toolbar macOS, menu Présentation, et les trois barres d'outils
+    iOS) : Galerie est la présentation par défaut à la première ouverture
+    d'une rubrique (`modeAffichage = "icone"`, une seule clé partagée par
+    toute l'app). Une fois changé, le choix reste mémorisé jusqu'au prochain
+    changement — comme avant, seul le défaut et l'ordre d'affichage bougent.
+  - **Bouton de corbeille MASQUÉ, essai** (`afficherBoutonCorbeilleToolbar`
+    dans `TriEtTotaux.swift`) : la commande « Supprimer » du menu Édition
+    déclenche la même confirmation, et devient seule voie pour supprimer
+    depuis Galerie et Liste. Code conservé, `true` restaure le bouton.
+  - **Bouton « Ajouter » piloté par `Categorie.feuilleAjout`, distinct de
+    `feuille`.** `feuille` filtre les données ; `feuilleAjout` dit dans
+    quelle feuille créer une œuvre, et vaut `nil` = pas de bouton. Une
+    rubrique déjà filtrée par type ou par thème (Catégories de Ventes et
+    dons, Collection personnelle, Thèmes, Catégories de Réserve, Favoris)
+    n'en a plus : une œuvre créée sans ce critère y serait invisible
+    aussitôt. Catalogue de « Ventes et dons » en gagne un — vue agrégée
+    sans feuille propre, il cible « Tableaux vendus », le défaut du modèle
+    lui-même (`Oeuvre.feuilleBrute`).
+  - **ESSAI VISUEL — le libellé d'une pastille de filtre retenue reste en
+    graisse normale**, sur les deux plateformes (pastille de type, de
+    vendeur, `BandeauTypes` iOS) : seuls le fond plein et le texte blanc
+    marquent désormais la sélection.
+- **macOS — menu Édition : Select All / Delete / Undo / Redo remplacés,
+  Couper/Copier/Coller recréés** (`PierreVincentApp.swift`).
+  `CommandGroup(replacing: .pasteboard)` prend la main sur le bloc standard
+  Cut/Copy/Paste/Delete/Select All : les versions par défaut de Select All
+  et Delete restaient GRISÉES, visant le premier répondant — que ni la
+  sélection de `VueFeuille` (un `@State`, pas un `NSResponder`) ni la
+  suppression confirmée n'utilisent.
+  - **`champTexteFocalise`** (`@AppStorage`, remonté par le `@FocusState`
+    existant de `EditeurEntree`) dit si un champ de texte a le focus. Il
+    pilote la bascule de CINQ commandes :
+    - **Couper/Copier/Coller** : cible `nil` (`NSApp.sendAction(_:to: nil,
+      from: nil)`), le mécanisme standard par lequel un champ de texte les
+      traite déjà — jamais de problème de chaîne de répondants ici,
+      contrairement à Select All/Delete. Grisées hors d'un champ focalisé
+      (`!champTexteFocalise`) ; limite acceptée, elles ne se grisent pas
+      selon la granularité fine de Cocoa (présence d'une sélection).
+    - **Tout sélectionner** : dans un champ, cible `nil` (sélectionne le
+      TEXTE, action native) ; sinon, déclenche `selectionnerTout()` — la
+      sélection des lignes de `VueFeuille`. Grisée seulement si l'éditeur
+      est ouvert SANS champ focalisé, cas où rien n'a de sens à
+      sélectionner. **Erreur commise puis corrigée** : la griser dès que
+      l'éditeur est ouvert, sans le test de focus, la rendait inerte y
+      compris EN TRAIN de taper.
+    - **Annuler / Rétablir** : cible `GestionAnnulation.shared.undoManager`
+      (les suppressions SwiftData) hors d'un champ, mais `nil` (l'action
+      standard `undo:`/`redo:`) DANS un champ. **Bug corrigé** : le
+      remplacement visait ce gestionnaire SANS CONDITION, et ⌘Z ne pouvait
+      donc jamais défaire une frappe corrigée dans l'éditeur — le
+      gestionnaire SwiftData n'a rien enregistré de la saisie.
+      `#selector` ne peut pas viser `undo:`/`redo:` (non déclarés côté Swift
+      sur `NSResponder`) : sélecteur construit à la main, `Selector(("undo:"))`.
+- **iOS — pastille « Import en cours »** (`PastilleImportBase.swift`), même
+  mécanisme de fenêtre à part que le masquage des prix (`PastillePrix.swift`)
+  mais SANS minuteur : elle reste tant que l'import dure, pas une durée fixe.
+  `gererImportBase` l'affiche puis lance l'import sur le tour de boucle
+  suivant (`DispatchQueue.main.async`), pour que la pastille ait le temps de
+  se peindre avant que l'import — synchrone et parfois long sur une grosse
+  base — ne bloque le fil principal.
 - **macOS — navigation clavier** (`VueGalerie.swift`, `VueFeuille.swift`,
   `ContentView.swift`) :
   - *Galerie* : après un clic, les 4 touches fléchées naviguent entre les
@@ -1086,17 +1176,29 @@ JavaScript, inexploitables par extraction) :
     ni repli, détachée des deux blocs : un favori pourra venir de l'un comme
     de l'autre. Elle ne dépend d'aucun repli et figure donc toujours dans
     `categoriesSidebar`.
-    - **Vide pour l'instant, et c'est sa liste de `statuts` VIDE qui l'y
-      tient** : `correspond` exige que le statut de l'œuvre figure dans cette
-      liste, qu'aucune ne satisfait quand elle est vide. Plus franc que d'y
-      afficher tout le catalogue en attendant.
-    - Sa `feuille` vaut `.reserve` **par provision**, pour hériter de la vue
-      du Catalogue de la Réserve — pas de récapitulatif, pas de prix, pas de
-      menu de tri, tout cela se déduisant de la feuille. **À revoir** le jour
-      où le champ « favori » existera : la rubrique devra devenir une vue
-      agrégée (`nil`) filtrée sur ce champ. Conséquence en attendant : le
-      bouton « Ajouter » de macOS y créerait une œuvre en Réserve, invisible
-      aussitôt.
+    - **Le champ `Oeuvre.favori` existe désormais** (Bool, défaut `false`,
+      exporté en optionnel dans `.pvbase` comme tout champ ajouté après coup).
+      La rubrique est donc passée d'une coquille vide à une VUE AGRÉGÉE
+      (`feuille` vaut `nil`, comme Catalogue) — l'étape que la note
+      précédente annonçait comme « à revoir le jour où le champ existera ».
+    - **`correspond(favoriSeul:)`** court-circuite le test de statut quand il
+      est actif : un favori peut être vendu, donné ou encore en réserve, et
+      la rubrique n'a donc aucune liste de statuts à faire valoir — seul
+      `o.favori` compte. `Categorie.favoriSeul` (vrai pour `.favoris` seul)
+      le pilote, sur le même patron que `collectionSeule`.
+    - **Bascule via le menu contextuel iOS** (`InteractionApercu` dans
+      `TransitionVisionneuse.swift`, donc les trois vues qui le partagent) :
+      l'entrée « Ajouter aux favoris » n'était plus inerte, elle devient
+      « Supprimer des favoris » une fois l'œuvre favorite — libellé et icône
+      recalculés à CHAQUE ouverture du menu, jamais périmés. L'œuvre reste à
+      SA place d'origine ; elle apparaît EN PLUS dans Favoris, sans y être
+      déplacée ni dupliquée.
+      **Aucune façon de la basculer depuis macOS** : le mécanisme n'existe
+      que côté menu contextuel iOS.
+    - Ses pastilles de type passent à TROIS (comme Catalogue), et non plus
+      les deux de la Réserve : un tapis peut être favori.
+    - Le bouton « Ajouter » en est retiré (voir `feuilleAjout` ci-dessous) :
+      une vue agrégée n'a pas de feuille cible unique où créer une œuvre.
 
   - Deux grands blocs **repliables**, avec leurs sous-groupes. Le premier
     niveau réunit les **vues d'ensemble**, les sous-groupes les **types

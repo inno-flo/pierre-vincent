@@ -9,17 +9,31 @@ import AppKit
 struct PierreVincentApp: App {
     #if os(macOS)
     // États partagés avec la toolbar (pilotés aussi par le menu « Présentation »).
-    @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     @AppStorage("inspecteurVisible") private var inspecteurVisible = false
     @AppStorage("prixMasques") private var prixMasques = false
     // Signaux pour piloter l'éditeur depuis le menu « Édition » (on incrémente
     // pour déclencher l'action côté vue, qui observe le changement).
     @AppStorage("signalOuvrirEditeur") private var signalOuvrirEditeur = 0
     @AppStorage("signalFermerEditeur") private var signalFermerEditeur = 0
+    // Mêmes signaux, pour « Tout sélectionner » et « Supprimer » : ces deux
+    // commandes du menu Édition étaient grisées faute d'action câblée — les
+    // sélections et suppressions de VueFeuille ne passent pas par la chaîne
+    // de répondants standard (voir CLAUDE.md, ⌘A). « Supprimer » déclenche la
+    // MÊME confirmation que le bouton de corbeille, pas une suppression directe.
+    @AppStorage("signalToutSelectionner") private var signalToutSelectionner = 0
+    @AppStorage("signalSupprimer") private var signalSupprimer = 0
     // État remonté par la vue : y a-t-il une œuvre sélectionnée, et l'éditeur
     // est-il ouvert ? Sert à griser « Ouvrir l'éditeur » au bon moment.
     @AppStorage("uneSelectionExiste") private var uneSelectionExiste = false
     @AppStorage("editeurOuvert") private var editeurOuvert = false
+    // Un champ de texte de l'éditeur a-t-il le focus ? (`EditeurEntree.swift`,
+    // via son `@FocusState`). Sert à griser Couper/Copier/Coller hors d'un
+    // champ éditable, et à router Annuler/Rétablir vers le bon gestionnaire.
+    @AppStorage("champTexteFocalise") private var champTexteFocalise = false
+    // Remonté par la vue : sert à griser « Supprimer » quand rien n'est
+    // sélectionné — même condition que le bouton de corbeille et la touche
+    // Suppr, réutilisée telle quelle (`uneSelectionExiste`).
     // Remonté par la vue : la rubrique affichée est-elle sans prix (Dons ou
     // Réserve) ? Sert à griser « Masquer les prix ».
     @AppStorage("rubriqueSansPrix") private var rubriqueSansPrix = false
@@ -138,17 +152,36 @@ struct PierreVincentApp: App {
                 }
                 .keyboardShortcut("w", modifiers: .command)
             }
-            // On remplace Annuler/Rétablir pour viser le gestionnaire SwiftData.
+            // On remplace Annuler/Rétablir pour viser le gestionnaire SwiftData —
+            // MAIS SEULEMENT hors d'un champ de texte. Ce remplacement visait
+            // SANS CONDITION jusqu'ici, et cassait la correction d'une frappe
+            // dans l'éditeur : ⌘Z appelait TOUJOURS le gestionnaire SwiftData,
+            // qui n'a rien enregistré de la saisie, au lieu de laisser le
+            // champ de texte défaire son propre caractère. Cible `nil` dans ce
+            // cas, exactement comme Couper/Copier/Coller : la frappe suit le
+            // PREMIER RÉPONDANT et son propre historique.
             CommandGroup(replacing: .undoRedo) {
                 Button("Annuler") {
-                    let u = GestionAnnulation.shared.undoManager
-                    if u.canUndo { u.undo() }
+                    if champTexteFocalise {
+                        // `#selector` ne peut pas viser `undo:` : ce n'est
+                        // pas une méthode déclarée de `NSResponder` côté
+                        // Swift, seulement une action standard reconnue à
+                        // l'exécution. D'où le sélecteur construit à la main.
+                        NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
+                    } else {
+                        let u = GestionAnnulation.shared.undoManager
+                        if u.canUndo { u.undo() }
+                    }
                 }
                 .keyboardShortcut("z", modifiers: .command)
 
                 Button("Rétablir") {
-                    let u = GestionAnnulation.shared.undoManager
-                    if u.canRedo { u.redo() }
+                    if champTexteFocalise {
+                        NSApp.sendAction(Selector(("redo:")), to: nil, from: nil)
+                    } else {
+                        let u = GestionAnnulation.shared.undoManager
+                        if u.canRedo { u.redo() }
+                    }
                 }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
             }
@@ -157,6 +190,63 @@ struct PierreVincentApp: App {
             // menu « Présentation » standard (inutiles pour cette app).
             CommandGroup(replacing: .sidebar) {}
 
+            // « Tout sélectionner » et « Supprimer », dans le menu « Édition ».
+            //
+            // **`CommandGroup(replacing: .pasteboard)`, et non `after:`** :
+            // ce groupe standard porte Cut/Copy/Paste/Delete/Select All, dont
+            // les versions par défaut (Select All, Delete) restent GRISÉES
+            // ici — elles visent le premier répondant, que ni la sélection de
+            // `VueFeuille` ni la suppression confirmée n'utilisent. Les
+            // remplacer entièrement évite d'afficher DEUX commandes
+            // « Supprimer », l'une grisée et l'autre active.
+            //
+            // **Couper/Copier/Coller sont RECRÉÉS, et non perdus** : l'éditeur
+            // (`EditeurEntree`) en a besoin dans ses champs de texte. Cible
+            // `nil` : l'action suit le PREMIER RÉPONDANT, exactement le
+            // mécanisme standard par lequel un champ de texte les traite déjà
+            // — à la différence de Select All / Delete, ces trois-là n'ont
+            // jamais posé de problème de chaîne de répondants.
+            //
+            // **Grisées hors d'un champ de texte** (`champTexteFocalise`,
+            // remonté par `EditeurEntree` via son `@FocusState`) : sans ce
+            // test, elles restaient cliquables en permanence, sans jamais se
+            // désactiver comme les items système d'origine.
+            CommandGroup(replacing: .pasteboard) {
+                Button("Couper") {
+                    NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("x", modifiers: .command)
+                .disabled(!champTexteFocalise)
+                Button("Copier") {
+                    NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("c", modifiers: .command)
+                .disabled(!champTexteFocalise)
+                Button("Coller") {
+                    NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("v", modifiers: .command)
+                .disabled(!champTexteFocalise)
+                Divider()
+                // Même bascule que Couper/Copier/Coller : dans un champ de
+                // texte, « Tout sélectionner » doit en sélectionner le texte
+                // (action native, premier répondant) — pas relancer la
+                // sélection des lignes de `VueFeuille`, masquée derrière
+                // l'éditeur. Disabled UNIQUEMENT quand l'éditeur est ouvert
+                // SANS champ focalisé : rien de sensé à sélectionner alors.
+                Button("Tout sélectionner") {
+                    if champTexteFocalise {
+                        NSApp.sendAction(Selector(("selectAll:")), to: nil, from: nil)
+                    } else {
+                        signalToutSelectionner += 1
+                    }
+                }
+                .keyboardShortcut("a", modifiers: .command)
+                .disabled(editeurOuvert && !champTexteFocalise)
+                Button("Supprimer") { signalSupprimer += 1 }
+                    .keyboardShortcut(.delete, modifiers: [])
+                    .disabled(editeurOuvert || !uneSelectionExiste)
+            }
             // Commandes d'ouverture / fermeture de l'éditeur, dans le menu « Édition ».
             CommandGroup(after: .pasteboard) {
                 Divider()
@@ -174,15 +264,17 @@ struct PierreVincentApp: App {
             }
             CommandGroup(replacing: .toolbar) {
                 // On reconstruit ici le contenu utile du menu « Présentation ».
-                Toggle("Liste", isOn: Binding(
-                    get: { modeAffichage == "liste" },
-                    set: { if $0 { modeAffichage = "liste" } }))
-                    .keyboardShortcut("1", modifiers: .command)
-
+                // Galerie en tête, même ordre que les boutons de la barre
+                // d'outils : c'est la présentation par défaut.
                 Toggle("Galerie", isOn: Binding(
                     get: { modeAffichage == "icone" },
                     set: { if $0 { modeAffichage = "icone" } }))
                     .keyboardShortcut("2", modifiers: .command)
+
+                Toggle("Liste", isOn: Binding(
+                    get: { modeAffichage == "liste" },
+                    set: { if $0 { modeAffichage = "liste" } }))
+                    .keyboardShortcut("1", modifiers: .command)
 
                 Divider()
 

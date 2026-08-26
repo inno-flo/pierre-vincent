@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import SwiftData
 
 /// Choix de la transition d'ouverture de la visionneuse.
 ///
@@ -102,6 +103,7 @@ struct InteractionApercu: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinateur.tapSimple))
         vue.addGestureRecognizer(tap)
+        context.coordinator.contexteModele = context.environment.modelContext
         return vue
     }
 
@@ -109,6 +111,7 @@ struct InteractionApercu: UIViewRepresentable {
         context.coordinator.oeuvre = oeuvre
         context.coordinator.onTap = onTap
         context.coordinator.onAfficher = onAfficher
+        context.coordinator.contexteModele = context.environment.modelContext
     }
 
     func makeCoordinator() -> Coordinateur {
@@ -119,6 +122,9 @@ struct InteractionApercu: UIViewRepresentable {
         var oeuvre: Oeuvre
         var onTap: () -> Void
         var onAfficher: () -> Void
+        /// Pour enregistrer la bascule de `favori` — captée depuis
+        /// l'environnement SwiftUI, `Oeuvre` n'exposant pas son contexte.
+        var contexteModele: ModelContext?
 
         init(oeuvre: Oeuvre, onTap: @escaping () -> Void,
              onAfficher: @escaping () -> Void) {
@@ -140,13 +146,22 @@ struct InteractionApercu: UIViewRepresentable {
                 // intrinsèque de l'image — plusieurs milliers de points.
                 hote.preferredContentSize = TransitionVisionneuse.taillePreview
                 return hote
-            } actionProvider: { _ in
-                UIMenu(children: [
-                    // INERTE pour l'instant : la rubrique « Favoris » n'existe
-                    // pas encore. L'entrée tient sa place dans le menu.
-                    UIAction(title: "Ajouter aux favoris",
-                             image: UIImage(systemName: "star")) { _ in }
-                ])
+            } actionProvider: { [weak self] _ in
+                // Le libellé et l'icône reflètent l'état ACTUEL : recalculés
+                // à chaque ouverture du menu, donc jamais périmés.
+                let estFavori = self?.oeuvre.favori ?? false
+                let bascule = UIAction(
+                    title: estFavori ? "Supprimer des favoris" : "Ajouter aux favoris",
+                    image: UIImage(systemName: estFavori ? "star.slash" : "star")
+                ) { [weak self] _ in
+                    guard let self else { return }
+                    // Bascule seule : l'œuvre reste dans SA feuille d'origine,
+                    // et apparaît EN PLUS dans Favoris — jamais de doublon ni
+                    // de déplacement.
+                    self.oeuvre.favori.toggle()
+                    try? self.contexteModele?.save()
+                }
+                return UIMenu(children: [bascule])
             }
         }
 

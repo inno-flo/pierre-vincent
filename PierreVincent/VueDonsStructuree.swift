@@ -26,7 +26,7 @@ struct VueDonsStructuree: View {
 
     @Query private var toutes: [Oeuvre]
 
-    @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     @AppStorage("triCroissant") private var triCroissant: Bool = false
 
@@ -138,21 +138,23 @@ struct VueDonsStructuree: View {
                                         symboleTous: symboleFiltreTous,
                                         typeRetenu: $typeRetenu)
                     }
-                    Button { modeAffichage = "liste" } label: {
-                        Image(systemName: "list.bullet")
-                            .padding(6)
-                            .background(
-                                Circle().fill(modeAffichage == "liste"
-                                              ? Color.primary.opacity(0.12) : Color.clear)
-                            )
-                    }
-                    .buttonStyle(.plain)
-
+                    // Galerie en tête : présentation par défaut à la première
+                    // ouverture (`modeAffichage` vaut "icone").
                     Button { modeAffichage = "icone" } label: {
                         Image(systemName: "square.grid.2x2")
                             .padding(6)
                             .background(
                                 Circle().fill(modeAffichage == "icone"
+                                              ? Color.primary.opacity(0.12) : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button { modeAffichage = "liste" } label: {
+                        Image(systemName: "list.bullet")
+                            .padding(6)
+                            .background(
+                                Circle().fill(modeAffichage == "liste"
                                               ? Color.primary.opacity(0.12) : Color.clear)
                             )
                     }

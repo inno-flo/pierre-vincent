@@ -51,6 +51,11 @@ struct EditeurEntree: View {
         case statut, theme, lieuStockage, emplacement
     }
     @FocusState private var focus: Champ?
+    /// Remonté vers le menu Édition (`PierreVincentApp.swift`) : un champ de
+    /// texte a-t-il le focus ? Sert à activer Couper/Copier/Coller — grisés
+    /// tant qu'aucun champ n'est éditable — et à router Annuler/Rétablir vers
+    /// le BON gestionnaire (voir la remarque sur `focus` dans `.onChange`).
+    @AppStorage("champTexteFocalise") private var champTexteFocalise = false
 
     // Copies locales des champs (saisie fluide).
     @State private var photoNom = ""
@@ -91,12 +96,22 @@ struct EditeurEntree: View {
                         if estVente {
                             // Cellule Prix.
                             celluleEditeur { champPrix() }
-                            // Cellule Type.
-                            celluleEditeur { champType() }
-                            // Cellule Dimensions + Format.
+                            // Cellule Type + Thème, CÔTE À CÔTE — les deux se
+                            // lisent ensemble (le genre d'objet, son sujet),
+                            // même présentation que Dimensions + Format.
                             celluleEditeur {
-                                champTexte("Dimensions", $dimensions, champ: .dimensions)
-                                champTexte("Format", $format, champ: .format)
+                                HStack(alignment: .top, spacing: 16) {
+                                    champType()
+                                    champTexte("Thème", $theme, champ: .theme)
+                                }
+                            }
+                            // Cellule Dimensions + Format, CÔTE À CÔTE — et non
+                            // superposés, les deux se lisant d'un coup d'œil.
+                            celluleEditeur {
+                                HStack(alignment: .top, spacing: 16) {
+                                    champTexte("Dimensions", $dimensions, champ: .dimensions)
+                                    champTexte("Format", $format, champ: .format)
+                                }
                             }
                             // Cellule Statut + Thème + Emplacement.
                             celluleEditeur { blocSuivi }
@@ -112,12 +127,22 @@ struct EditeurEntree: View {
                             // Ordre calqué sur celui de l'inspecteur en
                             // colonne : Type, Dimensions/Format, Suivi, puis
                             // Destinataire — mêmes champs, même enchaînement.
-                            // Cellule Type.
-                            celluleEditeur { champType() }
-                            // Cellule Dimensions + Format.
+                            // Cellule Type + Thème, CÔTE À CÔTE — les deux se
+                            // lisent ensemble (le genre d'objet, son sujet),
+                            // même présentation que Dimensions + Format.
                             celluleEditeur {
-                                champTexte("Dimensions", $dimensions, champ: .dimensions)
-                                champTexte("Format", $format, champ: .format)
+                                HStack(alignment: .top, spacing: 16) {
+                                    champType()
+                                    champTexte("Thème", $theme, champ: .theme)
+                                }
+                            }
+                            // Cellule Dimensions + Format, CÔTE À CÔTE — et non
+                            // superposés, les deux se lisant d'un coup d'œil.
+                            celluleEditeur {
+                                HStack(alignment: .top, spacing: 16) {
+                                    champTexte("Dimensions", $dimensions, champ: .dimensions)
+                                    champTexte("Format", $format, champ: .format)
+                                }
                             }
                             // Cellule Statut + Thème + Emplacement.
                             celluleEditeur { blocSuivi }
@@ -209,6 +234,15 @@ struct EditeurEntree: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 focus = nil
             }
+        }
+        .onChange(of: focus) { _, nouveau in
+            champTexteFocalise = (nouveau != nil)
+        }
+        // L'éditeur peut se fermer sans repasser par `focus = nil` (Cmd W,
+        // navigation) : sans ce filet, Couper/Copier/Coller resteraient
+        // actifs après la fermeture, sur une fenêtre qui n'édite plus rien.
+        .onDisappear {
+            champTexteFocalise = false
         }
         // Confirmation avant de quitter une œuvre modifiée pendant la navigation.
         .alert("Modifications non enregistrées", isPresented: $confirmationNavigation) {
@@ -386,7 +420,8 @@ struct EditeurEntree: View {
     @ViewBuilder
     private var blocSuivi: some View {
         champTexte("Statut", $statut, champ: .statut)
-        champTexte("Thème", $theme, champ: .theme)
+        // Thème est monté dans la cellule Type, juste au-dessus : les deux
+        // se lisent ensemble (le genre d'objet, son sujet).
         champCollectionPersonnelle()
         // Modifiable, contrairement à « Collection personnelle » : c'est un
         // renseignement de rangement, qu'on peut vouloir corriger à la main
@@ -471,7 +506,9 @@ struct EditeurEntree: View {
             HStack {
                 TextField("0", text: $prixTexte)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 120)
+                    // 4 chiffres suffisent largement à un prix : la largeur
+                    // d'origine (120 pt) laissait une case bien trop vaste.
+                    .frame(width: 60)
                     .focused($focus, equals: .prix)
                     .foregroundStyle(accent)
                     // Masquage : flouté et non modifiable tant qu'il est actif.

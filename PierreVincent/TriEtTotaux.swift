@@ -20,13 +20,21 @@ let statutsVentesEtDons: Set<String> = ["Vendu", "Donné"]
 /// Vrai si l'œuvre satisfait les filtres de statut et de type d'une rubrique.
 /// `types` vide = aucun filtre de type. Comparaisons insensibles à la casse et
 /// aux espaces de bord, les valeurs étant saisies à la main.
+///
+/// **`favoriSeul` court-circuite le test de statut** : un favori peut venir de
+/// N'IMPORTE QUEL statut — vendu, donné, encore en réserve —, et la rubrique
+/// Favoris n'a donc aucune liste de statuts à faire valoir. Seul `o.favori`
+/// compte. Le type et le thème restent testés normalement (Favoris n'en
+/// impose aucun des deux, donc ces gardes n'ont pas d'effet ici).
 func correspond(_ o: Oeuvre, statuts: [String], types: [String],
-                themes: [String] = [], collectionSeule: Bool = false) -> Bool {
+                themes: [String] = [], collectionSeule: Bool = false,
+                favoriSeul: Bool = false) -> Bool {
     func egal(_ a: String, _ b: String) -> Bool {
         a.trimmingCharacters(in: .whitespacesAndNewlines)
             .caseInsensitiveCompare(b.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
     }
-    guard statuts.contains(where: { egal(o.statut, $0) }) else { return false }
+    guard !favoriSeul || o.favori else { return false }
+    guard favoriSeul || statuts.contains(where: { egal(o.statut, $0) }) else { return false }
     guard types.isEmpty || types.contains(where: { egal(o.type, $0) }) else { return false }
     guard themes.isEmpty || themes.contains(where: { egal(o.theme, $0) }) else { return false }
     // Le statut est déjà testé plus haut : une œuvre vendue ou donnée ne peut
@@ -99,6 +107,14 @@ func filtrerParType(_ liste: [Oeuvre], mot: String?) -> [Oeuvre] {
 /// rangée de pastilles restant seul moyen de filtrer par type. Repasser à
 /// `true` le restaure partout d'un coup, un seul drapeau les gouvernant tous.
 let afficherMenuFiltreTypeToolbar = false
+
+/// Bouton de corbeille dans la barre d'outils macOS (Galerie et Liste) :
+/// essai à retirer sans supprimer le code.
+///
+/// **Retiré au profit de la seule commande « Supprimer » du menu Édition**
+/// (`VueFeuille.swift`), qui déclenche la MÊME confirmation. Repasser à
+/// `true` restaure le bouton.
+let afficherBoutonCorbeilleToolbar = false
 
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.

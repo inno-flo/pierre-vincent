@@ -14,6 +14,9 @@ struct VueFeuille: View {
     @Environment(\.accentRubrique) private var accent
 
     let feuille: Feuille?          // nil = vue compilée « Œuvres »
+    /// Feuille visée par le bouton « Ajouter » — distincte de `feuille`, voir
+    /// `Categorie.feuilleAjout`. `nil` = pas de bouton.
+    let feuilleAjout: Feuille?
     let lectureSeule: Bool
     let titre: String
     let modesVente: [String]       // filtre supplémentaire sur modeVente (vide = aucun)
@@ -21,6 +24,7 @@ struct VueFeuille: View {
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
     let collectionSeule: Bool      // ne recenser que la collection personnelle
+    let favoriSeul: Bool           // ne recenser que les favoris (rubrique Favoris)
     let filtreParVendeur: Bool     // bandeau de pastilles filtrant par vendeur
     /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
     /// rubrique, voir `Categorie.typesFiltre`.
@@ -35,12 +39,13 @@ struct VueFeuille: View {
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
-    init(feuille: Feuille?, lectureSeule: Bool, titre: String,
+    init(feuille: Feuille?, feuilleAjout: Feuille?, lectureSeule: Bool, titre: String,
          modesVente: [String] = [],
          statuts: [String] = Array(statutsVentesEtDons),
          types: [String] = [],
          themes: [String] = [],
          collectionSeule: Bool = false,
+         favoriSeul: Bool = false,
          filtreParVendeur: Bool = false,
          typesFiltre: [String] = [],
          symboleFiltreTous: String = "square.grid.2x2",
@@ -48,6 +53,7 @@ struct VueFeuille: View {
          visionneuseIntegree: Bool = false,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
+        self.feuilleAjout = feuilleAjout
         self.lectureSeule = lectureSeule
         self.titre = titre
         self.modesVente = modesVente
@@ -55,6 +61,7 @@ struct VueFeuille: View {
         self.types = types
         self.themes = themes
         self.collectionSeule = collectionSeule
+        self.favoriSeul = favoriSeul
         self.filtreParVendeur = filtreParVendeur
         self.typesFiltre = typesFiltre
         self.symboleFiltreTous = symboleFiltreTous
@@ -95,7 +102,7 @@ struct VueFeuille: View {
     @AppStorage("inspecteurVisible") private var inspecteurVisible = false
     // Mode d'affichage : « liste » (tableau) ou « icone » (galerie).
     // Conservé entre les sessions ; « liste » par défaut au tout premier lancement.
-    @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     // Critère de tri de la galerie (indépendant du tri du tableau).
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).
@@ -105,6 +112,12 @@ struct VueFeuille: View {
     // Signaux venus du menu « Édition » pour ouvrir / fermer l'éditeur.
     @AppStorage("signalOuvrirEditeur") private var signalOuvrirEditeur = 0
     @AppStorage("signalFermerEditeur") private var signalFermerEditeur = 0
+    // Signaux venus du menu « Édition » pour « Tout sélectionner » et
+    // « Supprimer » — ces commandes standard restaient grisées, la sélection
+    // et la suppression de cette vue ne passant pas par la chaîne de
+    // répondants (voir CLAUDE.md, ⌘A).
+    @AppStorage("signalToutSelectionner") private var signalToutSelectionner = 0
+    @AppStorage("signalSupprimer") private var signalSupprimer = 0
     // Action déclenchée depuis le menu « Fichier » (import/export). On stocke le
     // nom de l'action + un compteur pour redéclencher même deux fois de suite.
     @AppStorage("actionFichier") private var actionFichier = ""
@@ -145,7 +158,7 @@ struct VueFeuille: View {
         // celles encore détenues (voir `Categorie.statuts`).
         base = base.filter {
             correspond($0, statuts: statuts, types: types, themes: themes,
-                       collectionSeule: collectionSeule)
+                       collectionSeule: collectionSeule, favoriSeul: favoriSeul)
         }
         return base
     }
@@ -286,21 +299,27 @@ struct VueFeuille: View {
                         }
                     }
 
-                    // Cellule 2 : Type.
+                    // Cellule 2 : Type + Thème, CÔTE À CÔTE — même
+                    // regroupement et même présentation que dans l'éditeur.
                     celluleInspecteur {
-                        ligneInspecteur("Type", o.type)
+                        HStack(alignment: .top, spacing: 16) {
+                            ligneInspecteur("Type", o.type)
+                            ligneInspecteur("Thème", o.theme)
+                        }
                     }
 
-                    // Cellule 3 : Dimensions et Format.
+                    // Cellule 3 : Dimensions et Format, CÔTE À CÔTE — et non
+                    // superposés.
                     celluleInspecteur {
-                        ligneInspecteur("Dimensions", o.dimensions)
-                        ligneInspecteur("Format", o.format)
+                        HStack(alignment: .top, spacing: 16) {
+                            ligneInspecteur("Dimensions", o.dimensions)
+                            ligneInspecteur("Format", o.format)
+                        }
                     }
 
-                    // Cellule 4 : Statut, Thème, Emplacement.
+                    // Cellule 4 : Statut, Emplacement.
                     celluleInspecteur {
                         ligneInspecteur("Statut", o.statut)
-                        ligneInspecteur("Thème", o.theme)
                         // Placé AVANT l'emplacement : il dit à quel ensemble
                         // l'œuvre appartient, l'emplacement où la trouver.
                         ligneInspecteur("Collection personnelle",
@@ -472,6 +491,18 @@ struct VueFeuille: View {
         .onChange(of: signalFermerEditeur) { _, _ in
             editionEntree = nil
         }
+        // « Tout sélectionner » depuis le menu « Édition » : MÊME action que ⌘A.
+        .onChange(of: signalToutSelectionner) { _, _ in
+            selectionnerTout()
+        }
+        // « Supprimer » depuis le menu « Édition » : déclenche la MÊME
+        // confirmation que le bouton de corbeille (masqué), pas une
+        // suppression directe.
+        .onChange(of: signalSupprimer) { _, _ in
+            if !selection.isEmpty && !lectureSeule {
+                confirmerSuppression = true
+            }
+        }
         // Tient à jour les états lus par le menu « Édition ».
         .onChange(of: editionEntree) { _, nouveau in
             editeurOuvert = (nouveau != nil)
@@ -639,7 +670,7 @@ struct VueFeuille: View {
 
         // === Set 1 : création / suppression / modification ===
         if !lectureSeule {
-            if let f = feuille {
+            if let f = feuilleAjout {
                 ToolbarItem {
                     Button {
                         let o = Oeuvre(feuille: f)
@@ -650,11 +681,16 @@ struct VueFeuille: View {
                     .disabled(barreOutilsInactive)
                 }
             }
-            ToolbarItem {
-                Button(role: .destructive) {
-                    confirmerSuppression = true
-                } label: { Label(labelSupprimer, systemImage: "trash") }
-                .disabled(selection.isEmpty || barreOutilsInactive)
+            // Essai : bouton masqué, voir `afficherBoutonCorbeilleToolbar`.
+            // La commande « Supprimer » du menu Édition déclenche la même
+            // confirmation.
+            if afficherBoutonCorbeilleToolbar {
+                ToolbarItem {
+                    Button(role: .destructive) {
+                        confirmerSuppression = true
+                    } label: { Label(labelSupprimer, systemImage: "trash") }
+                    .disabled(selection.isEmpty || barreOutilsInactive)
+                }
             }
             if selection.count == 1 {
                 ToolbarItem {
@@ -690,17 +726,19 @@ struct VueFeuille: View {
         if afficherMenuFiltreTypeToolbar && filtreParType {
             ToolbarItem { menuFiltreType }
         }
-        ToolbarItem {
-            Button {
-                modeAffichage = "liste"
-            } label: { Label("Liste", systemImage: "list.bullet") }
-            .disabled(modeAffichage == "liste" || barreOutilsInactive)
-        }
+        // Galerie en tête : c'est la présentation par défaut à la première
+        // ouverture d'une vue (`modeAffichage` vaut "icone").
         ToolbarItem {
             Button {
                 modeAffichage = "icone"
             } label: { Label("Galerie", systemImage: "square.grid.2x2") }
             .disabled(modeAffichage == "icone" || barreOutilsInactive)
+        }
+        ToolbarItem {
+            Button {
+                modeAffichage = "liste"
+            } label: { Label("Liste", systemImage: "list.bullet") }
+            .disabled(modeAffichage == "liste" || barreOutilsInactive)
         }
 
         // === Tri + sens + inspecteur (galerie seulement) ===
@@ -1059,7 +1097,9 @@ struct VueFeuille: View {
                 // 13 pt, en gras une fois retenu — et non le 11 pt des
                 // pastilles de comptage.
                 .font(.system(size: 13))
-                .fontWeight(retenu ? .bold : .regular)
+                // ESSAI VISUEL : le libellé retenu ne passe plus en gras, seuls le
+                // fond plein et le texte blanc marquent la sélection.
+                .fontWeight(.regular)
                 .foregroundStyle(retenu ? Color.white : Color.textePrincipal)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
@@ -1084,7 +1124,9 @@ struct VueFeuille: View {
         } label: {
             Text(libelle)
                 .font(.system(size: 13))
-                .fontWeight(retenu ? .bold : .regular)
+                // ESSAI VISUEL : le libellé retenu ne passe plus en gras, seuls le
+                // fond plein et le texte blanc marquent la sélection.
+                .fontWeight(.regular)
                 .foregroundStyle(retenu ? Color.white : Color.textePrincipal)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)

@@ -116,21 +116,43 @@ enum Categorie: Hashable, Identifiable {
         case .reserveDessins:   return .reserve
         case .reserveTableaux:  return .reserve
         case .reserveCollection: return .reserve
-        // `.reserve` **par provision**, pour que la vue soit en tous points
-        // celle du Catalogue de la Réserve : pas de récapitulatif, pas de
-        // prix, pas de menu de tri — tout cela se déduit de la feuille dans
-        // `VueiOS` comme dans `VueFeuille`.
-        //
-        // À revoir le jour où le champ « favori » existera : un favori pourra
-        // alors venir de n'importe quelle feuille, et la rubrique devra
-        // devenir une vue agrégée (`nil`) filtrée sur ce champ.
-        case .favoris:          return .reserve
+        // Vue AGRÉGÉE, comme Œuvres et Ventes : un favori peut venir de
+        // N'IMPORTE QUELLE feuille (vendu, donné, encore en réserve). C'était
+        // `.reserve` par provision avant que `favori` existe ; voir
+        // `favoriSeul`, qui fait maintenant le tri.
+        case .favoris:          return nil
         // Même feuille que le reste de la Réserve : c'est le THÈME qui
         // restreint, pas la feuille.
         case .reserveTheme:     return .reserve
         case .synthese:         return nil
         // Vue agrégée, comme Ventes : le filtre porte sur le mode, pas la feuille.
         case .modeVente:        return nil
+        }
+    }
+
+    /// Feuille visée par le bouton « Ajouter », ou `nil` = pas de bouton du
+    /// tout. **Distincte de `feuille`** : le Catalogue de « Ventes et dons »
+    /// n'a PAS de feuille propre (vue agrégée des quatre), mais gagne un
+    /// bouton créant dans « Tableaux vendus » — le même repli que celui du
+    /// modèle (`Oeuvre.feuilleBrute` vaut ce même défaut). À l'inverse, les
+    /// rubriques déjà filtrées par TYPE ou par THÈME n'en ont plus : créer
+    /// une œuvre y suppose de choisir un type ou un thème que le bouton ne
+    /// demande pas, et l'entrée serait alors invisible juste après création.
+    var feuilleAjout: Feuille? {
+        switch self {
+        case .oeuvres:
+            return .tableauxVendus
+        case .tableauxVendus, .dessinsVendus, .tapisVendus,
+             .reserveDessins, .reserveTableaux, .reserveCollection:
+            return nil
+        case .reserveTheme:
+            return nil
+        // Vue agrégée sans feuille propre : créer une œuvre n'aurait aucune
+        // feuille cible unique où l'insérer.
+        case .favoris:
+            return nil
+        default:
+            return feuille
         }
     }
 
@@ -158,11 +180,9 @@ enum Categorie: Hashable, Identifiable {
     /// encore détenues.
     var statuts: [String] {
         switch self {
-        // **Liste VIDE, et c'est délibéré** : `correspond` exige que le statut
-        // de l'œuvre figure dans cette liste, donc aucune œuvre ne satisfait
-        // une liste vide. C'est ce qui rend la rubrique Favoris vide tant que
-        // le champ qui marquera les favoris n'existe pas — plutôt que d'y
-        // afficher tout le catalogue en attendant.
+        // Sans effet réel : `favoriSeul` fait court-circuiter ce test dans
+        // `correspond` — un favori peut avoir n'importe quel statut. La
+        // valeur ici ne sert qu'à satisfaire le type de la propriété.
         case .favoris:
             return []
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
@@ -186,6 +206,11 @@ enum Categorie: Hashable, Identifiable {
     /// La rubrique restant dans la Réserve, ses `statuts` excluent d'office
     /// les œuvres vendues ou données.
     var collectionSeule: Bool { self == .reserveCollection }
+
+    /// Vrai pour la seule rubrique Favoris. Voir `correspond(favoriSeul:)` :
+    /// aucun test de statut, de feuille ni de type ne s'applique alors —
+    /// seul `o.favori` décide.
+    var favoriSeul: Bool { self == .favoris }
 
     /// Filtre sur le champ Thème (vide = aucun filtre).
     var themes: [String] {
@@ -265,8 +290,12 @@ enum Categorie: Hashable, Identifiable {
         switch self {
         case .oeuvres, .ventesRealisees, .oeuvresDonnees:
             return motsTypesFiltrables
-        case .reserveInventaire, .reserveCollection, .favoris:
+        case .reserveInventaire, .reserveCollection:
             return ["tableau", "dessin"]
+        // Favoris peut contenir n'importe quel type, tapis compris : les
+        // trois pastilles, comme Catalogue/Ventes/Dons.
+        case .favoris:
+            return motsTypesFiltrables
         default:
             return []
         }
@@ -589,6 +618,7 @@ struct ContentView: View {
                     #if os(macOS)
                     // Interface Mac complète (édition, exports, etc.).
                     VueFeuille(feuille: cat.feuille,
+                               feuilleAjout: cat.feuilleAjout,
                                lectureSeule: cat.lectureSeule,
                                titre: cat.titre,
                                modesVente: cat.modesVente,
@@ -596,6 +626,7 @@ struct ContentView: View {
                                types: cat.types,
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
+                               favoriSeul: cat.favoriSeul,
                                filtreParVendeur: cat.filtreParVendeur,
                                typesFiltre: cat.typesFiltre,
                                symboleFiltreTous: cat.symboleFiltreTous,
@@ -642,6 +673,7 @@ struct ContentView: View {
                                types: cat.types,
                                themes: cat.themes,
                                collectionSeule: cat.collectionSeule,
+                               favoriSeul: cat.favoriSeul,
                                typesFiltre: cat.typesFiltre,
                                symboleFiltreTous: cat.symboleFiltreTous,
                                visionneuseIntegree: cat.visionneuseIntegree)
@@ -859,7 +891,8 @@ struct ContentView: View {
     private func correspond(_ o: Oeuvre, a cat: Categorie) -> Bool {
         PierreVincent.correspond(o, statuts: cat.statuts, types: cat.types,
                                  themes: cat.themes,
-                                 collectionSeule: cat.collectionSeule)
+                                 collectionSeule: cat.collectionSeule,
+                                 favoriSeul: cat.favoriSeul)
     }
 
     // MARK: Compteurs pour les pastilles de sous-rubriques (macOS)
@@ -973,11 +1006,19 @@ struct ContentView: View {
             defer { if acces { url.stopAccessingSecurityScopedResource() } }
             do {
                 let donnees = try Data(contentsOf: url)
-                let r = EchangeBase.importerEnRemplacant(donnees: donnees, context: context)
-                if let err = r.erreur {
-                    messageImportBase = "Échec : \(err)"
-                } else {
-                    messageImportBase = "\(r.importees) œuvre(s) importée(s)."
+                // La pastille doit être PEINTE avant que l'import — synchrone
+                // et parfois long sur une grosse base — ne bloque le fil
+                // principal. `DispatchQueue.main.async` laisse ce tour de
+                // boucle afficher la pastille avant de lancer le travail.
+                PastilleImportBase.shared.afficher()
+                DispatchQueue.main.async {
+                    let r = EchangeBase.importerEnRemplacant(donnees: donnees, context: context)
+                    PastilleImportBase.shared.masquer()
+                    if let err = r.erreur {
+                        messageImportBase = "Échec : \(err)"
+                    } else {
+                        messageImportBase = "\(r.importees) œuvre(s) importée(s)."
+                    }
                 }
             } catch {
                 messageImportBase = "Impossible de lire le fichier : \(error.localizedDescription)"

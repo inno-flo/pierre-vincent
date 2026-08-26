@@ -18,6 +18,7 @@ struct VueiOS: View {
     let types: [String]            // filtre sur le champ Type (vide = aucun)
     let themes: [String]           // filtre sur le champ Thème (vide = aucun)
     let collectionSeule: Bool      // ne recenser que la collection personnelle
+    let favoriSeul: Bool           // ne recenser que les favoris (rubrique Favoris)
     /// Pastilles de type proposées (vide = pas de bandeau). Décidées par la
     /// rubrique, voir `Categorie.typesFiltre`.
     let typesFiltre: [String]
@@ -33,6 +34,7 @@ struct VueiOS: View {
          types: [String] = [],
          themes: [String] = [],
          collectionSeule: Bool = false,
+         favoriSeul: Bool = false,
          typesFiltre: [String] = [],
          symboleFiltreTous: String = "square.grid.2x2",
          visionneuseIntegree: Bool = false) {
@@ -43,6 +45,7 @@ struct VueiOS: View {
         self.types = types
         self.themes = themes
         self.collectionSeule = collectionSeule
+        self.favoriSeul = favoriSeul
         self.typesFiltre = typesFiltre
         self.symboleFiltreTous = symboleFiltreTous
         self.visionneuseIntegree = visionneuseIntegree
@@ -53,7 +56,7 @@ struct VueiOS: View {
         KeyPathComparator(\Oeuvre.type)
     ]
     // Mode d'affichage, conservé entre les sessions (comme sur Mac).
-    @AppStorage("modeAffichage") private var modeAffichage: String = "liste"
+    @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     // Critère de tri de la galerie (partagé avec le Mac via le même réglage).
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).
@@ -91,7 +94,7 @@ struct VueiOS: View {
         // Filtres propres à la rubrique : statut, type, thème.
         let retenues = base.filter {
             correspond($0, statuts: statuts, types: types, themes: themes,
-                       collectionSeule: collectionSeule)
+                       collectionSeule: collectionSeule, favoriSeul: favoriSeul)
         }
         return filtrerParType(retenues, mot: typeRetenu)
     }
@@ -288,20 +291,8 @@ struct VueiOS: View {
                                     typeRetenu: $typeRetenu)
                 }
 
-                // 1. Vue Liste.
-                Button {
-                    modeAffichage = "liste"
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .padding(6)
-                        .background(
-                            Circle().fill(modeAffichage == "liste"
-                                          ? Color.primary.opacity(0.12) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-
-                // 2. Vue Galerie.
+                // 1. Vue Galerie — en tête : présentation par défaut à la
+                // première ouverture (`modeAffichage` vaut "icone").
                 Button {
                     modeAffichage = "icone"
                 } label: {
@@ -309,6 +300,19 @@ struct VueiOS: View {
                         .padding(6)
                         .background(
                             Circle().fill(modeAffichage == "icone"
+                                          ? Color.primary.opacity(0.12) : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                // 2. Vue Liste.
+                Button {
+                    modeAffichage = "liste"
+                } label: {
+                    Image(systemName: "list.bullet")
+                        .padding(6)
+                        .background(
+                            Circle().fill(modeAffichage == "liste"
                                           ? Color.primary.opacity(0.12) : Color.clear)
                         )
                 }
@@ -525,6 +529,18 @@ struct DetailiOS: View {
     @State private var tacheStabilisation: Task<Void, Never>?
     // Affichage de la photo en plein écran (tap prolongé).
     @State private var imagePleinEcranOuverte = false
+    /// Désactive le bouton « Fermer » de la barre d'outils pendant la
+    /// visionneuse plein écran, et un court instant après sa fermeture.
+    ///
+    /// **Sans quoi** : le bouton « Fermer » de CETTE fiche occupe le même
+    /// coin (haut-droit, `.confirmationAction`) que la croix de la
+    /// visionneuse. Si le doigt reste posé au moment où celle-ci se referme,
+    /// il retombe exactement sur ce bouton-ci — encore sous contact — qui
+    /// affiche alors son état « pressé » (un tremblement), sans pour autant
+    /// se déclencher : le geste n'est pas un appui reconnu depuis le début
+    /// PAR ce bouton. Le désactiver bloque ce résidu sans avoir à déplacer
+    /// la croix.
+    @State private var boutonFermerActif = true
 
     /// Œuvre réellement affichée (la courante, ou celle passée à l'ouverture).
     private var oeuvreAffichee: Oeuvre { courante ?? oeuvre }
@@ -588,6 +604,7 @@ struct DetailiOS: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fermer") { dismiss() }
+                        .disabled(!boutonFermerActif)
                 }
             }
             .onAppear {
@@ -618,9 +635,17 @@ struct DetailiOS: View {
                     // retour haptique puis ouverture en plein écran, zoomable.
                     .onLongPressGesture(minimumDuration: RetourAppuiLong.duree) {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        boutonFermerActif = false
                         imagePleinEcranOuverte = true
                     }
-                    .fullScreenCover(isPresented: $imagePleinEcranOuverte) {
+                    .fullScreenCover(isPresented: $imagePleinEcranOuverte, onDismiss: {
+                        // `onDismiss` : la visionneuse a COMPLÈTEMENT disparu.
+                        // Un court délai supplémentaire couvre le doigt encore
+                        // posé au moment où l'animation s'achève.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            boutonFermerActif = true
+                        }
+                    }) {
                         VisionneuseImagePleinEcran(image: img)
                     }
             } else {
@@ -645,21 +670,27 @@ struct DetailiOS: View {
                 }
             }
 
-            // Cellule 2 : Type.
+            // Cellule 2 : Type + Thème, CÔTE À CÔTE — même regroupement et
+            // même présentation que sur Mac (éditeur et inspecteur).
             cellule {
-                ligne("Type", oeuvre.type)
+                HStack(alignment: .top, spacing: 16) {
+                    ligne("Type", oeuvre.type)
+                    ligne("Thème", oeuvre.theme)
+                }
             }
 
-            // Cellule 3 : Dimensions et Format.
+            // Cellule 3 : Dimensions et Format, CÔTE À CÔTE.
             cellule {
-                ligne("Dimensions", oeuvre.dimensions)
-                ligne("Format", oeuvre.format)
+                HStack(alignment: .top, spacing: 16) {
+                    ligne("Dimensions", oeuvre.dimensions)
+                    ligne("Format", oeuvre.format)
+                }
             }
 
-            // Cellule 4 : Statut, Thème, Emplacement.
+            // Cellule 4 : Statut, Emplacement.
             cellule {
+                // Thème est monté dans la cellule Type, juste au-dessus.
                 ligne("Statut", oeuvre.statut)
-                ligne("Thème", oeuvre.theme)
                 // Placé AVANT l'emplacement : il dit à quel ensemble l'œuvre
                 // appartient, l'emplacement où la trouver.
                 ligne("Collection personnelle", oeuvre.collectionPersonnelle)

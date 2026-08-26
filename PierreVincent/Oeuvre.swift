@@ -63,6 +63,12 @@ final class Oeuvre {
     /// Distinct d'`emplacement`, qui nomme le carton à l'intérieur du lieu.
     var lieuStockage: String = ""
     var emplacement: String = ""
+    /// Mise en favori — indépendante de la feuille et du statut : un favori
+    /// peut venir de n'importe où (vendu, donné, encore en réserve), et reste
+    /// à SA place d'origine. Il apparaît EN PLUS dans la rubrique Favoris,
+    /// sans y être déplacé ni dupliqué. Bascule via le menu contextuel des
+    /// vignettes (« Ajouter aux favoris » / « Supprimer des favoris »).
+    var favori: Bool = false
 
     // Date technique de création de l'entrée (pour l'ordre par défaut)
     var creeLe: Date = Date()

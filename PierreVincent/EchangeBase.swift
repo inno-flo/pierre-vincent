@@ -46,6 +46,8 @@ enum EchangeBase {
         var collectionPersonnelle: String?
         var lieuStockage: String?
         var emplacement: String?
+        /// OPTIONNEL, même raison que les champs ci-dessus.
+        var favori: Bool?
         // Image encodée en base64 (vide si aucune photo).
         var imageBase64: String
         var imageExtension: String   // "png", "jpeg"… (pour ré-enregistrer)
@@ -90,6 +92,7 @@ enum EchangeBase {
                 collectionPersonnelle: o.collectionPersonnelle,
                 lieuStockage: o.lieuStockage,
                 emplacement: o.emplacement,
+                favori: o.favori,
                 imageBase64: b64,
                 imageExtension: ext))
         }
@@ -145,6 +148,7 @@ enum EchangeBase {
             o.collectionPersonnelle = e.collectionPersonnelle ?? ""
             o.lieuStockage = e.lieuStockage ?? ""
             o.emplacement  = e.emplacement ?? ""
+            o.favori       = e.favori ?? false
 
             // Filet : le statut fait foi sur l'appartenance à la Réserve.
             // La feuille voyage en TEXTE et se relit avec un repli sur

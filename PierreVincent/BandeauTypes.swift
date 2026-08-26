@@ -54,7 +54,9 @@ struct BandeauTypes: View {
                 // sidebar. Style SÉMANTIQUE et non une taille en points :
                 // figer une taille casserait le Dynamic Type.
                 .font(.body)
-                .fontWeight(retenu ? .bold : .regular)
+                // ESSAI VISUEL : le libellé retenu ne passe plus en gras, seuls le
+                // fond plein et le texte blanc marquent la sélection.
+                .fontWeight(.regular)
                 .foregroundStyle(retenu ? Color.white : Color.textePrincipal)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
