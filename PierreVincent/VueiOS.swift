@@ -203,34 +203,6 @@ struct VueiOS: View {
         toutes.filter { $0.favori }
     }
 
-    /// Bouton de fin de liste/galerie : retire TOUS les favoris d'un coup,
-    /// après confirmation. « Supprimer » désigne ici la mise en favori, pas
-    /// les œuvres elles-mêmes — aucune entrée n'est effacée.
-    @ViewBuilder
-    private var boutonSupprimerFavoris: some View {
-        if favoriSeul && !tousLesFavoris.isEmpty {
-            // Style standard iOS pour une action destructive : bouton plein,
-            // teinté rouge par le rôle `.destructive` — pas un simple texte.
-            Button(role: .destructive) {
-                confirmerSuppressionFavoris = true
-            } label: {
-                Text("Supprimer les favoris…")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-    }
-
-    /// Pendant galerie du bouton ci-dessus, transmis à `VueGalerie` pour
-    /// s'afficher à la fin de la grille plutôt qu'en dehors du défilement.
-    private var piedDePageFavoris: AnyView? {
-        guard favoriSeul && !tousLesFavoris.isEmpty else { return nil }
-        return AnyView(boutonSupprimerFavoris)
-    }
-
     /// Œuvres de la rubrique ayant réellement une photo — ce que parcourt la
     /// visionneuse. Une œuvre sans photo n'y mènerait qu'à un écran vide.
     ///
@@ -347,8 +319,7 @@ struct VueiOS: View {
                     onOuvrir: { o in selection = [o.id]; detail = o },
                     onAppuiLong: appuiLongGalerie,
                     espaceZoom: espaceZoom,
-                    entete: entete,
-                    piedDePage: piedDePageFavoris
+                    entete: entete
                 )
             } else {
                 liste
@@ -475,6 +446,18 @@ struct VueiOS: View {
                     }
                     .id("bouton-sens-tri")
                 }
+
+                // 5. Supprimer les favoris — tout à droite, seulement s'il en
+                // existe au moins un. Une simple icône de corbeille, et non
+                // un gros bouton rouge en pied de page (essayé, jugé trop
+                // voyant) : la confirmation, elle, reste une alerte standard.
+                if favoriSeul && !tousLesFavoris.isEmpty {
+                    Button(role: .destructive) {
+                        confirmerSuppressionFavoris = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                }
                 }
             }
         }
@@ -589,7 +572,6 @@ struct VueiOS: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 30)
-                boutonSupprimerFavoris
             }
             .background(Color.cremeFond)
             // Défile vers la dernière œuvre consultée à la fermeture de la fiche.

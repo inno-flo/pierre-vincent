@@ -1240,12 +1240,11 @@ JavaScript, inexploitables par extraction) :
       alerte plutôt qu'un simple vide. Un `VStack` maison reprend la même
       taille d'icône que la sidebar (`.font(.body)`, aucune taille imposée),
       le même corps que les libellés de rubrique, en gris (`.secondary`).
-    - **« Supprimer les favoris… »**, en pied de galerie ET de liste dès
-      qu'il existe au moins un favori (`VueGalerie` a gagné un paramètre
-      `piedDePage`, nul partout ailleurs). Bouton `.buttonStyle(.borderedProminent)`
-      pleine largeur — pas du texte nu, qui ne se lisait pas comme un vrai
-      contrôle — teinté rouge automatiquement par `role: .destructive`, le
-      style standard d'une action destructive sur iOS.
+    - **Suppression des favoris : une icône de corbeille dans la toolbar**,
+      tout à droite, seulement s'il existe au moins un favori — et non un
+      gros bouton en pied de galerie/liste, essayé puis retiré à la demande
+      (jugé trop voyant). `VueGalerie` garde son paramètre `piedDePage`
+      (nul ici désormais, encore utile ailleurs au besoin).
       Confirmation par **`.alert`, et non `.confirmationDialog`** : ce
       dernier s'affiche en feuille au bas de l'écran (le style d'un menu
       d'action), alors qu'une alerte standard apparaît au centre. Démarque
