@@ -794,6 +794,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   swipe gauche/droite ou chevrons) : le contenu de la fiche est enveloppé
   dans un `ZStack` (indispensable pour que `.transition(.move(edge:))` se
   voie réellement à l'intérieur d'un `ScrollView`), animation 0,25 s.
+  - **`.disabled()` seul ne grise pas visuellement un bouton de toolbar en
+    `.topBarLeading`.** Les chevrons Précédent/Suivant restaient tapables à
+    l'œil (sans effet réel, `naviguer()` garde son propre garde-fou) même en
+    bout de liste. Un `.foregroundStyle` explicite, conditionné sur la même
+    règle que `.disabled`, est posé en plus sur chaque `Image`.
 - **Sidebar — zone du bas, conservée en commentaire** (`ContentView.swift`,
   les deux plateformes) : le bas de la barre latérale est **vide**. Il a
   successivement porté les pastilles de choix de thème, le bouton « G »
@@ -1193,10 +1198,50 @@ JavaScript, inexploitables par extraction) :
       recalculés à CHAQUE ouverture du menu, jamais périmés. L'œuvre reste à
       SA place d'origine ; elle apparaît EN PLUS dans Favoris, sans y être
       déplacée ni dupliquée.
-      **Aucune façon de la basculer depuis macOS** : le mécanisme n'existe
-      que côté menu contextuel iOS.
+      **Bascule aussi depuis macOS** désormais : menu contextuel de la
+      `Table` (liste — `menuContextuel`, partagé par les trois feuilles) et
+      de `VueGalerie` (`#if os(macOS)` seul, sans toucher iOS), plus une
+      commande dédiée du menu Édition. Les trois libellés suivent la MÊME
+      convention sur une sélection multiple : si au moins une œuvre visée
+      n'est pas favorite, « Ajouter aux favoris » les marque TOUTES ; si
+      toutes le sont déjà, « Supprimer des favoris » les démarque toutes —
+      jamais un simple `.toggle()` par œuvre, qui mélangerait les états.
+      `VueFeuille.basculerFavoriSelection()` est le point de passage unique
+      pour la Table et le menu Édition ; `VueGalerie` calcule sa propre
+      version localement (une cible de clic droit peut différer de la
+      sélection remontée au menu Édition).
+    - **ESSAYÉ ET ABANDONNÉ — double-tap sur une vignette/ligne pour
+      basculer le favori**, comme alternative au menu contextuel iOS.
+      Techniquement, la bonne méthode UIKit a été posée : un second
+      `UITapGestureRecognizer` (2 taps) avec `tap.require(toFail:
+      doubleTap)` sur le premier, exactement le mécanisme qui fait
+      normalement attendre le tap simple. **Constaté à l'usage : ça ne
+      marchait pas** — le tap simple continuait d'intercepter la commande
+      avant qu'un second ait pu être reconnu. Revert complet (`InteractionApercu`
+      revient à tap simple + menu contextuel seul, les lignes de liste
+      retrouvent leur `Button` d'origine, `InteractionListeFavori` supprimé).
+      Ne pas retenter cette même piste sans en comprendre la cause exacte.
     - Ses pastilles de type passent à TROIS (comme Catalogue), et non plus
       les deux de la Réserve : un tapis peut être favori.
+      **Sur iPhone, elles sont en outre réellement PRÉSENTES** — la seule
+      rubrique où `typesFiltre` cède la place à une liste déduite des
+      données (`typesFiltreAffiches` dans `VueiOS.swift`), calculée AVANT
+      le filtre de type actif, sur le même principe que les vendeurs
+      déduits. Sans favori d'un type donné, sa pastille n'apparaît pas.
+    - **Aucun récapitulatif ni menu/bouton de tri sur iPhone ni sur Mac** :
+      un critère commun (prix, acheteur…) n'a pas de sens sur un mélange de
+      vendus/donnés/réservés. Galerie et Liste restent les seules
+      présentations.
+    - **Vide, elle affiche `ContentUnavailableView("Aucun favori", ...)`**
+      à la place de la galerie/liste (`VueiOS.swift`), et masque pastilles
+      et compteur du même geste (ils dépendent tous deux de la présence
+      réelle de favoris).
+    - **« Supprimer les favoris… »**, en pied de galerie ET de liste dès
+      qu'il existe au moins un favori (`VueGalerie` a gagné un paramètre
+      `piedDePage`, nul partout ailleurs). Confirmation par
+      `.confirmationDialog` avant d'agir : démarque TOUS les favoris de
+      l'app, quel que soit le filtre de type actif — « Supprimer » désigne
+      la mise en favori, pas les œuvres, qui ne sont jamais effacées.
     - Le bouton « Ajouter » en est retiré (voir `feuilleAjout` ci-dessous) :
       une vue agrégée n'a pas de feuille cible unique où créer une œuvre.
 

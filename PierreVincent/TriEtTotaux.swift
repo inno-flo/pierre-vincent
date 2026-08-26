@@ -1,4 +1,17 @@
 import Foundation
+import SwiftData
+
+/// Bascule la mise en favori d'une œuvre, et enregistre aussitôt.
+///
+/// **Point de passage UNIQUE** pour les trois gestes qui peuvent basculer un
+/// favori — menu contextuel iOS, double-tap en galerie, double-tap en liste —
+/// pour que la règle (bascule + enregistrement immédiat) ne diverge pas d'un
+/// endroit à l'autre.
+@MainActor
+func basculerFavori(_ oeuvre: Oeuvre, contexte: ModelContext?) {
+    oeuvre.favori.toggle()
+    try? contexte?.save()
+}
 
 /// Valeur affichable d'un champ de suivi (statut, thème, emplacement).
 /// Ces trois champs s'affichent TOUJOURS, même vides : le bloc doit rester

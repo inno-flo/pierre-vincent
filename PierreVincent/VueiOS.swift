@@ -52,9 +52,13 @@ struct VueiOS: View {
     }
 
     @Query private var toutes: [Oeuvre]
+    @Environment(\.modelContext) private var context
     @State private var tri: [KeyPathComparator<Oeuvre>] = [
         KeyPathComparator(\Oeuvre.type)
     ]
+    /// Confirmation avant « Supprimer tous les favoris… » : retire TOUS les
+    /// favoris de l'app d'un coup, quel que soit le filtre de type actif.
+    @State private var confirmerSuppressionFavoris = false
     // Mode d'affichage, conservé entre les sessions (comme sur Mac).
     @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     // Critère de tri de la galerie (partagé avec le Mac via le même réglage).
@@ -92,15 +96,20 @@ struct VueiOS: View {
             base = base.filter { modesVente.contains($0.modeVente) }
         }
         // Filtres propres à la rubrique : statut, type, thème.
-        let retenues = base.filter {
+        return base.filter {
             correspond($0, statuts: statuts, types: types, themes: themes,
                        collectionSeule: collectionSeule, favoriSeul: favoriSeul)
         }
-        return filtrerParType(retenues, mot: typeRetenu)
+    }
+
+    /// `baseRubrique`, filtre de type APPLIQUÉ — ce que montrent la galerie
+    /// et la liste.
+    private var oeuvresFiltrees: [Oeuvre] {
+        filtrerParType(baseRubrique, mot: typeRetenu)
     }
     /// Œuvres de cette catégorie, filtrées et triées.
     private var oeuvres: [Oeuvre] {
-        baseRubrique.sorted(using: tri)
+        oeuvresFiltrees.sorted(using: tri)
     }
 
     private var estFeuilleDon: Bool { feuille == .oeuvresDonnees }
@@ -113,7 +122,7 @@ struct VueiOS: View {
 
     /// Œuvres triées pour la galerie, selon le critère choisi (prix ou acheteur).
     private var oeuvresGalerie: [Oeuvre] {
-        let base = baseRubrique
+        let base = oeuvresFiltrees
         // Critère effectif : on retombe sur un tri pertinent si le critère
         // mémorisé ne s'applique pas à cette feuille (ex. prix dans les dons,
         // dimensions dans les tapis).
@@ -146,7 +155,10 @@ struct VueiOS: View {
     /// Le récapitulatif compte des VENTES : sans objet dans la Réserve, dont
     /// les œuvres n'ont par définition pas encore été vendues. Retiré des deux
     /// présentations, galerie et liste.
-    private var recapVisible: Bool { feuille != .reserve }
+    // Favoris n'a rien à recapituler : le nombre affiché est déjà celui du
+    // bandeau de pastilles juste en dessous, et « Nombre de ventes » n'a
+    // aucun sens pour une rubrique qui mélange vendus, donnés et réservés.
+    private var recapVisible: Bool { feuille != .reserve && !favoriSeul }
 
     /// En-tête commun aux deux présentations : le récapitulatif quand il a du
     /// sens, et le bandeau de pastilles quand la rubrique le déclare.
@@ -155,17 +167,62 @@ struct VueiOS: View {
     /// barre de navigation garde sa translucidité. Ancré au-dessus, elle
     /// deviendrait pleine.
     private var entete: AnyView? {
-        guard recapVisible || !typesFiltre.isEmpty else { return nil }
+        guard recapVisible || !typesFiltreAffiches.isEmpty else { return nil }
         return AnyView(
             VStack(spacing: 0) {
                 if recapVisible { recapCell }
-                if !typesFiltre.isEmpty {
-                    BandeauTypes(mots: typesFiltre,
+                if !typesFiltreAffiches.isEmpty {
+                    BandeauTypes(mots: typesFiltreAffiches,
                                  typeRetenu: $typeRetenu,
                                  nombreAffiche: oeuvresGalerie.count)
                 }
             }
         )
+    }
+
+    /// Pastilles à proposer : dans Favoris, seulement celles réellement
+    /// présentes parmi les favoris — un type sans aucun favori ne
+    /// filtrerait jamais que vers une liste vide. Calculé sur `baseRubrique`,
+    /// AVANT le filtre de type actif : sinon, choisir une pastille ferait
+    /// disparaître les autres, sans retour possible.
+    ///
+    /// Ailleurs, `typesFiltre` reste FIXE, comme partout dans l'app — seule
+    /// Favoris mélange des types assez librement pour que la présence réelle
+    /// vaille la peine d'être vérifiée.
+    private var typesFiltreAffiches: [String] {
+        guard favoriSeul else { return typesFiltre }
+        return typesFiltre.filter { mot in
+            baseRubrique.contains { $0.type.localizedCaseInsensitiveContains(mot) }
+        }
+    }
+
+    /// Tous les favoris de l'app, indépendamment du type retenu — la cible
+    /// du bouton « Supprimer les favoris… », qui agit sur la totalité et pas
+    /// seulement sur ce que le filtre de type laisse voir.
+    private var tousLesFavoris: [Oeuvre] {
+        toutes.filter { $0.favori }
+    }
+
+    /// Bouton de fin de liste/galerie : retire TOUS les favoris d'un coup,
+    /// après confirmation. « Supprimer » désigne ici la mise en favori, pas
+    /// les œuvres elles-mêmes — aucune entrée n'est effacée.
+    @ViewBuilder
+    private var boutonSupprimerFavoris: some View {
+        if favoriSeul && !tousLesFavoris.isEmpty {
+            Button(role: .destructive) {
+                confirmerSuppressionFavoris = true
+            } label: {
+                Text("Supprimer les favoris…")
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    /// Pendant galerie du bouton ci-dessus, transmis à `VueGalerie` pour
+    /// s'afficher à la fin de la grille plutôt qu'en dehors du défilement.
+    private var piedDePageFavoris: AnyView? {
+        guard favoriSeul && !tousLesFavoris.isEmpty else { return nil }
+        return AnyView(boutonSupprimerFavoris)
     }
 
     /// Œuvres de la rubrique ayant réellement une photo — ce que parcourt la
@@ -258,14 +315,21 @@ struct VueiOS: View {
         // Ventes et Dons. Placé au-dessus du ScrollView, il restait ancré et
         // ces deux effets manquaient.
         Group {
-            if modeAffichage == "icone" {
+            if favoriSeul && oeuvresGalerie.isEmpty {
+                // Aucun favori : ni pastilles ni compteur n'ont de sens (ils
+                // disparaissent déjà tout seuls, voir `typesFiltreAffiches`),
+                // et la galerie/liste laisserait un écran vide sans dire
+                // pourquoi.
+                ContentUnavailableView("Aucun favori", systemImage: "star")
+            } else if modeAffichage == "icone" {
                 VueGalerie(
                     oeuvres: oeuvresGalerie,
                     selection: $selection,
                     onOuvrir: { o in selection = [o.id]; detail = o },
                     onAppuiLong: appuiLongGalerie,
                     espaceZoom: espaceZoom,
-                    entete: entete
+                    entete: entete,
+                    piedDePage: piedDePageFavoris
                 )
             } else {
                 liste
@@ -274,6 +338,19 @@ struct VueiOS: View {
         // Plein écran, barres système comprises : `.fullScreenCover` et non
         // `.sheet`, qui laisserait la fiche en carte avec ses coins arrondis.
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
+        // Confirmation avant de retirer TOUS les favoris — une opération
+        // large et sans retour simple, comme la suppression d'entrées.
+        .confirmationDialog("Supprimer tous les favoris ?",
+                            isPresented: $confirmerSuppressionFavoris,
+                            titleVisibility: .visible) {
+            Button("Supprimer les favoris", role: .destructive) {
+                for o in tousLesFavoris { o.favori = false }
+                try? context.save()
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Les œuvres elles-mêmes ne sont pas supprimées, seule leur mise en favori l'est.")
+        }
         .background(Color.cremeFond)
         .navigationTitle(titre)
         .toolbar {
@@ -285,8 +362,8 @@ struct VueiOS: View {
 
                 // 0. Filtre par type, en TÊTE de la capsule.
                 // Retiré pour l'instant : voir `afficherMenuFiltreTypeToolbar`.
-                if afficherMenuFiltreTypeToolbar && !typesFiltre.isEmpty {
-                    MenuFiltreTypes(mots: typesFiltre,
+                if afficherMenuFiltreTypeToolbar && !typesFiltreAffiches.isEmpty {
+                    MenuFiltreTypes(mots: typesFiltreAffiches,
                                     symboleTous: symboleFiltreTous,
                                     typeRetenu: $typeRetenu)
                 }
@@ -326,7 +403,10 @@ struct VueiOS: View {
                 // `VueOeuvresStructuree` par `estVenteRealisee`. La branche qui
                 // s'était écrite ici ne s'affichait donc jamais — et divergeait
                 // déjà de celle qui vit, faute d'être vue.
-                if feuille != .reserve {
+                // Absent aussi de Favoris : l'œuvre peut être vendue, donnée
+                // ou encore en réserve — aucun critère commun n'a de sens, et
+                // le tri s'y ferait sur des champs à moitié vides.
+                if feuille != .reserve && !favoriSeul {
                     // Mode tri standard : Prix, Acheteur, Dimensions.
                     // Absent de la Réserve : ces œuvres n'ont ni prix ni
                     // acheteur, et le menu n'y proposerait que Dimensions.
@@ -363,13 +443,17 @@ struct VueiOS: View {
                 // est certaine) que l'on retourne verticalement pour figurer le
                 // sens inverse. Les longueurs des traits s'inversent ainsi :
                 // décroissant = grand/moyen/petit, croissant = petit/moyen/grand.
-                Button {
-                    triCroissant.toggle()
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                // Retiré avec le menu de critère pour Favoris : un sens de
+                // tri sans critère commun n'a rien à inverser.
+                if !favoriSeul {
+                    Button {
+                        triCroissant.toggle()
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                            .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                    }
+                    .id("bouton-sens-tri")
                 }
-                .id("bouton-sens-tri")
                 }
             }
         }
@@ -484,6 +568,7 @@ struct VueiOS: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 30)
+                boutonSupprimerFavoris
             }
             .background(Color.cremeFond)
             // Défile vers la dernière œuvre consultée à la fermeture de la fiche.
@@ -592,15 +677,26 @@ struct DetailiOS: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         naviguer(-1)
-                    } label: { Image(systemName: "chevron.left") }
-                        .disabled(indexCourant <= 0)
+                    } label: {
+                        // Style de premier plan posé EXPLICITEMENT : `.disabled`
+                        // bloque bien le tap, mais un bouton de barre d'outils
+                        // en `.topBarLeading` ne s'estompait pas tout seul —
+                        // resté visuellement actif à la première image.
+                        Image(systemName: "chevron.left")
+                            .foregroundStyle(indexCourant > 0 ? Color.primary : Color.secondary.opacity(0.4))
+                    }
+                    .disabled(indexCourant <= 0)
                 }
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         naviguer(1)
-                    } label: { Image(systemName: "chevron.right") }
-                        .disabled(indexCourant >= listeNavigation.count - 1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(indexCourant < listeNavigation.count - 1
+                                             ? Color.primary : Color.secondary.opacity(0.4))
+                    }
+                    .disabled(indexCourant >= listeNavigation.count - 1)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fermer") { dismiss() }

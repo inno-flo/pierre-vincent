@@ -118,6 +118,10 @@ struct VueFeuille: View {
     // répondants (voir CLAUDE.md, ⌘A).
     @AppStorage("signalToutSelectionner") private var signalToutSelectionner = 0
     @AppStorage("signalSupprimer") private var signalSupprimer = 0
+    // Signal et état pour « Ajouter aux favoris » / « Supprimer des
+    // favoris » depuis le menu Édition — pendant Mac du menu contextuel iOS.
+    @AppStorage("signalBasculerFavori") private var signalBasculerFavori = 0
+    @AppStorage("selectionEstToutFavorite") private var selectionEstToutFavorite = false
     // Action déclenchée depuis le menu « Fichier » (import/export). On stocke le
     // nom de l'action + un compteur pour redéclencher même deux fois de suite.
     @AppStorage("actionFichier") private var actionFichier = ""
@@ -509,6 +513,8 @@ struct VueFeuille: View {
         }
         .onChange(of: selection) { _, nouvelle in
             uneSelectionExiste = !nouvelle.isEmpty
+            selectionEstToutFavorite = !nouvelle.isEmpty
+                && oeuvres.filter { nouvelle.contains($0.id) }.allSatisfy { $0.favori }
             nbSelection = nouvelle.count
             // Sélectionner une œuvre (clic en liste ou en galerie) donne la
             // main au clavier au panneau de contenu.
@@ -622,7 +628,14 @@ struct VueFeuille: View {
         .onAppear {
             nbSelection = selection.count
             uneSelectionExiste = !selection.isEmpty
+            selectionEstToutFavorite = !selection.isEmpty
+                && oeuvres.filter { selection.contains($0.id) }.allSatisfy { $0.favori }
             editeurOuvert = (editionEntree != nil)
+        }
+        // « Ajouter aux favoris » / « Supprimer des favoris » depuis le menu
+        // Édition.
+        .onChange(of: signalBasculerFavori) { _, _ in
+            basculerFavoriSelection()
         }
     }
 
@@ -744,22 +757,28 @@ struct VueFeuille: View {
         // === Tri + sens + inspecteur (galerie seulement) ===
         if modeAffichage == "icone" {
             ToolbarSpacer(.fixed)
-            ToolbarItemGroup {
-                // Menu de critère : sans objet dans la Réserve, dont les
-                // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
-                // le tri par dimensions y gardant du sens.
-                if feuille != .reserve {
-                    menuTri
-                        .disabled(barreOutilsInactive)
+            // Favoris n'a ni critère ni sens de tri : l'œuvre peut être
+            // vendue, donnée ou encore en réserve, sans champ commun qui
+            // fasse un tri sensé. Retiré comme sur iOS, la galerie et la
+            // liste restant seules présentations.
+            if !favoriSeul {
+                ToolbarItemGroup {
+                    // Menu de critère : sans objet dans la Réserve, dont les
+                    // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
+                    // le tri par dimensions y gardant du sens.
+                    if feuille != .reserve {
+                        menuTri
+                            .disabled(barreOutilsInactive)
+                    }
+                    Button {
+                        triCroissant.toggle()
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                            .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                    }
+                    .disabled(barreOutilsInactive)
+                    .help(triCroissant ? "Tri croissant" : "Tri décroissant")
                 }
-                Button {
-                    triCroissant.toggle()
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
-                }
-                .disabled(barreOutilsInactive)
-                .help(triCroissant ? "Tri croissant" : "Tri décroissant")
             }
             ToolbarSpacer(.fixed)
             ToolbarItem {
@@ -1386,7 +1405,36 @@ struct VueFeuille: View {
                 Button("Dupliquer") { dupliquerSelection() }
             }
             Button("Supprimer", role: .destructive) { confirmerSuppression = true }
+            Divider()
         }
+        // Pendant Mac du menu contextuel iOS — même bascule que la commande
+        // du menu Édition, mais calculée ici sur `selection` directement :
+        // le signal `@AppStorage` sert à faire remonter l'action jusqu'au
+        // menu Édition (une scène différente), il n'a pas à transiter par
+        // là pour un menu posé sur la vue elle-même.
+        Button(selectionToutFavorite ? "Supprimer des favoris" : "Ajouter aux favoris") {
+            basculerFavoriSelection()
+        }
+    }
+
+    /// Vrai si la sélection n'est pas vide et l'est ENTIÈREMENT déjà favorite.
+    private var selectionToutFavorite: Bool {
+        !selection.isEmpty
+            && oeuvres.filter { selection.contains($0.id) }.allSatisfy { $0.favori }
+    }
+
+    /// Bascule TOUTE la sélection vers l'état opposé à `selectionToutFavorite`
+    /// — comme un « marquer » à bascule sur plusieurs éléments, pas un simple
+    /// `.toggle()` œuvre par œuvre, qui mélangerait les états sur une
+    /// sélection hétérogène. Point de passage UNIQUE pour le menu Édition et
+    /// le menu contextuel, qui ne doivent pas diverger.
+    private func basculerFavoriSelection() {
+        let selectionnees = oeuvres.filter { selection.contains($0.id) }
+        guard !selectionnees.isEmpty else { return }
+        let nouvelEtat = !selectionToutFavorite
+        for o in selectionnees { o.favori = nouvelEtat }
+        try? context.save()
+        selectionEstToutFavorite = nouvelEtat
     }
 
     private func ouvrirDepuisDoubleClic(_ ids: Set<UUID>) {

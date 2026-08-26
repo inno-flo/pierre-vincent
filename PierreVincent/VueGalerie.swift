@@ -10,6 +10,9 @@ struct VueGalerie: View {
     /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
     /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
     @Environment(\.accentRubrique) private var accent
+    #if os(macOS)
+    @Environment(\.modelContext) private var context
+    #endif
 
     let oeuvres: [Oeuvre]
     @Binding var selection: Set<UUID>
@@ -29,6 +32,9 @@ struct VueGalerie: View {
     /// En-tête facultatif, placé DANS la zone de défilement : il défile donc
     /// avec les vignettes. Sert au récapitulatif des vues iOS ; nul sur Mac.
     var entete: AnyView? = nil
+    /// Pied de page facultatif, placé APRÈS la grille, dans la même zone de
+    /// défilement. Sert au bouton « Supprimer les favoris… » ; nul ailleurs.
+    var piedDePage: AnyView? = nil
 
     // Ancre pour la sélection par plage (Maj + clic).
     @State private var derniere: UUID?
@@ -65,6 +71,7 @@ struct VueGalerie: View {
                     }
                 }
                 .padding(16)
+                piedDePage
             }
             .background(Color.cremeFond)
             // Fait défiler vers l'œuvre sélectionnée quand la sélection change
@@ -247,6 +254,20 @@ struct VueGalerie: View {
             selection = [o.id]
             derniere = o.id
             onOuvrir(o)
+        }
+        // Menu contextuel : pendant Mac de la commande du menu contextuel
+        // iOS. Agit sur TOUTE la sélection si la vignette cliquée en fait
+        // partie, sinon sur elle seule — même convention qu'un clic droit
+        // standard sur une sélection multiple.
+        .contextMenu {
+            let cibles = selection.contains(o.id) ? selection : [o.id]
+            let visees = oeuvres.filter { cibles.contains($0.id) }
+            let toutFavori = !visees.isEmpty && visees.allSatisfy { $0.favori }
+            Button(toutFavori ? "Supprimer des favoris" : "Ajouter aux favoris") {
+                let nouvelEtat = !toutFavori
+                for v in visees { v.favori = nouvelEtat }
+                try? context.save()
+            }
         }
         #else
         // Sur iPhone : tap et appui prolongé sont pris par une vue UIKit

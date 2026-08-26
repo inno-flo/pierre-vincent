@@ -23,6 +23,13 @@ struct PierreVincentApp: App {
     // MÊME confirmation que le bouton de corbeille, pas une suppression directe.
     @AppStorage("signalToutSelectionner") private var signalToutSelectionner = 0
     @AppStorage("signalSupprimer") private var signalSupprimer = 0
+    // Signal pour basculer le favori de la sélection, depuis le menu Édition.
+    @AppStorage("signalBasculerFavori") private var signalBasculerFavori = 0
+    // Remonté par la vue : la sélection est-elle DÉJÀ tout entière favorite ?
+    // Dit si la commande doit ajouter (au moins une œuvre ne l'est pas) ou
+    // retirer (toutes le sont déjà) — même convention qu'un « marquer »/
+    // « démarquer » à bascule sur plusieurs éléments.
+    @AppStorage("selectionEstToutFavorite") private var selectionEstToutFavorite = false
     // État remonté par la vue : y a-t-il une œuvre sélectionnée, et l'éditeur
     // est-il ouvert ? Sert à griser « Ouvrir l'éditeur » au bon moment.
     @AppStorage("uneSelectionExiste") private var uneSelectionExiste = false
@@ -246,6 +253,13 @@ struct PierreVincentApp: App {
                 Button("Supprimer") { signalSupprimer += 1 }
                     .keyboardShortcut(.delete, modifiers: [])
                     .disabled(editeurOuvert || !uneSelectionExiste)
+
+                Divider()
+
+                Button(selectionEstToutFavorite ? "Supprimer des favoris" : "Ajouter aux favoris") {
+                    signalBasculerFavori += 1
+                }
+                .disabled(editeurOuvert || !uneSelectionExiste)
             }
             // Commandes d'ouverture / fermeture de l'éditeur, dans le menu « Édition ».
             CommandGroup(after: .pasteboard) {

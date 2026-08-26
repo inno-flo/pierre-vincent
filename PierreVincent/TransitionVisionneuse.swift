@@ -158,8 +158,7 @@ struct InteractionApercu: UIViewRepresentable {
                     // Bascule seule : l'œuvre reste dans SA feuille d'origine,
                     // et apparaît EN PLUS dans Favoris — jamais de doublon ni
                     // de déplacement.
-                    self.oeuvre.favori.toggle()
-                    try? self.contexteModele?.save()
+                    basculerFavori(self.oeuvre, contexte: self.contexteModele)
                 }
                 return UIMenu(children: [bascule])
             }
