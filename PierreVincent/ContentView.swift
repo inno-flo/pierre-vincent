@@ -359,7 +359,7 @@ enum Categorie: Hashable, Identifiable {
         switch self {
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
              .reserveTheme, .reserveCollection: return .bleuArdoise
-        case .favoris:              return .yellow
+        case .favoris:              return .taupeChaud
         default:                 return .orangeInternational
         }
     }
@@ -1168,7 +1168,12 @@ struct ContentView: View {
             // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
             HStack(spacing: 6) {
                 Image(systemName: cat.symbole)
-                    .foregroundStyle(cat == .favoris ? Color.yellow : categorie == cat
+                    // Favoris garde SA teinte même sélectionnée, là où les
+                    // autres rubriques passent au blanc de la sélection : sa
+                    // couleur propre est ce qui la signale comme rubrique
+                    // isolée. `cat.accent` et non la couleur en dur — la
+                    // teinte se change alors à un seul endroit.
+                    .foregroundStyle(cat == .favoris ? cat.accent : categorie == cat
                                      ? Color.texteSelectionSidebarMac
                                      : cat.accent)
                 // Rubrique sélectionnée : libellé blanc et gras, conformément
@@ -1220,7 +1225,7 @@ struct ContentView: View {
                     Text(cat.titre)
                 } icon: {
                     Image(systemName: cat.symbole)
-                        .foregroundStyle(cat == .favoris ? Color.yellow : cat.accent)
+                        .foregroundStyle(cat.accent)
                 }
                 if let n = compteurPourCategorie(cat) {
                     Spacer()

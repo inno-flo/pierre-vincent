@@ -1622,11 +1622,29 @@ JavaScript, inexploitables par extraction) :
   centralisé dans `TexteLigneSelectionnee`, afin que les trois tableaux restent
   cohérents.
 
-- **Favoris — accent jaune** (`ContentView.swift`) : la rubrique Favoris utilise
-  désormais le jaune comme accent propre. Il s'applique à l'icône de la
-  sidebar, au fond du compteur de la sidebar, au compteur de la vue et aux
-  trois pastilles de type Tableaux, Dessins et Tapis. Le bleu ardoise reste
-  l'accent des autres rubriques de la Réserve.
+- **Favoris — accent TAUPE CHAUD** (`Couleurs.swift`, `ContentView.swift`) :
+  `Color.taupeChaud`, (125, 106, 88) en clair, éclairci en sombre. Il remplace
+  le jaune, qui n'a plus aucune occurrence dans le code. Il s'applique à
+  l'icône de la sidebar, au fond du compteur de la sidebar, au compteur de la
+  vue et aux trois pastilles de type. Le bleu ardoise reste l'accent des
+  autres rubriques de la Réserve.
+  - **TROIS accents cohabitent donc**, et non deux : orange (« Ventes et
+    dons »), bleu ardoise (« Réserve »), taupe (Favoris). Favoris est une
+    rubrique ISOLÉE, qui n'appartient à aucune des deux sections — sa teinte
+    propre le dit.
+  - **La valeur claire est contrainte par la pastille de comptage**, qui pose
+    du texte BLANC sur un fond plein de cette teinte. (125, 106, 88) donne
+    5,15:1, au-dessus du seuil AA ; (138, 118, 98), essayé d'abord, tombait à
+    4,33:1. Ne pas éclaircir ce taupe sans refaire ce calcul — c'est le même
+    écueil qui avait fait écarter la plus claire des deux nuances de sélection
+    de sidebar macOS.
+  - **Une seule source** : `Categorie.accent`. Les deux tests
+    `cat == .favoris ? Color.yellow : …` qui traînaient dans `lien()` ont
+    disparu — celui d'iOS était même redondant, `accent` renvoyant déjà cette
+    teinte. Seul subsiste, côté macOS, le test qui fait garder à Favoris SA
+    couleur quand la rubrique est sélectionnée, là où les autres passent au
+    blanc ; il passe désormais par `cat.accent`, donc la teinte se change à un
+    seul endroit.
 
 - **Accent système et Synthèse** (`project.pbxproj`, `Couleurs.swift`,
   `VueSynthese.swift`) : le projet ne déclare plus le catalogue `AccentColor`
