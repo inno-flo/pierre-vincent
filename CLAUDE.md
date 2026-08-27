@@ -1169,6 +1169,21 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `listStyle(.sidebar)` fournit bien ce gris, mais le
     `.foregroundStyle(Color.textePrincipal)` appliqué à toute la hiérarchie de
     `ContentView` l'écrase.
+- **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
+  `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
+  (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en
+  mode clair) — et c'est cet écart, et lui seul, qui détache visuellement les
+  blocs. La sidebar portait `.scrollContentBackground(.hidden)` suivi d'un
+  `.background(Color.cremeFond)`, hérité du thème crème : depuis le passage aux
+  couleurs système, `cremeFond` vaut `systemBackground`, donc **blanc**. Le fond
+  de la vue prenait ainsi la couleur des blocs et **toute la sidebar devenait
+  uniformément blanche**, sans plus aucune séparation visible.
+  - Correctif : retirer l'override et laisser le style natif faire. Le fond de
+    la COLONNE (hors liste) utilise `Color.fondGroupe`, ajoutée pour l'occasion
+    dans `Couleurs.swift`, sinon la zone du bas trancherait sur la liste.
+  - **`fondGroupe` n'est pas `cremeFond`** : la première est le fond d'une liste
+    groupée, la seconde celui d'une vue ordinaire. Les confondre reproduit
+    exactement ce défaut.
 - **iOS — sidebar, typographie** (`ContentView.swift`) : tailles relevées via
   `UIFont` (taille de texte « Large ») — body **17 pt**, headline 17 pt
   semi-gras, subheadline 15 pt, **footnote 13 pt**, caption 12/11 pt.

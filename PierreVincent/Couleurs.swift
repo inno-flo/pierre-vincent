@@ -83,6 +83,22 @@ extension Color {
         #endif
     }
 
+    /// Fond d'une vue à liste GROUPÉE (iOS `.insetGrouped`).
+    ///
+    /// À ne pas confondre avec `cremeFond` (`systemBackground`), qui est le
+    /// fond d'une vue ordinaire. Une liste groupée pose ses blocs en
+    /// `secondarySystemGroupedBackground` — blanc en mode clair — sur un fond
+    /// `systemGroupedBackground` légèrement gris : c'est cet écart, et lui
+    /// seul, qui détache visuellement les blocs. Peindre le fond en
+    /// `systemBackground` les rend indistinguables.
+    static var fondGroupe: Color {
+        #if os(macOS)
+        return Color(nsColor: .windowBackgroundColor)
+        #else
+        return Color(uiColor: .systemGroupedBackground)
+        #endif
+    }
+
     /// Fond des cellules / tuiles / légendes.
     static var fondLegende: Color {
         #if os(macOS)

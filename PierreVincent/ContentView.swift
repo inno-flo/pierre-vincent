@@ -500,8 +500,15 @@ struct ContentView: View {
                 }
                 #if os(iOS)
                 .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
-                .background(Color.cremeFond)
+                // PAS de `.scrollContentBackground(.hidden)` suivi d'un fond
+                // peint à la main : `.insetGrouped` distingue DEUX fonds — la
+                // vue en `systemGroupedBackground` (gris), les blocs en
+                // `secondarySystemGroupedBackground` (blanc) — et c'est cet
+                // écart qui détache les blocs. Les repeindre avec `cremeFond`
+                // (soit `systemBackground`, donc BLANC) les alignait sur la
+                // couleur des blocs : toute la sidebar devenait uniformément
+                // blanche. L'override datait du thème crème, qui n'existe
+                // plus ; le style natif donne exactement le rendu voulu.
             #else
                 .listStyle(.sidebar)
                 // La sélection native devient grise lorsque le contenu
@@ -551,8 +558,9 @@ struct ContentView: View {
                 #endif
             }
             #if os(iOS)
-            // Fond de toute la colonne.
-            .background(Color.cremeFond)
+            // Fond de la colonne, hors de la liste : le MÊME que celui d'une
+            // liste groupée, sans quoi la zone du bas trancherait sur elle.
+            .background(Color.fondGroupe)
             #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
