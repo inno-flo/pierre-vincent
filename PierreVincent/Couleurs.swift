@@ -76,18 +76,20 @@ extension Color {
 
     /// Fond général de l'app.
     static var cremeFond: Color {
-        couleurTheme(
-            cremeClair: (250, 245, 235), cremeSombre: nil,
-            grisClair:  (231, 236, 240), grisSombre:  (15, 21, 25),
-            vertClair:  (230, 237, 230), vertSombre:  (18, 24, 20))
+        #if os(macOS)
+        return Color(nsColor: .windowBackgroundColor)
+        #else
+        return Color(uiColor: .systemBackground)
+        #endif
     }
 
     /// Fond des cellules / tuiles / légendes.
     static var fondLegende: Color {
-        couleurTheme(
-            cremeClair: (255, 255, 255), cremeSombre: (0, 0, 0),
-            grisClair:  (255, 255, 255), grisSombre:  (22, 24, 28),
-            vertClair:  (251, 253, 250), vertSombre:  (22, 24, 28))
+        #if os(macOS)
+        return Color(nsColor: .controlBackgroundColor)
+        #else
+        return Color(uiColor: .secondarySystemBackground)
+        #endif
     }
 
     /// Texte sur la légende. Noir/blanc selon le mode clair/sombre.

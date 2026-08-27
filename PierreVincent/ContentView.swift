@@ -435,17 +435,6 @@ struct ContentView: View {
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
     @State private var messageImportBase: String?
-    // Section qui vient d'être choisie : reste teintée un court instant
-    // après la sélection (pour accompagner la transition), puis s'éteint
-    // TOUTE SEULE — sans dépendre du retour à cette vue, qui n'est pas
-    // fiable à observer avec NavigationSplitView (onDisappear ne se
-    // déclenche pas systématiquement sur sa colonne « detail »).
-    // Piloté uniquement par le changement officiel de `categorie` (aucun
-    // geste personnalisé sur les lignes : un DragGesture, même en
-    // simultaneousGesture, entre par moments en concurrence avec le tap
-    // natif du NavigationLink et empêche la navigation par intermittence.
-    @State private var categorieRecemmentChoisie: Categorie?
-    @State private var tacheExtinctionSurbrillance: Task<Void, Never>?
     #endif
 
     var body: some View {
@@ -506,27 +495,13 @@ struct ContentView: View {
                 .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
                 .background(Color.cremeFond)
-                // Déclenché uniquement par la sélection officielle
-                // (fiable), jamais par un geste personnalisé sur les
-                // lignes : voir la remarque sur categorieRecemmentChoisie.
-                .onChange(of: categorie) { _, nouvelle in
-                    guard let nouvelle else { return }
-                    categorieRecemmentChoisie = nouvelle
-                    // Réarme le minuteur d'extinction à chaque sélection.
-                    tacheExtinctionSurbrillance?.cancel()
-                    tacheExtinctionSurbrillance = Task {
-                        try? await Task.sleep(nanoseconds: 400_000_000)   // 0,4 s
-                        if !Task.isCancelled { categorieRecemmentChoisie = nil }
-                    }
-                }
-                #else
+            #else
                 .listStyle(.sidebar)
                 // Couleur de sélection des rubriques : marron au lieu du bleu.
                 // `.tint()` n'a AUCUN effet sur la surbrillance d'une List en
                 // style sidebar (essayé, sans résultat) : on désactive la
                 // surbrillance système sur le NSOutlineView et on peint le fond
                 // nous-mêmes via .listRowBackground dans lien().
-                .background(DesactiveSurbrillanceSidebar())
                 // ↑↓ : ni onKeyPress (SwiftUI capte avant AppKit sans traiter),
                 // ni repli sur le natif (le premier répondant ne suit pas les
                 // clics de façon fiable ici). On passe par un capteur NSEvent
@@ -1175,7 +1150,7 @@ struct ContentView: View {
             // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
             HStack(spacing: 6) {
                 Image(systemName: cat.symbole)
-                    .foregroundStyle(categorie == cat
+                    .foregroundStyle(cat == .favoris ? Color.yellow : categorie == cat
                                      ? Color.texteSelectionSidebarMac
                                      : cat.accent)
                 // Rubrique sélectionnée : libellé gras sur le fond marron —
@@ -1228,7 +1203,7 @@ struct ContentView: View {
                     Text(cat.titre)
                 } icon: {
                     Image(systemName: cat.symbole)
-                        .foregroundStyle(cat.accent)
+                        .foregroundStyle(cat == .favoris ? Color.yellow : cat.accent)
                 }
                 if let n = compteurPourCategorie(cat) {
                     Spacer()
@@ -1263,27 +1238,6 @@ struct ContentView: View {
             }
             #endif
         }
-        #if os(iOS)
-        // Fond de cellule suivant le thème (blanc en clair, gris en sombre),
-        // avec une teinte plus soutenue juste après la sélection (voir
-        // categorieRecemmentChoisie, piloté par .onChange(of: categorie)
-        // sur la liste). Aucun geste personnalisé ici : c'était la source
-        // d'un bug de navigation aléatoire (tap sans effet), même avec
-        // simultaneousGesture.
-        .listRowBackground(
-            categorieRecemmentChoisie == cat
-                ? Color.fondCelluleSidebarSelectionnee : Color.fondCelluleSidebar)
-        .animation(nil, value: categorieRecemmentChoisie)
-        #else
-        // Surbrillance de la rubrique sélectionnée, peinte par nous : la
-        // surbrillance système (bleue) est désactivée sur le NSOutlineView,
-        // voir DesactiveSurbrillanceSidebar.
-        .listRowBackground(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(categorie == cat ? Color.fondSelectionSidebarMac : Color.clear)
-                .padding(.horizontal, 4)
-        )
-        #endif
     }
 }
 

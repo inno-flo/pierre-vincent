@@ -1482,6 +1482,15 @@ JavaScript, inexploitables par extraction) :
   donc PAS à pouvoir la passer à l'appel, il faut aussi étendre l'`init`.
   Rencontré deux fois.
 
+- **Couleurs standard de l'interface** (`Couleurs.swift`, `ContentView.swift`) :
+  les fonds auparavant crème utilisent désormais les fonds système macOS et
+  iOS. Les sélections personnalisées des sidebars ont été retirées afin de
+  laisser les deux systèmes afficher leur sélection bleue native ; la
+  sélection marron de la sidebar macOS n'est donc plus utilisée. Les couleurs
+  orange international et bleu ardoise sont conservées pour les éléments
+  d'interface qui les utilisent déjà : icônes, pastilles, compteurs, contours
+  et filets. L'icône de la rubrique Favoris est jaune sur les deux plateformes.
+
 - **macOS — premier répondant des vues Liste** (`VueFeuille.swift`) : la
   sélection bleue native pouvait devenir grise après un changement de
   rubrique, car le `NSTableView` partagé restait un tableau sélectionné mais
