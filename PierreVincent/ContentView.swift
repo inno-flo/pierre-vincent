@@ -426,6 +426,12 @@ struct ContentView: View {
     // clés à chaque lancement — les deux grands blocs dépliés, les quatre
     // sous-groupes repliés. Les valeurs ci-dessous ne servent donc que de
     // garde-fou, et suivent le même arrangement.
+    #if os(macOS)
+    // Incrémente uniquement lorsqu'une rubrique est choisie : le relais
+    // AppKit de la sidebar ne doit pas reprendre le focus lors d'une simple
+    // mise à jour du contenu central.
+    @State private var demandeFocusSidebar = 0
+    #endif
     @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
     @AppStorage("blocStockOuvert") private var blocStockOuvert = true
     @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = false
@@ -498,11 +504,14 @@ struct ContentView: View {
                 .background(Color.cremeFond)
             #else
                 .listStyle(.sidebar)
-                // Couleur de sélection des rubriques : marron au lieu du bleu.
-                // `.tint()` n'a AUCUN effet sur la surbrillance d'une List en
-                // style sidebar (essayé, sans résultat) : on désactive la
-                // surbrillance système sur le NSOutlineView et on peint le fond
-                // nous-mêmes via .listRowBackground dans lien().
+                // La sélection native devient grise lorsque le contenu
+                // central est le premier répondant. Ce relais rend à la
+                // sidebar son statut actif après un choix de rubrique, sans
+                // imposer de couleur personnalisée.
+                .background(ActiveSidebarSelection(demande: demandeFocusSidebar))
+                // La couleur de sélection reste entièrement gérée par macOS.
+                // Le relais ActiveSidebarSelection veille seulement à ce que
+                // la sidebar soit active au moment du choix d'une rubrique.
                 // ↑↓ : ni onKeyPress (SwiftUI capte avant AppKit sans traiter),
                 // ni repli sur le natif (le premier répondant ne suit pas les
                 // clics de façon fiable ici). On passe par un capteur NSEvent
@@ -515,7 +524,10 @@ struct ContentView: View {
                 )
                 // Choisir une rubrique rend la main au clavier à la sidebar.
                 .onChange(of: categorie) { _, nouvelle in
-                    if nouvelle != nil { ZoneClavier.definir(ZoneClavier.sidebar) }
+                    if nouvelle != nil {
+                        ZoneClavier.definir(ZoneClavier.sidebar)
+                        demandeFocusSidebar += 1
+                    }
                 }
                 // ←→ ne sont pas consommées par NSOutlineView.
                 .onKeyPress(.rightArrow) {
@@ -1154,9 +1166,8 @@ struct ContentView: View {
                     .foregroundStyle(cat == .favoris ? Color.yellow : categorie == cat
                                      ? Color.texteSelectionSidebarMac
                                      : cat.accent)
-                // Rubrique sélectionnée : libellé gras sur le fond marron —
-                // noir en mode clair, blanc en mode sombre (le marron y est
-                // assombri). Voir Color.texteSelectionSidebarMac.
+                // Rubrique sélectionnée : libellé blanc et gras, conformément
+                // au contraste de la sélection native affichée par macOS.
                 // 13 pt = NSFont.systemFontSize, la taille standard d'un
                 // libellé de sidebar sur macOS (les en-têtes de section, eux,
                 // sont à 11 pt : ils doivent rester PLUS PETITS que les
@@ -1277,6 +1288,55 @@ extension View {
 #endif
 
 #if os(macOS)
+/// Rend le `NSOutlineView` de la sidebar premier répondant après une nouvelle
+/// sélection. Sans cela, le tableau central peut conserver le statut actif et
+/// macOS affiche la sélection de la sidebar en gris, qui est sa teinte native
+/// pour une sélection inactive.
+private struct ActiveSidebarSelection: NSViewRepresentable {
+    let demande: Int
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSView {
+        NSView(frame: .zero)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard context.coordinator.derniereDemande != demande else { return }
+        context.coordinator.derniereDemande = demande
+
+        DispatchQueue.main.async {
+            guard let outline = Self.outlineViewProche(de: nsView),
+                  let fenetre = outline.window else { return }
+            outline.selectionHighlightStyle = .regular
+            fenetre.makeFirstResponder(outline)
+        }
+    }
+
+    final class Coordinator {
+        var derniereDemande = -1
+    }
+
+    private static func outlineViewProche(de vue: NSView) -> NSOutlineView? {
+        var courant: NSView? = vue.superview
+        while let ancetre = courant {
+            if let outline = outlineView(dans: ancetre) { return outline }
+            courant = ancetre.superview
+        }
+        return nil
+    }
+
+    private static func outlineView(dans vue: NSView) -> NSOutlineView? {
+        if let outline = vue as? NSOutlineView, outline.numberOfColumns <= 1 {
+            return outline
+        }
+        for sousVue in vue.subviews {
+            if let outline = outlineView(dans: sousVue) { return outline }
+        }
+        return nil
+    }
+}
+
 /// Désactive la surbrillance de sélection **système** (le bleu) sur le
 /// `NSOutlineView` de la sidebar, pour que la teinte marron peinte par
 /// `.listRowBackground` soit seule visible.

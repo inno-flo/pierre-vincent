@@ -1527,3 +1527,11 @@ JavaScript, inexploitables par extraction) :
   dans les réglages système, y compris après relance. Les fonds des tuiles de
   Synthèse utilisent le fond secondaire standard gris (`fondLegende`), tandis
   que le fond général reste le fond système.
+
+- **Sidebar macOS — sélection native active** (`ContentView.swift`) : la
+  sélection grise observée dans la sidebar correspond à la sélection native
+  inactive de macOS, et non à une couleur personnalisée. Le composant
+  `ActiveSidebarSelection` réactive le `NSOutlineView` de la sidebar uniquement
+  lorsqu'une rubrique change, afin que la couleur d'accent choisie dans les
+  réglages système soit affichée. Il ne doit pas reprendre le focus pendant
+  les mises à jour du tableau central.
