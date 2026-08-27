@@ -1481,3 +1481,11 @@ JavaScript, inexploitables par extraction) :
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit
   donc PAS à pouvoir la passer à l'appel, il faut aussi étendre l'`init`.
   Rencontré deux fois.
+
+- **macOS — lisibilité de la sélection dans les tableaux** (`VueFeuille.swift`) :
+  la sélection de la `Table` reste la sélection bleue native de macOS. Dans les
+  trois tableaux — Ventes, Dons et Réserve — le texte de toutes les cellules de
+  la ligne sélectionnée passe en blanc et en gras. Le prix suit la même règle ;
+  hors sélection, il conserve la couleur d'accent de la rubrique. Le style est
+  centralisé dans `TexteLigneSelectionnee`, afin que les trois tableaux restent
+  cohérents.
