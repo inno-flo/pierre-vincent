@@ -4,6 +4,20 @@ import SwiftData
 import AppKit
 import UniformTypeIdentifiers
 
+/// Rend le contenu d'une ligne sélectionnée lisible sur le bleu AppKit.
+/// La couleur de fond reste entièrement celle du système ; seules les cellules
+/// changent de style, de façon identique dans les trois tableaux.
+private struct TexteLigneSelectionnee: ViewModifier {
+    let estSelectionnee: Bool
+    var couleurAuRepos: Color = .textePrincipal
+
+    func body(content: Content) -> some View {
+        content
+            .fontWeight(estSelectionnee ? .bold : .regular)
+            .foregroundStyle(estSelectionnee ? Color.white : couleurAuRepos)
+    }
+}
+
 /// Une vue de feuille = un onglet, construite autour du composant natif `Table`
 /// de macOS : colonnes redimensionnables, tri par en-tête, sélection multiple
 /// et grille gérés nativement. L'édition d'une entrée se fait via une fiche
@@ -1244,30 +1258,37 @@ struct VueFeuille: View {
             .width(96)
             TableColumn("Type", value: \Oeuvre.type) { o in
                 Text(o.type)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Dimensions", value: \Oeuvre.dimensions) { o in
                 Text(o.dimensions)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Format", value: \Oeuvre.format) { o in
                 Text(o.format)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Statut", value: \Oeuvre.statut) { o in
                 Text(afficher(o.statut))
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Thème", value: \Oeuvre.theme) { o in
                 Text(afficher(o.theme))
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Emplacement", value: \Oeuvre.emplacement) { o in
                 Text(afficher(o.emplacement))
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Remarques", value: \Oeuvre.remarques) { o in
                 Text(o.remarques)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(minHeight: hauteurContenu, alignment: .leading)
             }
         }
@@ -1291,36 +1312,45 @@ struct VueFeuille: View {
             .width(96)
             TableColumn("Prix", value: \Oeuvre.prix) { o in
                 Text(formaterEuros(o.prix))
-                    .foregroundStyle(accent)
+                    .modifier(TexteLigneSelectionnee(
+                        estSelectionnee: selection.contains(o.id),
+                        couleurAuRepos: accent))
                     .blur(radius: prixMasques ? 5 : 0)
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Type", value: \Oeuvre.type) { o in
                 Text(o.type)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Dimensions", value: \Oeuvre.dimensions) { o in
                 Text(o.dimensions)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Format", value: \Oeuvre.format) { o in
                 Text(o.format)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Vendeur", value: \Oeuvre.vendeur) { o in
                 Text(o.vendeur)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Acheteur", value: \Oeuvre.acheteur) { o in
                 Text(o.acheteur)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Mode de vente", value: \Oeuvre.modeVente) { o in
                 Text(o.modeVente)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             TableColumn("Date", value: \Oeuvre.date) { o in
                 Text(o.date)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
             // Regroupées : le builder de `Table` n'accepte que 10 colonnes
@@ -1328,18 +1358,22 @@ struct VueFeuille: View {
             Group {
                 TableColumn("Statut", value: \Oeuvre.statut) { o in
                     Text(afficher(o.statut))
+                        .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                         .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
                 }
                 TableColumn("Thème", value: \Oeuvre.theme) { o in
                     Text(afficher(o.theme))
+                        .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                         .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
                 }
                 TableColumn("Emplacement", value: \Oeuvre.emplacement) { o in
                     Text(afficher(o.emplacement))
+                        .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                         .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
                 }
                 TableColumn("Remarques", value: \Oeuvre.remarques) { o in
                     Text(o.remarques)
+                        .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                         .frame(minHeight: hauteurContenu, alignment: .leading)
                 }
             }
@@ -1361,34 +1395,42 @@ struct VueFeuille: View {
             .width(96)
             TableColumn("Destinataire", value: \Oeuvre.destinataire) { o in
                 Text(o.destinataire)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(minHeight: hauteurContenu, alignment: .leading)
             }
             TableColumn("Type", value: \Oeuvre.type) { o in
                 Text(o.type)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Dimensions", value: \Oeuvre.dimensions) { o in
                 Text(o.dimensions)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Format", value: \Oeuvre.format) { o in
                 Text(o.format)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Statut", value: \Oeuvre.statut) { o in
                 Text(afficher(o.statut))
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Thème", value: \Oeuvre.theme) { o in
                 Text(afficher(o.theme))
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Emplacement", value: \Oeuvre.emplacement) { o in
                 Text(afficher(o.emplacement))
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
             TableColumn("Remarques", value: \Oeuvre.remarques) { o in
                 Text(o.remarques)
+                    .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(minHeight: hauteurContenu, alignment: .leading)
             }
         }
