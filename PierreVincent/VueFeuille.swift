@@ -1718,7 +1718,7 @@ struct VueFeuille: View {
         exportEnCours = true
         Task { @MainActor in
             do {
-                let donnees = try EchangeBase.exporter(oeuvres: listeToutes)
+                let donnees = try await EchangeBase.exporter(oeuvres: listeToutes)
                 try donnees.write(to: url)
                 exportEnCours = false
                 messageExport = "Base exportée (\(listeToutes.count) œuvres). "

@@ -167,6 +167,23 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
     AVANT l'import, et leur drapeau est déjà consommé quand le fichier arrive.
   - L'export part de `toutes`, la requête complète, et non de la rubrique
     affichée : la Réserve y est.
+  - **Les DEUX sens sont `async`, et le gros du travail sort de `MainActor`.**
+    Un modèle SwiftData ne se lit que sur l'acteur principal : l'export en
+    prend donc d'abord un instantané `Sendable` **images exclues**, puis part
+    en tâche détachée pour lire les fichiers, encoder en base64 et produire le
+    JSON. L'import fait l'inverse en trois temps — décodage JSON, puis
+    écriture de TOUTES les images en une passe, tous deux hors `MainActor`,
+    qui ne garde que les mutations SwiftData.
+    - `OeuvreExport` et `Fichier` sont marqués `Sendable` pour franchir la
+      frontière. **Sans effet sur le format du fichier** : le JSON produit est
+      identique, les `.pvbase` existants restent lisibles.
+    - La pastille « Import en cours » (iOS) n'a plus besoin du report d'un
+      tour de boucle (`DispatchQueue.main.async`) qui lui laissait le temps de
+      se peindre : un simple `Task` suffit, le fil principal restant libre
+      pendant l'import.
+    - **Limite connue, inchangée** : le fichier entier est construit en
+      mémoire, images comprises. Sur une grosse base cela reste lourd — le
+      corriger demanderait une écriture en flux, un autre chantier.
 
 ## Import de photos (macOS)
 
@@ -295,6 +312,14 @@ diffèrent en tout.
     glisser-déposer sur l'éditeur ou sur la cellule Photo, bouton
     « Choisir… ». L'ancienne `importerImage` ré-encodait en **PNG** — 4,3 Mo
     à partir d'une photo légère — et a été supprimée. Ne pas la réintroduire.
+    - **L'import CSV y avait échappé** (`Import.swift`) : il appelait encore
+      `PhotoStore.enregistrer(image:)`, qui ré-encode en PNG, après un
+      `NSImage(contentsOf:)` inutile. Toute photo entrée par cette voie pesait
+      donc plusieurs mégaoctets au lieu de 450 Ko, et alourdissait ensuite le
+      cache, les exports et les transferts `.pvbase`. Corrigé : cette voie
+      passe par `importerImageCompressee` comme les autres.
+    - `enregistrer(image:)` **existe encore** et reste le seul chemin PNG de
+      l'app. Elle n'a plus aucun appelant : ne pas s'en resservir.
 
 ## Thèmes de couleurs
 

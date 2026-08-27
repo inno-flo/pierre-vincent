@@ -22,7 +22,7 @@ enum EchangeBase {
     // MARK: Modèle de transport (une œuvre sérialisable en JSON)
 
     /// Copie « plate » d'une œuvre, avec son image encodée en base64.
-    struct OeuvreExport: Codable {
+    struct OeuvreExport: Codable, Sendable {
         var feuille: String
         var type: String
         var dimensions: String
@@ -54,7 +54,7 @@ enum EchangeBase {
     }
 
     /// Enveloppe du fichier : version + liste des œuvres.
-    struct Fichier: Codable {
+    struct Fichier: Codable, Sendable {
         var version: Int
         var oeuvres: [OeuvreExport]
     }
@@ -63,18 +63,21 @@ enum EchangeBase {
 
     /// Construit le fichier d'échange à partir de toutes les œuvres.
     /// Les images sont lues sur le disque et encodées dans le JSON.
+    ///
+    /// **`async`, en DEUX temps.** Les propriétés d'une `Oeuvre` (modèle
+    /// SwiftData) ne se lisent que sur `MainActor` : on en prend donc d'abord
+    /// un instantané `Sendable`, images exclues. La partie lourde — lecture des
+    /// fichiers, encodage base64, encodage JSON — part ensuite dans une tâche
+    /// détachée. Tout faire sur le fil principal y gelait l'interface le temps
+    /// d'encoder TOUTES les photos de la base.
     @MainActor
-    static func exporter(oeuvres: [Oeuvre]) throws -> Data {
+    static func exporter(oeuvres: [Oeuvre]) async throws -> Data {
+        // 1. Instantané sur MainActor : le champ image reste vide à ce stade,
+        //    seul le nom de fichier est retenu pour la seconde étape.
         var liste: [OeuvreExport] = []
+        var photos: [String] = []
         for o in oeuvres {
-            var b64 = ""
-            var ext = ""
-            if !o.photoNom.isEmpty,
-               let url = PhotoStore.urlPhoto(nom: o.photoNom),
-               let data = try? Data(contentsOf: url) {
-                b64 = data.base64EncodedString()
-                ext = url.pathExtension.isEmpty ? "png" : url.pathExtension
-            }
+            photos.append(o.photoNom)
             liste.append(OeuvreExport(
                 feuille: o.feuilleBrute,
                 type: o.type,
@@ -93,12 +96,24 @@ enum EchangeBase {
                 lieuStockage: o.lieuStockage,
                 emplacement: o.emplacement,
                 favori: o.favori,
-                imageBase64: b64,
-                imageExtension: ext))
+                imageBase64: "",
+                imageExtension: ""))
         }
-        let fichier = Fichier(version: 1, oeuvres: liste)
-        let encodeur = JSONEncoder()
-        return try encodeur.encode(fichier)
+
+        // 2. Hors MainActor : lecture disque, base64 et encodage JSON.
+        let instantane = liste
+        let noms = photos
+        return try await Task.detached(priority: .userInitiated) {
+            var finale = instantane
+            for i in finale.indices where !noms[i].isEmpty {
+                guard let url = PhotoStore.urlPhoto(nom: noms[i]),
+                      let data = try? Data(contentsOf: url) else { continue }
+                finale[i].imageBase64 = data.base64EncodedString()
+                finale[i].imageExtension = url.pathExtension.isEmpty
+                    ? "png" : url.pathExtension
+            }
+            return try JSONEncoder().encode(Fichier(version: 1, oeuvres: finale))
+        }.value
     }
 
     // MARK: Import (iPhone surtout, mais fonctionne aussi sur Mac)
@@ -108,16 +123,25 @@ enum EchangeBase {
 
     /// Lit un fichier d'échange et REMPLACE la base : supprime toutes les
     /// œuvres existantes (et leurs photos), puis recrée tout depuis le fichier.
+    ///
+    /// **`async`, en TROIS temps** : le décodage JSON puis l'écriture des
+    /// images (décodage base64 + écriture disque) se font hors de `MainActor`,
+    /// qui ne garde que les mutations SwiftData. Tout enchaîner sur le fil
+    /// principal y gelait l'interface pendant tout l'import d'une grosse base —
+    /// c'est ce que la pastille « Import en cours » ne faisait que signaler.
     @MainActor
-    static func importerEnRemplacant(donnees: Data, context: ModelContext) -> Resultat {
+    static func importerEnRemplacant(donnees: Data, context: ModelContext) async -> Resultat {
+        // 1. Décodage du fichier, hors MainActor.
         let fichier: Fichier
         do {
-            fichier = try JSONDecoder().decode(Fichier.self, from: donnees)
+            fichier = try await Task.detached(priority: .userInitiated) {
+                try JSONDecoder().decode(Fichier.self, from: donnees)
+            }.value
         } catch {
             return Resultat(importees: 0, erreur: "Fichier illisible ou format inattendu.")
         }
 
-        // 1. Effacer l'existant (œuvres + photos sur disque).
+        // 2. Effacer l'existant (œuvres + photos sur disque).
         do {
             let toutes = try context.fetch(FetchDescriptor<Oeuvre>())
             for o in toutes {
@@ -128,9 +152,22 @@ enum EchangeBase {
             return Resultat(importees: 0, erreur: "Impossible de vider la base existante.")
         }
 
-        // 2. Recréer chaque œuvre, en ré-enregistrant son image.
+        // 3. Écrire TOUTES les images hors MainActor, en une passe : décodage
+        //    base64 et écriture disque sont le gros du travail d'un import.
+        //    On n'en rapporte que les noms de fichiers créés, indexés comme
+        //    `fichier.oeuvres` — des `String?`, donc Sendable.
+        let entrees = fichier.oeuvres
+        let nomsPhotos: [String?] = await Task.detached(priority: .userInitiated) {
+            entrees.map { e in
+                guard !e.imageBase64.isEmpty,
+                      let data = Data(base64Encoded: e.imageBase64) else { return nil }
+                return PhotoStore.enregistrerDonnees(data, extension: e.imageExtension)
+            }
+        }.value
+
+        // 4. Recréer chaque œuvre sur MainActor — mutations SwiftData seules.
         var compte = 0
-        for e in fichier.oeuvres {
+        for (index, e) in fichier.oeuvres.enumerated() {
             let feuille = Feuille(rawValue: e.feuille) ?? .tableauxVendus
             let o = Oeuvre(feuille: feuille)
             o.type         = e.type
@@ -160,11 +197,10 @@ enum EchangeBase {
             // lancement, donc AVANT l'import, et leur drapeau est déjà consommé.
             if estEnReserve(o) { o.feuille = .reserve }
 
-            // Image : on écrit DIRECTEMENT les octets décodés du base64, sans
-            // les transformer en image en mémoire (bien plus léger et rapide).
-            if !e.imageBase64.isEmpty,
-               let data = Data(base64Encoded: e.imageBase64),
-               let nom = PhotoStore.enregistrerDonnees(data, extension: e.imageExtension) {
+            // Image : déjà écrite sur disque à l'étape 2b, il ne reste qu'à
+            // reprendre son nom. Les octets du base64 sont écrits DIRECTEMENT,
+            // sans passer par une image en mémoire (bien plus léger et rapide).
+            if let nom = nomsPhotos[index] {
                 o.photoNom = nom
             }
 

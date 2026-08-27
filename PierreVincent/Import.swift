@@ -184,8 +184,13 @@ enum Import {
                 let nomPhoto = val("Photo")
                 if !nomPhoto.isEmpty {
                     let src = dossierPhotos.appendingPathComponent(nomPhoto)
-                    if let img = NSImage(contentsOf: src),
-                       let stocke = PhotoStore.enregistrer(image: img) {
+                    // `importerImageCompressee` et NON `enregistrer(image:)` :
+                    // cette dernière ré-encode en PNG (plusieurs mégaoctets à
+                    // partir d'une photo légère). C'est le point de passage
+                    // unique de TOUTES les entrées d'image de l'app — l'import
+                    // CSV lui avait échappé. Elle décode aussi directement à la
+                    // bonne taille, sans charger l'image entière en mémoire.
+                    if let stocke = PhotoStore.importerImageCompressee(depuis: src) {
                         o.photoNom = stocke
                     }
                 }

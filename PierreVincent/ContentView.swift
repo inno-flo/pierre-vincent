@@ -1001,13 +1001,15 @@ struct ContentView: View {
             defer { if acces { url.stopAccessingSecurityScopedResource() } }
             do {
                 let donnees = try Data(contentsOf: url)
-                // La pastille doit être PEINTE avant que l'import — synchrone
-                // et parfois long sur une grosse base — ne bloque le fil
-                // principal. `DispatchQueue.main.async` laisse ce tour de
-                // boucle afficher la pastille avant de lancer le travail.
+                // L'import fait désormais son gros travail — décodage JSON,
+                // base64 et écriture des images — hors du fil principal, qui
+                // ne garde que les mutations SwiftData. Le `Task` suffit donc :
+                // le report d'un tour de boucle (`DispatchQueue.main.async`)
+                // n'a plus lieu d'être, la pastille se peint pendant l'attente.
                 PastilleImportBase.shared.afficher()
-                DispatchQueue.main.async {
-                    let r = EchangeBase.importerEnRemplacant(donnees: donnees, context: context)
+                Task { @MainActor in
+                    let r = await EchangeBase.importerEnRemplacant(donnees: donnees,
+                                                                   context: context)
                     PastilleImportBase.shared.masquer()
                     if let err = r.erreur {
                         messageImportBase = "Échec : \(err)"
