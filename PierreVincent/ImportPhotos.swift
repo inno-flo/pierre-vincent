@@ -20,6 +20,16 @@ enum ImportPhotos {
         let erreur: String?
     }
 
+    /// Résultat Sendable de la préparation d'un fichier. Les métadonnées et
+    /// l'écriture de l'image sont produites hors de `MainActor`; seules ces
+    /// valeurs simples repassent ensuite dans le traitement SwiftData.
+    private struct FichierPrepare: Sendable {
+        let motsCles: [String]
+        let legende: String
+        let nomFichier: String
+        let nomStocke: String?
+    }
+
     /// Images à importer pour un élément choisi dans le panneau.
     ///
     /// Un fichier se renvoie lui-même ; un **dossier** est parcouru en
@@ -52,6 +62,20 @@ enum ImportPhotos {
     private static func estUneImage(_ url: URL) -> Bool {
         guard let type = UTType(filenameExtension: url.pathExtension) else { return false }
         return PhotoStore.typesAcceptes.contains { type.conforms(to: $0) }
+    }
+
+    /// Lit les métadonnées et prépare l'image sans toucher à SwiftData.
+    /// Cette fonction est appelée dans une tâche détachée de priorité utilitaire
+    /// afin qu'une compression lourde ne bloque pas l'interface.
+    nonisolated private static func preparer(fichier: URL) -> FichierPrepare {
+        let motsCles = PhotoStore.motsCles(de: fichier)
+        let legende = PhotoStore.legende(de: fichier)
+        let nomFichier = fichier.deletingPathExtension().lastPathComponent
+        let nomStocke = PhotoStore.importerImageCompressee(depuis: fichier)
+        return FichierPrepare(motsCles: motsCles,
+                              legende: legende,
+                              nomFichier: nomFichier,
+                              nomStocke: nomStocke)
     }
 
     /// Crée une œuvre par fichier image fourni.
@@ -100,23 +124,22 @@ enum ImportPhotos {
         defer { suivi.terminer() }
 
         for fichier in aTraiter {
+            // Lecture IPTC et compression hors de MainActor. Le retour contient
+            // uniquement des valeurs Sendable et le nom du fichier créé.
+            let preparation = await Task.detached(priority: .utility) {
+                Self.preparer(fichier: fichier)
+            }.value
 
-            // Métadonnées LUES AVANT la compression : la version stockée est
-            // ré-encodée et ne conserve pas l'IPTC d'origine.
-            let motsCles = PhotoStore.motsCles(de: fichier)
-            let legende = PhotoStore.legende(de: fichier)
-            let nomFichier = fichier.deletingPathExtension().lastPathComponent
-
-            guard let nomStocke = PhotoStore.importerImageCompressee(depuis: fichier) else {
+            guard let nomStocke = preparation.nomStocke else {
                 ignorees += 1
                 continue
             }
 
             let oeuvre = Oeuvre(feuille: feuilleCible)
             oeuvre.photoNom = nomStocke
-            CorrespondanceMotsCles.appliquer(motsCles: motsCles,
-                                             legende: legende,
-                                             nomFichier: nomFichier,
+            CorrespondanceMotsCles.appliquer(motsCles: preparation.motsCles,
+                                             legende: preparation.legende,
+                                             nomFichier: preparation.nomFichier,
                                              sur: oeuvre)
 
             // Le champ est binaire : sans mot-clé « à garder », c'est « Non »
