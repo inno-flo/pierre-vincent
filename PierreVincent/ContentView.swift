@@ -358,7 +358,8 @@ enum Categorie: Hashable, Identifiable {
     var accent: Color {
         switch self {
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection, .favoris: return .bleuArdoise
+             .reserveTheme, .reserveCollection: return .bleuArdoise
+        case .favoris:              return .yellow
         default:                 return .orangeInternational
         }
     }

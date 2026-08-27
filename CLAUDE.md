@@ -1514,3 +1514,9 @@ JavaScript, inexploitables par extraction) :
   hors sélection, il conserve la couleur d'accent de la rubrique. Le style est
   centralisé dans `TexteLigneSelectionnee`, afin que les trois tableaux restent
   cohérents.
+
+- **Favoris — accent jaune** (`ContentView.swift`) : la rubrique Favoris utilise
+  désormais le jaune comme accent propre. Il s'applique à l'icône de la
+  sidebar, au fond du compteur de la sidebar, au compteur de la vue et aux
+  trois pastilles de type Tableaux, Dessins et Tapis. Le bleu ardoise reste
+  l'accent des autres rubriques de la Réserve.
