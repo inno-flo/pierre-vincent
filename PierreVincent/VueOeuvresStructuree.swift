@@ -567,11 +567,7 @@ struct VueOeuvresStructuree: View {
         // Lazy : ne construit que les lignes visibles à l'écran.
         LazyVStack(spacing: 8) {
             ForEach(liste) { o in
-                Button {
-                    selection = [o.id]
-                    detail = o
-                } label: {
-                    HStack(spacing: 14) {
+                HStack(spacing: 14) {
                         VignetteCachee(nom: o.photoNom, cote: 76)
                         VStack(alignment: .leading, spacing: 3) {
                             if aUnPrix(o) {
@@ -597,25 +593,26 @@ struct VueOeuvresStructuree: View {
                         }
                         Spacer()
                     }
-                    .frame(height: 92)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.fondLegende)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(selection.contains(o.id)
-                                          ? Color.orangeInternational : Color.clear,
-                                          lineWidth: 3)
-                    )
-                }
-                .buttonStyle(.plain)
-                // PAS d'appui prolongé sur les lignes de liste. Deux
-                // tentatives ont échoué : `.onLongPressGesture` n'aboutit
-                // jamais, le `Button` de la ligne captant le geste ; et
-                // `simultaneousGesture` a causé de nouveaux problèmes. La
-                // visionneuse s'ouvre donc depuis les VIGNETTES de galerie,
-                // qui ne sont pas des boutons. À reprendre autrement.
+                .frame(height: 92)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.fondLegende)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(selection.contains(o.id)
+                                      ? Color.orangeInternational : Color.clear,
+                                      lineWidth: 3)
+                )
+                .contentShape(Rectangle())
+                // Appui prolongé : la visionneuse, avec le menu contextuel
+                // « Ajouter aux favoris » — même mécanisme que sur les
+                // vignettes de galerie. PLUS un `Button` : c'est justement
+                // ce qui empêchait l'appui prolongé d'aboutir ici.
+                .overlay(InteractionApercu(
+                    oeuvre: o,
+                    onTap: { selection = [o.id]; detail = o },
+                    onAfficher: { ouvrirVisionneuse(o) }))
                 // Cible de défilement (proxy.scrollTo).
                 .id(o.id)
             }

@@ -496,11 +496,7 @@ struct VueiOS: View {
                 // Lazy : ne construit que les lignes visibles à l'écran.
                 LazyVStack(spacing: 8) {
                     ForEach(oeuvresGalerie) { o in
-                        Button {
-                            selection = [o.id]
-                            detail = o
-                        } label: {
-                            HStack(spacing: 14) {
+                        HStack(spacing: 14) {
                                 VignetteCachee(nom: o.photoNom, cote: 76)
                                 VStack(alignment: .leading, spacing: 3) {
                                     if aUnPrix(o) {
@@ -544,28 +540,31 @@ struct VueiOS: View {
                                 }
                                 Spacer()
                             }
-                            .frame(height: 92)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.fondLegende)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(selection.contains(o.id)
-                                                  ? accent : Color.clear,
-                                                  lineWidth: 3)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        // Appui prolongé : la visionneuse, comme sur une
-                        // vignette de galerie. Le tap du bouton continue
-                        // d'ouvrir la fiche de détail.
-                        // PAS d'appui prolongé sur les lignes de liste. Deux
-                        // tentatives ont échoué : `.onLongPressGesture` n'aboutit
-                        // jamais, le `Button` de la ligne captant le geste ; et
-                        // `simultaneousGesture` a causé de nouveaux problèmes. La
-                        // visionneuse s'ouvre donc depuis les VIGNETTES de galerie,
-                        // qui ne sont pas des boutons. À reprendre autrement.
+                        .frame(height: 92)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.fondLegende)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(selection.contains(o.id)
+                                              ? accent : Color.clear,
+                                              lineWidth: 3)
+                        )
+                        .contentShape(Rectangle())
+                        // Appui prolongé : la visionneuse, avec le menu
+                        // contextuel « Ajouter aux favoris » — même mécanisme
+                        // que sur les vignettes de galerie (`MenuApercuSiDemande`
+                        // / `InteractionApercu`, en UIKit). PLUS un `Button` :
+                        // l'ancienne tentative d'appui prolongé échouait
+                        // justement parce que le `Button` de la ligne captait
+                        // le geste avant lui.
+                        .overlay(MenuApercuSiDemande(oeuvre: o,
+                                                     onTap: {
+                                                         selection = [o.id]
+                                                         detail = o
+                                                     },
+                                                     onAfficher: appuiLongGalerie))
                         .id(o.id)
                     }
                 }

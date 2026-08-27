@@ -844,11 +844,13 @@ struct ContentView: View {
         var liste: [Categorie] = []
         if blocVentesOuvert {
             liste += [.oeuvres, .ventesRealisees, .oeuvresDonnees, .synthese]
-            if sousBlocModesVenteOuvert {
-                liste += modesDeVentePresents.map { Categorie.modeVente($0) }
-            }
+            // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
+            // rubrique dans un ordre qui ne correspond à rien de visible.
             if sousBlocCategoriesOuvert {
                 liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
+            }
+            if sousBlocModesVenteOuvert {
+                liste += modesDeVentePresents.map { Categorie.modeVente($0) }
             }
         }
         if blocStockOuvert {
@@ -856,12 +858,12 @@ struct ContentView: View {
             liste.append(.reserveCollection)
             // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
             // rubrique dans un ordre qui ne correspond à rien de visible.
-            if sousBlocReserveThemesOuvert {
-                liste += themesPresents.map { Categorie.reserveTheme($0) }
-            }
             if sousBlocReserveCategoriesOuvert {
                 liste.append(.reserveTableaux)
                 liste.append(.reserveDessins)
+            }
+            if sousBlocReserveThemesOuvert {
+                liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
         }
         // Hors des deux blocs, et donc toujours présente : elle ne dépend
@@ -1048,14 +1050,6 @@ struct ContentView: View {
         lien(.ventesRealisees)
         lien(.oeuvresDonnees)
         lien(.synthese)
-        // Sous-groupe des modes de vente, construit d'après les données.
-        DisclosureGroup(isExpanded: $sousBlocModesVenteOuvert) {
-            ForEach(modesDeVentePresents, id: \.self) { mode in
-                lien(.modeVente(mode))
-            }
-        } label: {
-            Text("Modes de vente").fontWeight(.semibold)
-        }
         // Sous-groupe repliable des catégories d'œuvres. `DisclosureGroup` et
         // non `Section` : une `List` n'accepte pas de Section dans une Section.
         DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
@@ -1064,6 +1058,14 @@ struct ContentView: View {
             lien(.tapisVendus)
         } label: {
             Text("Catégories").fontWeight(.semibold)
+        }
+        // Sous-groupe des modes de vente, construit d'après les données.
+        DisclosureGroup(isExpanded: $sousBlocModesVenteOuvert) {
+            ForEach(modesDeVentePresents, id: \.self) { mode in
+                lien(.modeVente(mode))
+            }
+        } label: {
+            Text("Modes de vente").fontWeight(.semibold)
         }
     }
 
@@ -1114,21 +1116,19 @@ struct ContentView: View {
         lien(.reserveCollection)
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
-        // Thèmes AVANT Catégories, contrairement à « Ventes et dons » : ici
-        // le thème est le critère de rangement principal des cartons.
-        // Sous-groupe construit d'après les données.
+        DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
+            lien(.reserveTableaux)
+            lien(.reserveDessins)
+        } label: {
+            Text("Catégories").fontWeight(.semibold)
+        }
+        // Sous-groupe des thèmes, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocReserveThemesOuvert) {
             ForEach(themesPresents, id: \.self) { theme in
                 lien(.reserveTheme(theme))
             }
         } label: {
             Text("Thèmes").fontWeight(.semibold)
-        }
-        DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
-            lien(.reserveTableaux)
-            lien(.reserveDessins)
-        } label: {
-            Text("Catégories").fontWeight(.semibold)
         }
     }
 
@@ -1144,12 +1144,14 @@ struct ContentView: View {
     private var themesPresents: [String] {
         var vus: [String: String] = [:]
         for o in toutes where o.feuille == .reserve && estEnReserve(o) {
-            let brut = o.theme.trimmingCharacters(in: .whitespacesAndNewlines)
-            let cle = brut.lowercased()
-            guard !brut.isEmpty,
-                  brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
-                  vus[cle] == nil else { continue }
-            vus[cle] = brut
+            // Une œuvre peut porter PLUSIEURS thèmes (voir `themesDeOeuvre`) :
+            // chacun obtient sa propre sous-rubrique, pas seulement le premier.
+            for brut in themesDeOeuvre(o) {
+                let cle = brut.lowercased()
+                guard brut.caseInsensitiveCompare(valeurInconnue) != .orderedSame,
+                      vus[cle] == nil else { continue }
+                vus[cle] = brut
+            }
         }
         return vus.values.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }

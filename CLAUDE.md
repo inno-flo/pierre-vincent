@@ -202,6 +202,28 @@ diffèrent en tout.
     finissant en « non reconnu » dans les Remarques. Rien n'était perdu, rien
     n'était exploitable — c'est exactement ce que le repli en Remarques est
     là pour garantir.
+  - **Une œuvre peut porter PLUSIEURS thèmes** (« Dessin bouquet » ET
+    « Dessin nature morte » sur la même photo) : `theme` reste un simple
+    texte, plusieurs valeurs y cohabitent séparées par `separateurThemes`
+    (`", "`, défini dans `TriEtTotaux.swift`). `ecrireTheme` — et non
+    `ecrire` — les AJOUTE au lieu d'écraser : `ecrire` n'écrit que si le
+    champ est vide, donc le second mot-clé de thème d'une même œuvre était
+    silencieusement ignoré, sans même passer par le repli en Remarques
+    (contrairement à un mot-clé non reconnu). L'œuvre n'apparaissait alors
+    que dans une seule des deux sous-rubriques.
+    - `themesDeOeuvre(_:)` (`TriEtTotaux.swift`) découpe le champ en thèmes
+      individuels ; `correspond(themes:)` et `themesPresents` (sidebar)
+      passent tous deux par elle plutôt que de comparer le champ entier —
+      sans quoi une œuvre à deux thèmes ne correspondrait à aucune
+      sous-rubrique.
+    - Éditeur, inspecteur, fiche iPhone et exports n'ont rien à changer :
+      ils affichent le champ tel quel, et « Bouquet, Nature morte » s'y lit
+      très bien — l'éditeur permet même de corriger la liste à la main.
+    - **Angle mort connu** : `renommerThemePortrait` (reprise consommée, voir
+      plus bas) testait une égalité EXACTE sur tout le champ ; un thème déjà
+      combiné contenant « Personnage » n'aurait pas été renommé en
+      « Portrait ». Sans effet sur les imports futurs, son drapeau étant
+      consommé.
   - `lieuxStockage` : « Stockage Bourg-de-Péage » → « Bourg-de-Péage »,
     « Stockage domicile » → « Domicile ». Attention aux traits d'union du
     mot-clé source, une clé mal orthographiée passe en « non reconnu » sans
@@ -742,16 +764,22 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
       publiée par Apple** — il fonctionne de longue date, sans garantie — et
       il est **muet en mode silencieux**. La vibration reste donc le signal
       principal, le son un supplément.
-  - **PAS d'appui prolongé sur les lignes de LISTE iPhone.** Deux tentatives
-    ont échoué :
-    - `.onLongPressGesture` n'aboutit jamais — la ligne est un `Button`, qui
-      capte le geste ;
-    - `simultaneousGesture` a causé d'autres problèmes, comme il l'avait déjà
-      fait sur les lignes de sidebar (voir les pièges).
-    La visionneuse s'ouvre donc depuis les **vignettes de galerie**, qui ne
-    sont pas des boutons. Piste restante : abandonner le `Button` pour ces
-    lignes et adopter la construction des vignettes — vue simple,
-    `.contentShape(Rectangle())` et `.onTapGesture`.
+  - **Appui prolongé désormais RÉSOLU sur les lignes de LISTE iPhone**
+    (`VueiOS`, `VueDonsStructuree`, `VueOeuvresStructuree`) — même menu
+    contextuel « Ajouter aux favoris » et même appui prolongé qu'en galerie.
+    Deux tentatives avaient échoué avant d'y arriver :
+    - `.onLongPressGesture` n'aboutissait jamais — la ligne était un
+      `Button`, qui captait le geste ;
+    - `simultaneousGesture` avait causé d'autres problèmes, comme il l'avait
+      déjà fait sur les lignes de sidebar (voir les pièges).
+    **Solution retenue** : abandonner le `Button` de la ligne, exactement
+    comme pour les vignettes de galerie — `.contentShape(Rectangle())` +
+    `.overlay(InteractionApercu(...))` / `MenuApercuSiDemande(...)`, la même
+    vue UIKit qui gère déjà tap simple, appui prolongé et menu contextuel en
+    galerie. Le double-tap tenté juste avant sur ces mêmes lignes (voir
+    plus bas, section Favoris) avait échoué pour une raison DIFFÉRENTE — deux
+    reconnaisseurs de TAP se disputent le même geste — qui ne s'applique pas
+    à l'appui prolongé, un geste que sa durée distingue nativement d'un tap.
 - **NON RÉSOLU — couleur de sélection des listes macOS.** Après un passage par
   une rubrique de la Réserve, la sélection passe du bleu au gris et **y reste**,
   dans toutes les rubriques, jusqu'à la relance. Le défaut est récent.

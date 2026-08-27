@@ -305,7 +305,7 @@ enum CorrespondanceMotsCles {
             if let v = statuts[cle] {
                 ecrire(v, dans: \.statut, sur: o)
             } else if let v = themes[cle] {
-                ecrire(v, dans: \.theme, sur: o)
+                ecrireTheme(v, sur: o)
             } else if let v = types[cle] {
                 ecrire(v, dans: \.type, sur: o)
             } else if let v = lieuxStockage[cle] {
@@ -343,6 +343,24 @@ enum CorrespondanceMotsCles {
         guard actuel.isEmpty || actuel.caseInsensitiveCompare(valeurInconnue) == .orderedSame
         else { return }
         o[keyPath: champ] = valeur
+    }
+
+    /// Écrit une valeur de Thème — mais en l'AJOUTANT, contrairement à
+    /// `ecrire` : une œuvre peut porter plusieurs mots-clés de thème (« Dessin
+    /// bouquet » ET « Dessin nature morte »), et doit alors apparaître dans
+    /// les DEUX sous-rubriques. `ecrire` aurait gardé la première valeur
+    /// rencontrée et ignoré silencieusement la seconde.
+    @MainActor
+    private static func ecrireTheme(_ valeur: String, sur o: Oeuvre) {
+        let actuel = o.theme.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !actuel.isEmpty, actuel.caseInsensitiveCompare(valeurInconnue) != .orderedSame else {
+            o.theme = valeur
+            return
+        }
+        // Déjà présent (ex. le mot-clé apparaît deux fois) : rien à ajouter.
+        guard !themesDeOeuvre(o).contains(where: { $0.caseInsensitiveCompare(valeur) == .orderedSame })
+        else { return }
+        o.theme = actuel + separateurThemes + valeur
     }
 
     /// Minuscules, sans accent, sans espaces de bord : la comparaison tolère

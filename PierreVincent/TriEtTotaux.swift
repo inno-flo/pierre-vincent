@@ -49,12 +49,36 @@ func correspond(_ o: Oeuvre, statuts: [String], types: [String],
     guard !favoriSeul || o.favori else { return false }
     guard favoriSeul || statuts.contains(where: { egal(o.statut, $0) }) else { return false }
     guard types.isEmpty || types.contains(where: { egal(o.type, $0) }) else { return false }
-    guard themes.isEmpty || themes.contains(where: { egal(o.theme, $0) }) else { return false }
+    // Une œuvre peut porter PLUSIEURS thèmes (voir `themesDeOeuvre`) : le
+    // test doit donc chercher une INTERSECTION, pas une égalité du champ
+    // entier — sans quoi une œuvre à la fois « Bouquet » et « Nature morte »
+    // ne correspondrait jamais à aucune des deux sous-rubriques.
+    guard themes.isEmpty
+        || themesDeOeuvre(o).contains(where: { valeur in themes.contains { egal(valeur, $0) } })
+    else { return false }
     // Le statut est déjà testé plus haut : une œuvre vendue ou donnée ne peut
     // donc pas apparaître dans la collection personnelle, quelle que soit la
     // valeur du drapeau.
     guard !collectionSeule || estEnCollectionPersonnelle(o) else { return false }
     return true
+}
+
+/// Séparateur entre plusieurs thèmes dans le champ `Oeuvre.theme`.
+let separateurThemes = ", "
+
+/// Les thèmes d'une œuvre, un par un.
+///
+/// **`theme` peut porter PLUSIEURS valeurs** : une œuvre importée avec à la
+/// fois les mots-clés « Dessin bouquet » et « Dessin nature morte » doit
+/// figurer dans les DEUX sous-rubriques de Thèmes, pas une seule. Le champ
+/// reste un simple texte (comme avant, et comme l'attendent l'éditeur,
+/// l'inspecteur et les exports) ; plusieurs valeurs y cohabitent séparées par
+/// `separateurThemes`, écrites par `CorrespondanceMotsCles.ecrireTheme`.
+func themesDeOeuvre(_ o: Oeuvre) -> [String] {
+    o.theme
+        .components(separatedBy: separateurThemes)
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
 }
 
 /// Les seuls types d'œuvre possibles, dans l'ordre du menu de l'éditeur.
