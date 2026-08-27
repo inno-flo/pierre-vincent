@@ -99,24 +99,22 @@ extension Color {
             vertClair:  (125, 106, 88), vertSombre:  (192, 172, 148))
     }
 
-    /// Fond général de l'app.
-    static var cremeFond: Color {
-        #if os(macOS)
-        return Color(nsColor: .windowBackgroundColor)
-        #else
-        return Color(uiColor: .systemBackground)
-        #endif
-    }
-
-    /// Fond d'une vue à liste GROUPÉE (iOS `.insetGrouped`).
+    /// Fond général de l'app — **la PAGE**, sous les cartes.
     ///
-    /// À ne pas confondre avec `cremeFond` (`systemBackground`), qui est le
-    /// fond d'une vue ordinaire. Une liste groupée pose ses blocs en
-    /// `secondarySystemGroupedBackground` — blanc en mode clair — sur un fond
-    /// `systemGroupedBackground` légèrement gris : c'est cet écart, et lui
-    /// seul, qui détache visuellement les blocs. Peindre le fond en
-    /// `systemBackground` les rend indistinguables.
-    static var fondGroupe: Color {
+    /// **Sur iOS, c'est le fond GROUPÉ** (`systemGroupedBackground`, gris très
+    /// clair en mode clair), et non `systemBackground` (blanc). L'app suit
+    /// partout la sémantique groupée d'iOS : page légèrement grise, cartes
+    /// blanches posées dessus (`fondLegende`). C'est cet écart, et lui seul,
+    /// qui détache les cartes ; intervertir les deux les rend indistinguables,
+    /// ce qui avait rendu la sidebar entièrement blanche.
+    ///
+    /// En mode sombre l'écart est le même dans l'autre sens : page noire,
+    /// cartes gris foncé.
+    ///
+    /// `fondGroupe`, créée un temps pour la seule sidebar, a été absorbée ici :
+    /// les deux désignaient exactement la même couleur, et deux noms pour une
+    /// même teinte finissent par diverger.
+    static var cremeFond: Color {
         #if os(macOS)
         return Color(nsColor: .windowBackgroundColor)
         #else
@@ -124,12 +122,18 @@ extension Color {
         #endif
     }
 
-    /// Fond des cellules / tuiles / légendes.
+    /// Fond des cellules / tuiles / légendes — **la CARTE**, posée sur la page.
+    ///
+    /// **Sur iOS, c'est `secondarySystemGroupedBackground`** : BLANC en mode
+    /// clair, gris foncé en sombre. Il forme la paire avec `cremeFond`, et les
+    /// deux doivent rester du même jeu — un fond groupé sous une carte non
+    /// groupée (ou l'inverse) donne deux teintes identiques, donc une carte
+    /// invisible.
     static var fondLegende: Color {
         #if os(macOS)
         return Color(nsColor: .controlBackgroundColor)
         #else
-        return Color(uiColor: .secondarySystemBackground)
+        return Color(uiColor: .secondarySystemGroupedBackground)
         #endif
     }
 

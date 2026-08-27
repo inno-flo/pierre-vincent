@@ -1186,6 +1186,30 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `listStyle(.sidebar)` fournit bien ce gris, mais le
     `.foregroundStyle(Color.textePrincipal)` appliqué à toute la hiérarchie de
     `ContentView` l'écrase.
+- **iOS — l'app suit PARTOUT la sémantique GROUPÉE : page grise, cartes
+  blanches.** Deux couleurs, et deux seulement, portent tous les fonds des
+  vues ; elles forment une PAIRE et doivent rester du même jeu.
+
+  | | macOS | iOS (clair) | iOS (sombre) |
+  |---|---|---|---|
+  | `cremeFond` — la PAGE | `windowBackgroundColor` | `systemGroupedBackground` (242,242,247) | noir |
+  | `fondLegende` — la CARTE | `controlBackgroundColor` | `secondarySystemGroupedBackground` (255,255,255) | (28,28,30) |
+
+  - Auparavant, iOS avait l'inverse : page **blanche** (`systemBackground`) et
+    cartes **grises** (`secondarySystemBackground`). Les deux valeurs ont été
+    strictement échangées, sur le modèle de la sidebar.
+  - **Le mode sombre n'a pas bougé** — page noire, cartes gris foncé — les
+    variantes groupées et non groupées y ayant les mêmes valeurs. L'inversion
+    ne se voit donc qu'en mode clair.
+  - **Ne jamais mélanger les deux jeux** : un fond groupé sous une carte non
+    groupée (ou l'inverse) donne deux teintes IDENTIQUES, donc une carte
+    invisible. C'est exactement ce qui avait rendu la sidebar entièrement
+    blanche.
+  - Aucune vue ne pose de fond en dur : tout passe par ces deux couleurs, et
+    l'inversion s'est donc faite à un seul endroit. Garder cette discipline.
+  - `fondGroupe`, créée un temps pour la seule sidebar, a été **absorbée par
+    `cremeFond`** : les deux désignaient la même couleur, et deux noms pour une
+    même teinte finissent par diverger.
 - **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
   `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
   (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en

@@ -560,7 +560,8 @@ struct ContentView: View {
             #if os(iOS)
             // Fond de la colonne, hors de la liste : le MÊME que celui d'une
             // liste groupée, sans quoi la zone du bas trancherait sur elle.
-            .background(Color.fondGroupe)
+            // `cremeFond` EST ce fond groupé sur iOS (voir `Couleurs.swift`).
+            .background(Color.cremeFond)
             #endif
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
             #if os(iOS)
