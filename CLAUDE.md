@@ -1549,3 +1549,12 @@ JavaScript, inexploitables par extraction) :
   carrées des listes et aux variantes avec ratio de la galerie. Les vignettes
   anciennes peuvent donc être évacuées automatiquement, notamment sous
   pression mémoire, puis recréées à la demande si nécessaire.
+
+- **Réduction des vignettes par ImageIO** (`CacheVignettes.swift`) : la
+  fabrication des variantes carrée et avec ratio utilise désormais
+  `CGImageSourceCreateThumbnailAtIndex`. ImageIO réduit l'image pendant le
+  décodage au lieu de charger l'image pleine taille avec `NSImage(data:)` ou
+  `UIImage(data:)`. Le recadrage carré reste centré, l'orientation EXIF est
+  respectée et les deux plateformes utilisent leur type d'image natif. Il
+  n'y a toujours pas de préchauffage global : seules les vignettes demandées
+  par les cellules visibles sont préparées.

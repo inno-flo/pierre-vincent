@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import SwiftUI
 #if os(macOS)
 import AppKit
@@ -90,48 +91,30 @@ final class CacheVignettes {
     }
 
     /// Fabrique une petite image à partir du fichier d'origine.
-    /// Multiplateforme (NSImage sur Mac, UIImage sur iPhone).
+    /// ImageIO réduit l'image directement pendant le décodage : l'image
+    /// pleine taille n'est donc jamais chargée en mémoire pour fabriquer une
+    /// vignette.
     nonisolated private static func fabriquerVignette(url: URL, cotePixels: CGFloat)
         -> ImagePlateforme? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-
-        #if os(macOS)
-        guard let source = NSImage(data: data) else { return nil }
-        // Recadrage CARRÉ au centre de l'image source (évite la déformation).
-        let s = source.size
-        let cote = min(s.width, s.height)
-        let origine = NSRect(x: (s.width - cote) / 2, y: (s.height - cote) / 2,
-                             width: cote, height: cote)
-        let cible = NSSize(width: cotePixels, height: cotePixels)
-        let vignette = NSImage(size: cible)
-        vignette.lockFocus()
-        source.draw(in: NSRect(origin: .zero, size: cible),
-                    from: origine,   // on ne prend que le carré central
-                    operation: .copy, fraction: 1.0)
-        vignette.unlockFocus()
-        return vignette
-        #else
-        guard let source = UIImage(data: data) else { return nil }
-        let s = source.size
-        let cote = min(s.width, s.height)
-        // Rectangle carré centré, en points de l'image source.
-        let origineX = (s.width - cote) / 2
-        let origineY = (s.height - cote) / 2
-        let cible = CGSize(width: cotePixels, height: cotePixels)
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: cible, format: format)
-        return renderer.image { _ in
-            // On dessine l'image entière mais décalée/agrandie de sorte que seul
-            // le carré central tombe dans la zone visible (recadrage centré).
-            let echelle = cotePixels / cote
-            let dessinRect = CGRect(x: -origineX * echelle,
-                                    y: -origineY * echelle,
-                                    width: s.width * echelle,
-                                    height: s.height * echelle)
-            source.draw(in: dessinRect)
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+            return nil
         }
-        #endif
+
+        // Pour obtenir un carré de la taille demandée après le recadrage,
+        // ImageIO doit conserver assez de pixels sur le plus grand côté.
+        let coteMax = coteMaximalePourCarre(source: source, cotePixels: cotePixels)
+        guard let imageReduite = imageReduite(source: source, coteMaximale: coteMax) else {
+            return nil
+        }
+
+        let cote = min(imageReduite.width, imageReduite.height)
+        guard cote > 0 else { return nil }
+        let origine = CGRect(x: (imageReduite.width - cote) / 2,
+                             y: (imageReduite.height - cote) / 2,
+                             width: cote,
+                             height: cote)
+        guard let imageCarree = imageReduite.cropping(to: origine) else { return nil }
+        return imagePlateforme(depuis: imageCarree)
     }
 
     /// Fabrique une vignette qui PRÉSERVE le ratio d'origine (pas de crop).
@@ -139,34 +122,52 @@ final class CacheVignettes {
     /// (sur son plus grand côté). Utilisée par la galerie.
     nonisolated private static func fabriquerVignetteRatio(url: URL, coteMaxPixels: CGFloat)
         -> ImagePlateforme? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-
-        #if os(macOS)
-        guard let source = NSImage(data: data) else { return nil }
-        let s = source.size
-        guard s.width > 0, s.height > 0 else { return nil }
-        // Facteur pour que le plus grand côté atteigne coteMaxPixels.
-        let facteur = coteMaxPixels / max(s.width, s.height)
-        let cible = NSSize(width: s.width * facteur, height: s.height * facteur)
-        let vignette = NSImage(size: cible)
-        vignette.lockFocus()
-        source.draw(in: NSRect(origin: .zero, size: cible),
-                    from: NSRect(origin: .zero, size: s),
-                    operation: .copy, fraction: 1.0)
-        vignette.unlockFocus()
-        return vignette
-        #else
-        guard let source = UIImage(data: data) else { return nil }
-        let s = source.size
-        guard s.width > 0, s.height > 0 else { return nil }
-        let facteur = coteMaxPixels / max(s.width, s.height)
-        let cible = CGSize(width: s.width * facteur, height: s.height * facteur)
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: cible, format: format)
-        return renderer.image { _ in
-            source.draw(in: CGRect(origin: .zero, size: cible))
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let imageReduite = imageReduite(source: source,
+                                              coteMaximale: coteMaxPixels) else {
+            return nil
         }
+        return imagePlateforme(depuis: imageReduite)
+    }
+
+    /// Renvoie la taille de décodage nécessaire pour recadrer ensuite un carré.
+    nonisolated private static func coteMaximalePourCarre(source: CGImageSource,
+                                                          cotePixels: CGFloat) -> CGFloat {
+        guard let proprietes = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+                as? [CFString: Any],
+              let largeur = (proprietes[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+              let hauteur = (proprietes[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+              largeur > 0,
+              hauteur > 0 else {
+            return cotePixels
+        }
+
+        let plusGrandCote = max(largeur, hauteur)
+        let plusPetitCote = min(largeur, hauteur)
+        return cotePixels * CGFloat(plusGrandCote / plusPetitCote)
+    }
+
+    /// Décode directement une image réduite à la taille maximale demandée.
+    /// `WithTransform` applique l'orientation EXIF avant le recadrage ou le
+    /// rendu dans SwiftUI.
+    nonisolated private static func imageReduite(source: CGImageSource,
+                                                 coteMaximale: CGFloat) -> CGImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, Int(ceil(coteMaximale)))
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+
+    /// Convertit l'image ImageIO vers le type natif de la plateforme.
+    nonisolated private static func imagePlateforme(depuis image: CGImage)
+        -> ImagePlateforme {
+        #if os(macOS)
+        NSImage(cgImage: image,
+                size: NSSize(width: image.width, height: image.height))
+        #else
+        UIImage(cgImage: image)
         #endif
     }
 }
