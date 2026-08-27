@@ -1209,6 +1209,11 @@ struct VueFeuille: View {
                 )
                 // Défilement vers la ligne sélectionnée, en VERTICAL seulement.
                 .background(DefilementTableau(ligne: ligneSelectionnee))
+                // Le même NSTableView est réutilisé quand on change de
+                // rubrique. On réimpose donc son style bleu natif ici, afin
+                // qu'un réglage laissé par une vue précédente ne le fasse
+                // jamais passer en gris.
+                .background(ForceSelectionBleueTableau())
         }
     }
 
@@ -1818,6 +1823,21 @@ private struct DefilementTableau: NSViewRepresentable {
             if let t = premierTableau(dans: sous) { return t }
         }
         return nil
+    }
+}
+
+/// Réaffirme le style de sélection standard des tableaux de contenu.
+/// La sidebar conserve son traitement marron indépendant.
+private struct ForceSelectionBleueTableau: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let table = DefilementTableau.tableauProche(de: nsView) else { return }
+            if table.selectionHighlightStyle != .regular {
+                table.selectionHighlightStyle = .regular
+            }
+        }
     }
 }
 

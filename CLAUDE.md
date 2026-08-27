@@ -1482,6 +1482,14 @@ JavaScript, inexploitables par extraction) :
   donc PAS à pouvoir la passer à l'appel, il faut aussi étendre l'`init`.
   Rencontré deux fois.
 
+- **macOS — sélection bleue des vues Liste** (`VueFeuille.swift`) : la couleur
+  de fond de sélection reste celle de la `Table` native de macOS, donc bleue,
+  dans toutes les rubriques et quel que soit l'ordre d'ouverture. Le composant
+  `ForceSelectionBleueTableau` réimpose `selectionHighlightStyle = .regular`
+  après chaque mise à jour du tableau partagé. Le marron personnalisé de la
+  sidebar n'est pas modifié. Sur la ligne sélectionnée, les cellules textuelles
+  et le prix restent blancs et gras pour assurer la lisibilité.
+
 - **macOS — lisibilité de la sélection dans les tableaux** (`VueFeuille.swift`) :
   la sélection de la `Table` reste la sélection bleue native de macOS. Dans les
   trois tableaux — Ventes, Dons et Réserve — le texte de toutes les cellules de
