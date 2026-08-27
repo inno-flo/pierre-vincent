@@ -184,6 +184,20 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
     - **Limite connue, inchangée** : le fichier entier est construit en
       mémoire, images comprises. Sur une grosse base cela reste lourd — le
       corriger demanderait une écriture en flux, un autre chantier.
+    - **Ordre de grandeur au 28 août 2026** : 479,9 Mo de photos donnent un
+      `.pvbase` d'environ **640 Mo**, le base64 gonflant de 33 %. Export comme
+      import le construisent entièrement en mémoire ; sur iPhone c'est au bord
+      de ce qu'iOS tolère avant de tuer l'app.
+      **Le critère de décision n'est PAS la croissance de la base** — elle
+      n'augmente quasiment plus — **mais sa taille absolue** : tant que les
+      transferts Mac → iPhone aboutissent, ne rien changer. Si l'app se ferme
+      seule pendant un import `.pvbase`, c'est ce plafond, et l'écriture en
+      flux devient alors un vrai chantier à ouvrir.
+    - Deux leviers permettraient d'alléger davantage — abaisser le seuil de
+      450 Ko, ou le côté long de 2000 px — mais **tous deux dégradent la
+      qualité de TOUTES les photos**, y compris celles qui vont bien. 2000 px
+      est déjà le minimum confortable pour un affichage plein écran sur un
+      catalogue d'œuvres d'art : à ne considérer qu'en dernier recours.
 
 ## Import de photos (macOS)
 
@@ -326,6 +340,14 @@ diffèrent en tout.
 - **`RecompressionPhotos` (macOS)** : rattrape les photos entrées avant que
   toutes les voies d'import passent par `importerImageCompressee`. Mesuré sur
   un PNG hérité de 19 Mo : **441 Ko après recompression, facteur 43**.
+  - **Passe exécutée le 28 août 2026 sur la vraie base : 591,1 Mo → 479,9 Mo**,
+    soit 111,2 Mo libérés (19 %). L'écart avec le facteur 43 est normal et ne
+    signale aucun défaut : ce facteur vaut pour le PIRE cas, un PNG hérité de
+    l'import CSV. La grande majorité des photos venaient de l'import IPTC, qui
+    compressait déjà — elles étaient à ~450 Ko et le filtre les a ignorées.
+  - **La commande reste utile après coup** : elle est rejouable sans risque
+    (une photo déjà sous le seuil n'est pas touchée) et rattrapera toute photo
+    lourde entrée par une voie encore inconnue.
   - **Ce n'est PAS une passe de `RepriseDonnees`, et ça ne doit pas le
     devenir.** Les reprises tournent au lancement sur le fil principal :
     recompresser des centaines d'images à ce moment-là gèlerait l'app à chaque
