@@ -686,11 +686,6 @@ struct ContentView: View {
             let nomsUtilises = Set(toutes.map { $0.photoNom }.filter { !$0.isEmpty })
             PhotoStore.nettoyerPhotosOrphelines(nomsUtilises: nomsUtilises)
 
-            // Données de TEST (développement) : remplit la base si elle est
-            // vide, pour visualiser l'interface. Ne s'active jamais si des
-            // données existent déjà, donc sans risque pour de vraies données.
-            DonneesTest.genererSiVide(context: context)
-
             // Reprise ponctuelle : renseigne le Statut par défaut — « Donné »
             // pour les dons, « Vendu » pour les autres — sur les œuvres dont il
             // est encore vide. Ne s'exécute qu'une fois et n'écrase aucune

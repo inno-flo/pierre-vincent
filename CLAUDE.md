@@ -1535,3 +1535,10 @@ JavaScript, inexploitables par extraction) :
   lorsqu'une rubrique change, afin que la couleur d'accent choisie dans les
   réglages système soit affichée. Il ne doit pas reprendre le focus pendant
   les mises à jour du tableau central.
+
+- **Générateur de données et d'images de test supprimé** (`DonneesTest.swift`,
+  `ContentView.swift`) : le générateur qui créait automatiquement des œuvres
+  et des images artificielles lorsque la base était vide a été entièrement
+  supprimé. Il n'existe plus de génération automatique de données de test au
+  lancement, y compris sur une installation neuve. Les données réelles
+  doivent être introduites par les mécanismes d'importation de l'application.
