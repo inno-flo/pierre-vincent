@@ -14,45 +14,113 @@ import UIKit
 /// chaque apparition de cellule → saccades. Ici, on prépare UNE fois une petite
 /// version (vignette) de chaque image, on la garde en mémoire, et on la
 /// réutilise. Le chargement se fait en arrière-plan pour ne pas bloquer l'écran.
+/// Drapeau partagé entre le fil principal (qui le pose) et la file de
+/// fabrication (qui le lit). Un verrou suffit : la valeur est un simple
+/// booléen, touché deux ou trois fois par vignette.
+///
+/// `@unchecked Sendable` parce que la protection est assurée par le verrou et
+/// non par le compilateur.
+private final class JetonAbandon: @unchecked Sendable {
+    private let verrou = NSLock()
+    private var valeur = false
+
+    var abandonne: Bool {
+        verrou.lock(); defer { verrou.unlock() }
+        return valeur
+    }
+    func abandonner() { verrou.lock(); valeur = true; verrou.unlock() }
+    func reprendre()  { verrou.lock(); valeur = false; verrou.unlock() }
+}
+
 @MainActor
 final class CacheVignettes {
     static let shared = CacheVignettes()
 
-    // Cache mémoire borné : nom de fichier -> vignette déjà préparée.
-    // La limite est commune aux variantes carrée et avec ratio : les images
-    // anciennes sont évacuées automatiquement, notamment sous pression
-    // mémoire, au lieu de rester en mémoire pendant toute la session.
+    // Cache mémoire borné : clé -> vignette déjà préparée.
+    // La limite est commune à toutes les variantes : les images anciennes sont
+    // évacuées automatiquement, notamment sous pression mémoire, au lieu de
+    // rester en mémoire pendant toute la session.
     private let cache: NSCache<NSString, ImagePlateforme> = {
         let cache = NSCache<NSString, ImagePlateforme>()
         cache.countLimit = 48
         return cache
     }()
-    // Noms en cours de chargement, pour éviter de lancer deux fois le même.
-    private var enCours: Set<String> = []
+
+    /// Demandeurs en attente, par clé. Plusieurs cellules peuvent réclamer la
+    /// MÊME vignette : elles sont toutes servies par une seule fabrication.
+    ///
+    /// **Ce regroupement est indispensable.** Auparavant une demande portant
+    /// sur une clé déjà en cours était simplement ignorée, et son rappel
+    /// perdu : la deuxième cellule n'était jamais prévenue et restait sur son
+    /// icône grise jusqu'à ce qu'on quitte la vue et y revienne.
+    private var attentes: [String: [UUID: CheckedContinuation<ImagePlateforme?, Never>]] = [:]
+
+    /// Fabrications lancées, avec leur jeton d'abandon.
+    private var enCours: [String: JetonAbandon] = [:]
 
     private init() {}
 
-    /// Demande la préparation d'une vignette (en arrière-plan si nécessaire).
-    /// `cote` = taille cible en points (ex. 120 pour une liste, 240 pour galerie).
-    /// `preserverRatio` = true : garde le ratio d'origine (pas de crop carré) ;
-    /// false : recadre en carré centré (pour les listes).
-    /// Quand la vignette est prête, `quandPrete` est appelé sur le fil principal.
-    func demanderVignette(nom: String, cote: CGFloat,
-                          preserverRatio: Bool = false,
-                          quandPrete: @escaping (ImagePlateforme) -> Void) {
-        guard !nom.isEmpty else { return }
-        // Clé distincte selon le mode : un même fichier peut avoir une version
-        // carrée (liste) ET une version au ratio d'origine (galerie).
-        let cle = preserverRatio ? nom + "|ratio" : nom
-        if let dejaLa = cache.object(forKey: cle as NSString) {
-            quandPrete(dejaLa)
+    /// Clé de cache.
+    ///
+    /// Elle inclut **la taille**, et pas seulement le nom et la variante : la
+    /// galerie demande 320 pt quand les listes structurées en demandent 240, et
+    /// le mode Liste une taille qui suit la hauteur de rangée. Sans la taille,
+    /// la première vignette préparée était resservie à toutes les autres — donc
+    /// floue si elle avait été fabriquée plus petite.
+    ///
+    /// La taille est arrondie à un palier de 40 pt pour éviter qu'une hauteur
+    /// de rangée réglable ne fabrique une variante par pixel.
+    nonisolated private static func cle(nom: String, cote: CGFloat,
+                                        preserverRatio: Bool) -> String {
+        let palier = max(40, (Int(cote) + 39) / 40 * 40)
+        return "\(nom)|\(preserverRatio ? "ratio" : "carre")|\(palier)"
+    }
+
+    /// Prépare (ou récupère) une vignette et la renvoie quand elle est prête.
+    ///
+    /// `cote` = taille cible en points (ex. 76 pour une liste, 320 pour la
+    /// galerie). `preserverRatio` = true : garde le ratio d'origine ; false :
+    /// recadre en carré centré.
+    ///
+    /// **`async`, et non un rappel.** L'appelante est un `.task(id:)`, que
+    /// SwiftUI annule tout seul quand la cellule disparaît ou change de photo :
+    /// l'attente se dénoue alors d'elle-même, et si plus personne n'attend
+    /// cette vignette, sa fabrication est abandonnée avant d'occuper la file.
+    /// Sans cela, changer de rubrique laissait la file terminer des dizaines de
+    /// vignettes devenues invisibles, retardant d'autant celles qu'on regarde.
+    func vignette(nom: String, cote: CGFloat,
+                  preserverRatio: Bool = false) async -> ImagePlateforme? {
+        guard !nom.isEmpty else { return nil }
+        let cle = Self.cle(nom: nom, cote: cote, preserverRatio: preserverRatio)
+        if let dejaLa = cache.object(forKey: cle as NSString) { return dejaLa }
+
+        let id = UUID()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { suite in
+                attentes[cle, default: [:]][id] = suite
+                lancer(cle: cle, nom: nom, cote: cote, preserverRatio: preserverRatio)
+            }
+        } onCancel: {
+            Task { @MainActor in self.abandonner(cle: cle, id: id) }
+        }
+    }
+
+    /// Lance la fabrication si elle ne tourne pas déjà pour cette clé.
+    private func lancer(cle: String, nom: String, cote: CGFloat, preserverRatio: Bool) {
+        // Déjà en cours : cette demande sera servie par la même fabrication.
+        // On réarme le jeton au cas où la précédente vague de demandeurs avait
+        // tout abandonné — sinon la fabrication serait sautée alors que
+        // quelqu'un l'attend de nouveau.
+        if let jeton = enCours[cle] {
+            jeton.reprendre()
             return
         }
-        if enCours.contains(cle) { return }
-        enCours.insert(cle)
+
+        let jeton = JetonAbandon()
+        enCours[cle] = jeton
 
         let url = PhotoStore.dossierPhotos.appendingPathComponent(nom)
-        let cotePixels = cote * 2   // un peu plus fin que l'affichage (écrans Retina)
+        let cotePixels = cote * 2   // un peu plus fin que l'affichage (Retina)
 
         // File SÉRIE dédiée, et non `Task.detached` : en galerie, des dizaines
         // de vignettes sont demandées d'un coup. Autant de tâches détachées
@@ -64,17 +132,38 @@ final class CacheVignettes {
         // Conséquence voulue : les vignettes se préparent l'une après l'autre,
         // dans l'ordre où elles ont été demandées, donc de haut en bas.
         Self.filePreparation.async {
-            let vignette = preserverRatio
-                ? Self.fabriquerVignetteRatio(url: url, coteMaxPixels: cotePixels)
-                : Self.fabriquerVignette(url: url, cotePixels: cotePixels)
+            // Personne n'attend plus cette vignette : on passe au suivant sans
+            // rien décoder. Le test est fait ICI, au tour de la demande dans la
+            // file, donc une fabrication déjà commencée va jusqu'au bout.
+            let vignette: ImagePlateforme? = jeton.abandonne
+                ? nil
+                : (preserverRatio
+                    ? Self.fabriquerVignetteRatio(url: url, coteMaxPixels: cotePixels)
+                    : Self.fabriquerVignette(url: url, cotePixels: cotePixels))
+
             Task { @MainActor in
-                self.enCours.remove(cle)
-                if let v = vignette {
-                    self.cache.setObject(v, forKey: cle as NSString)
-                    quandPrete(v)
-                }
+                self.enCours[cle] = nil
+                if let v = vignette { self.cache.setObject(v, forKey: cle as NSString) }
+
+                // Servir TOUS les demandeurs de cette clé, pas seulement le
+                // premier : c'est tout l'objet du regroupement.
+                let suites = self.attentes.removeValue(forKey: cle) ?? [:]
+                for suite in suites.values { suite.resume(returning: vignette) }
             }
         }
+    }
+
+    /// Retire un demandeur qui a renoncé (cellule disparue, photo changée).
+    /// Une continuation doit être reprise exactement une fois : on la sert donc
+    /// avec `nil` au lieu de la laisser en suspens.
+    private func abandonner(cle: String, id: UUID) {
+        guard let suite = attentes[cle]?.removeValue(forKey: id) else { return }
+        suite.resume(returning: nil)
+        guard attentes[cle]?.isEmpty ?? false else { return }
+        attentes[cle] = nil
+        // Plus personne n'attend : la fabrication peut être sautée si elle
+        // n'a pas encore démarré.
+        enCours[cle]?.abandonner()
     }
 
     /// File unique de fabrication des vignettes.
@@ -85,9 +174,11 @@ final class CacheVignettes {
         label: "PierreVincent.vignettes", qos: .userInitiated)
 
     /// Renvoie une vignette déjà en cache si présente (sans en déclencher).
-    func vignettePrete(nom: String, preserverRatio: Bool = false) -> ImagePlateforme? {
-        let cle = preserverRatio ? nom + "|ratio" : nom
-        return cache.object(forKey: cle as NSString)
+    func vignettePrete(nom: String, cote: CGFloat,
+                       preserverRatio: Bool = false) -> ImagePlateforme? {
+        guard !nom.isEmpty else { return nil }
+        return cache.object(forKey: Self.cle(nom: nom, cote: cote,
+                                             preserverRatio: preserverRatio) as NSString)
     }
 
     /// Fabrique une petite image à partir du fichier d'origine.
@@ -185,7 +276,7 @@ struct VignetteCacheeFlexible: View {
     var body: some View {
         GeometryReader { geo in
             Group {
-                if let img = image ?? CacheVignettes.shared.vignettePrete(nom: nom, preserverRatio: preserverRatio) {
+                if let img = image ?? CacheVignettes.shared.vignettePrete(nom: nom, cote: coteSource, preserverRatio: preserverRatio) {
                     Image(imagePlateforme: img)
                         .resizable()
                         .scaledToFill()
@@ -203,13 +294,12 @@ struct VignetteCacheeFlexible: View {
         }
         // Même correctif que sur `VignetteCachee` : recharger quand le nom de
         // fichier change alors que la vue est déjà à l'écran.
+        // `await` et non un rappel : SwiftUI annule cette tâche quand la
+        // cellule disparaît, ce qui libère la fabrication devenue inutile.
         .task(id: nom) {
             image = nil
-            guard !nom.isEmpty else { return }
-            CacheVignettes.shared.demanderVignette(nom: nom, cote: coteSource,
-                                                   preserverRatio: preserverRatio) { v in
-                image = v
-            }
+            image = await CacheVignettes.shared.vignette(
+                nom: nom, cote: coteSource, preserverRatio: preserverRatio)
         }
     }
 }
@@ -225,7 +315,7 @@ struct VignetteCachee: View {
 
     var body: some View {
         Group {
-            if let img = image ?? CacheVignettes.shared.vignettePrete(nom: nom) {
+            if let img = image ?? CacheVignettes.shared.vignettePrete(nom: nom, cote: cote) {
                 Image(imagePlateforme: img).resizable().scaledToFill()
                     .frame(width: cote, height: cote)
                     .clipped()
@@ -246,10 +336,7 @@ struct VignetteCachee: View {
         // jusqu'à ce qu'on quitte la vue et y revienne.
         .task(id: nom) {
             image = nil
-            guard !nom.isEmpty else { return }
-            CacheVignettes.shared.demanderVignette(nom: nom, cote: cote) { v in
-                image = v
-            }
+            image = await CacheVignettes.shared.vignette(nom: nom, cote: cote)
         }
     }
 }

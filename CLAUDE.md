@@ -1575,6 +1575,35 @@ JavaScript, inexploitables par extraction) :
   anciennes peuvent donc être évacuées automatiquement, notamment sous
   pression mémoire, puis recréées à la demande si nécessaire.
 
+- **Cache des vignettes — clé, regroupement et abandon** (`CacheVignettes.swift`).
+  Trois défauts corrigés ensemble, tous invisibles à la lecture du code :
+  - **La clé inclut la TAILLE**, plus seulement le nom et la variante. La
+    galerie demande 320 pt, les listes structurées 240, le mode Liste une
+    taille qui suit la hauteur de rangée : sans elle, la première vignette
+    préparée était resservie à toutes les autres, donc floue si elle avait été
+    fabriquée plus petite. La taille est arrondie à un palier de 40 pt, sans
+    quoi une hauteur de rangée réglable fabriquerait une variante par pixel.
+  - **Les demandeurs d'une même vignette sont REGROUPÉS.** Une demande portant
+    sur une clé déjà en cours était auparavant ignorée et son rappel **perdu** :
+    la deuxième cellule n'était jamais prévenue et restait sur son icône grise
+    jusqu'à ce qu'on quitte la vue et y revienne. Le défaut s'est aggravé avec
+    le `NSCache`, qui peut évincer une entrée puis la voir redemandée par
+    plusieurs cellules à la fois.
+  - **Une fabrication que plus personne n'attend est ABANDONNÉE.**
+    `demanderVignette` (rappel) a laissé la place à `vignette(nom:cote:)`,
+    **`async`** : SwiftUI annule le `.task(id:)` quand la cellule disparaît,
+    l'attente se dénoue seule, et si plus aucun demandeur ne reste, la
+    fabrication est sautée. Le test se fait au tour de la demande dans la file,
+    donc **une fabrication déjà commencée va jusqu'au bout** — on n'interrompt
+    jamais un décodage en cours. Sans cela, changer de rubrique laissait la
+    file terminer des dizaines de vignettes devenues invisibles.
+  - `JetonAbandon` est un booléen sous verrou, partagé entre le fil principal
+    qui le pose et la file qui le lit. Il est **réarmé** si une nouvelle
+    demande arrive sur une clé dont les demandeurs avaient tous renoncé.
+  - **Une continuation doit être reprise exactement une fois** : un demandeur
+    qui renonce est servi avec `nil` plutôt que laissé en suspens.
+  - La file reste **sérielle** et en `.userInitiated` : voir plus haut, c'est ce
+    qui évite le « Hang Risk » d'une tâche détachée par image.
 - **Réduction des vignettes par ImageIO** (`CacheVignettes.swift`) : la
   fabrication des variantes carrée et avec ratio utilise désormais
   `CGImageSourceCreateThumbnailAtIndex`. ImageIO réduit l'image pendant le
