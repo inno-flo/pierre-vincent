@@ -115,6 +115,15 @@ struct PierreVincentApp: App {
         #if os(macOS)
         .windowStyle(.titleBar)
         .commands {
+            // Remplace le panneau « À propos » standard pour y ajouter les
+            // bibliothèques tierces (Credits) — le seul moyen offert par
+            // AppKit : `orderFrontStandardAboutPanel(options:)` avec la clé
+            // `.credits`, qui accepte un texte enrichi affiché sous le nom et
+            // la version. Le panneau reste celui du système pour le reste
+            // (icône, nom, version, copyright).
+            CommandGroup(replacing: .appInfo) {
+                Button("À propos de PierreVincent") { afficherAPropos() }
+            }
             CommandGroup(replacing: .newItem) {}
             // On retire le « Fermer » système par défaut (il se place en tête du
             // menu Fichier) pour le recréer nous-mêmes à la fin.

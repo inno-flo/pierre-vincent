@@ -652,6 +652,58 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   rendu « Liquid Glass » multi-couches. L'ancien AppIcon PNG seul ne suffit pas.
 - Illustration source : un kaki (persimmon), détouré sur fond transparent, 1024×1024.
 
+## Mentions des bibliothèques tierces et nom de l'app
+
+- **Trois dépendances SwiftPM** (`XLKit`, `ZIPFoundation`, `swift-textfile`,
+  toutes sous licence MIT) sont citées dans les deux plateformes — un endroit
+  à tenir à jour à chaque ajout ou retrait d'une bibliothèque, la liste étant
+  dupliquée deux fois (macOS et iOS n'ont aucun mécanisme commun ici).
+  - **macOS** (`APropos.swift`) : `NSApp.orderFrontStandardAboutPanel(options:
+    [.credits: …])`, le mécanisme standard Apple pour ajouter un texte enrichi
+    sous le nom et la version dans le panneau « À propos » système — le reste
+    du panneau (icône, version, copyright) reste géré par le système. Rangé
+    dans un `CommandGroup(replacing: .appInfo)` (`PierreVincentApp.swift`),
+    qui remplace l'entrée par défaut du menu pomme (grisée sinon, faute de
+    contenu personnalisé).
+  - **iOS** : pas de panneau « À propos » dans l'app elle-même — l'information
+    est déposée dans **Réglages système › PierreVincent**, via
+    `Settings.bundle/Root.plist` (quatre `PSGroupSpecifier`, chacun avec
+    `Title` et `FooterText`). C'est le mécanisme standard Apple pour ajouter
+    des préférences à une app dans les Réglages iOS ; ce fichier n'apparaît
+    dans le bundle .app qu'une fois compilé pour iOS, jamais pour macOS.
+    - La ligne de titre au-dessus de ce contenu (bouton retour + nom de la
+      page) est la barre de navigation SYSTÈME des Réglages iOS — un élément
+      non personnalisable par une app tierce, à ne pas confondre avec du
+      contenu de `Root.plist`.
+- **Nom affiché de l'app : « PierreVincent », sans tiret, PARTOUT** où
+  l'utilisateur le voit — décision prise après avoir constaté une divergence
+  entre plateformes (« Pierre-Vincent » sur l'écran d'accueil iOS et dans les
+  Réglages, « PierreVincent » dans la barre de menus macOS).
+  - **Cause de la divergence** : le nom de menu bar macOS vient de
+    `PRODUCT_NAME = "$(TARGET_NAME)"`, et la target Xcode s'appelle
+    `PierreVincent` (sans tiret) — donc déjà correct sans rien y toucher.
+    `INFOPLIST_KEY_CFBundleDisplayName` valait « Pierre-Vincent », AVEC
+    tiret : c'est cette clé, utilisée par iOS (écran d'accueil, Réglages) et
+    lue par macOS en dernier recours si elle diffère du nom du produit, qui
+    portait le mauvais nom. Corrigée dans `project.pbxproj`, Debug et
+    Release.
+  - Corrigés avec elle, les deux seuls autres textes AFFICHÉS portant le
+    tiret : le libellé du menu « À propos de PierreVincent »
+    (`PierreVincentApp.swift`) et le pied de page des Réglages iOS
+    (`Settings.bundle/Root.plist`).
+  - **Volontairement laissés tels quels** : les commentaires de code en
+    français mentionnant « Pierre-Vincent » (CLAUDE.md, en-têtes de
+    fichiers) — texte interne, jamais vu par l'utilisateur, sans rapport
+    avec le nom affiché.
+  - **Volontairement NON touché, et à traiter avec prudence si un jour
+    demandé** : `PhotoStore.swift` crée le dossier de stockage réel sur
+    disque dans `Application Support/Pierre-Vincent` (AVEC tiret). Ce n'est
+    pas un texte affiché mais un CHEMIN — le renommer déplacerait le dossier
+    et romprait l'accès à la base et aux photos déjà présentes sur toute
+    machine ayant déjà lancé l'app, sans une migration explicite (copier
+    l'ancien dossier vers le nouveau nom au lancement). Un simple
+    renommage de la chaîne serait une régression silencieuse des données.
+
 ## Détails d'interface déjà en place
 
 - **Un champ non renseigné vaut « Inconnu », et ce mot est STOCKÉ EN BASE**
@@ -725,6 +777,13 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     qui couvrirait toute la fenêtre, sidebar et barre d'outils comprises.
     Échap ferme, le pincement du trackpad agrandit de 1× à 5×, le glissement
     déplace l'image agrandie.
+    - **Le champ sous l'image (emplacement + dimensions) est remplacé par un
+      bouton favori** (étoile pleine/vide selon `oeuvre.favori`), au même
+      style que les boutons de navigation Précédent/Suivant. Bascule via
+      `basculerFavori(_:contexte:)`, le même point de passage que partout
+      ailleurs — `ModelContext` récupéré via `@Environment(\.modelContext)`.
+      Nécessite `import SwiftData` explicite dans ce fichier (jusque-là sans),
+      sinon erreur de compilation `MemberImportVisibility` sur `\.modelContext`.
   - **iOS** (`VisionneuseOeuvres.swift`) : appui prolongé sur une vignette,
     le tap continuant d'ouvrir la fiche. Plein écran en portrait comme en
     paysage. Balayage latéral pour changer d'image — **inerte tant qu'on est

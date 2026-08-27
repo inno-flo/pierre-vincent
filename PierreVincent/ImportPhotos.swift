@@ -272,6 +272,7 @@ enum CorrespondanceMotsCles {
     private static let dimensions: [String: String] = [
         "dim100x65": "100x65",
         "dim110x75": "110x75",
+        "dim45x62":  "45x62",
         "dim45x64":  "45x64",
         "dim45x65":  "45x65",
         "dim48x48":  "48x48",

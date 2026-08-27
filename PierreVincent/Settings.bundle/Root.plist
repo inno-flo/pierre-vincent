@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>StringsTable</key>
+	<string>Root</string>
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Bibliothèques utilisées</string>
+			<key>FooterText</key>
+			<string>PierreVincent s'appuie sur les bibliothèques libres suivantes, toutes distribuées sous licence MIT.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>XLKit 1.1.6</string>
+			<key>FooterText</key>
+			<string>Copyright © 2025 The Acharya. Sous licence MIT.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>ZIPFoundation 0.9.20</string>
+			<key>FooterText</key>
+			<string>Copyright © 2017–2025 Thomas Zoechling. Sous licence MIT.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>swift-textfile 0.5.2</string>
+			<key>FooterText</key>
+			<string>Copyright © 2018 Steffan Andrews. Sous licence MIT.</string>
+		</dict>
+	</array>
+</dict>
+</plist>

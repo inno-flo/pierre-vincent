@@ -1,6 +1,7 @@
 #if os(macOS)
 import SwiftUI
 import AppKit
+import SwiftData
 
 /// Visionneuse d'images occupant tout le panneau de contenu.
 ///
@@ -16,6 +17,8 @@ struct VisionneusePanneau: View {
     /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
     /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
     @Environment(\.accentRubrique) private var accent
+    /// Pour enregistrer la bascule du favori (voir `basculerFavori`).
+    @Environment(\.modelContext) private var context
 
     /// Œuvres parcourables — celles qui ont réellement une photo.
     let oeuvres: [Oeuvre]
@@ -69,7 +72,7 @@ struct VisionneusePanneau: View {
                         boutonFermer
                     }
                     image(pour: o)
-                    legende(de: o)
+                    boutonFavori(pour: o)
                     barreNavigation
                 }
                 .padding(24)
@@ -159,15 +162,21 @@ struct VisionneusePanneau: View {
         }
     }
 
-    private func legende(de o: Oeuvre) -> some View {
-        VStack(spacing: 4) {
-            Text(afficher(o.emplacement))
-                .font(.system(size: 13))
+    /// Remplace l'ancien champ de légende (emplacement + dimensions) sous
+    /// l'image : un simple bouton pour ajouter ou retirer l'œuvre affichée
+    /// des favoris, au même style que les boutons de navigation.
+    private func boutonFavori(pour o: Oeuvre) -> some View {
+        Button {
+            basculerFavori(o, contexte: context)
+        } label: {
+            Image(systemName: o.favori ? "star.fill" : "star")
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
-            Text(o.dimensions)
-                .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.6))
+                .padding(12)
+                .background(pastille(actif: true))
         }
+        .buttonStyle(.plain)
+        .help(o.favori ? "Retirer des favoris" : "Ajouter aux favoris")
     }
 
     private var barreNavigation: some View {
