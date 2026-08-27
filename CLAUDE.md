@@ -949,7 +949,24 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   changé). Piste : depuis le retrait du `.id(cat)`, le MÊME `NSTableView` sert
   dans toutes les rubriques — un réglage posé une fois y demeure.
 - **`.statusBarHidden()` n'obtient pas fiablement la main sur la barre système
-  dans une présentation MODALE IMBRIQUÉE.** `VisionneuseImagePleinEcran`
+  — et PAS seulement dans une présentation imbriquée.**
+  Le défaut a fini par se produire aussi dans `VisionneuseOeuvres`, qui
+  s'ouvre pourtant depuis la racine : `.ignoresSafeArea()` était posé sur le
+  `GeometryReader`, donc sur TOUT le contenu, commandes comprises. La croix,
+  placée à 20 pt du bord PHYSIQUE, venait cogner contre l'heure et la
+  batterie. **Ne pas compter sur `.statusBarHidden()` pour positionner une
+  commande**, quelle que soit la façon dont la vue est présentée.
+  - Les deux visionneuses plein écran partagent désormais la MÊME règle :
+    seul le **fond** ignore la zone sûre (il doit couvrir l'encoche), les
+    **commandes** restent mesurées depuis elle. C'était déjà la règle de
+    `VisionneuseImagePleinEcran` ; `VisionneuseOeuvres` l'a rejointe, ce qui
+    aligne enfin leur position de croix — l'intention affichée de longue date.
+  - Effet secondaire assumé : `ouvertureDepuisVignette(ecran:)` reçoit
+    maintenant la taille de la zone sûre et non celle de l'écran entier. Le
+    ressort d'ouverture part donc d'un facteur très légèrement différent,
+    invisible à l'œil.
+- **Le cas d'origine, toujours valable** : `.statusBarHidden()` dans une
+  présentation MODALE IMBRIQUÉE. `VisionneuseImagePleinEcran`
   s'ouvre en `.fullScreenCover` DEPUIS un `.sheet` (`DetailiOS`) —
   contrairement à `VisionneuseOeuvres`, qui s'ouvre directement depuis la
   racine. Faire ignorer la zone sûre à TOUTE la vue (comme le fait

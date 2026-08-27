@@ -91,10 +91,20 @@ struct VisionneuseOeuvres: View {
     }
 
     var body: some View {
+        // **PAS de `.ignoresSafeArea()` ici.** Posé sur le `GeometryReader`,
+        // il s'appliquait à TOUT le contenu, commandes comprises : la croix,
+        // à 20 pt du bord PHYSIQUE, venait alors cogner contre l'heure et la
+        // batterie. `.statusBarHidden()` ne suffit pas à s'en prémunir — il
+        // n'obtient pas la main de façon fiable, exactement comme dans
+        // `VisionneuseImagePleinEcran` (voir le commentaire de son `body`).
+        //
+        // Même partage qu'elle, désormais : seul le FOND ignore la zone sûre
+        // — il doit couvrir l'encoche — tandis que les commandes restent
+        // mesurées depuis elle. Les deux visionneuses plein écran se
+        // manipulent ainsi de façon identique, ce qui était l'intention.
         GeometryReader { geo in
             corps(ecran: geo.size)
         }
-        .ignoresSafeArea()
     }
 
     private func corps(ecran: CGSize) -> some View {
