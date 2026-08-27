@@ -228,6 +228,14 @@ diffèrent en tout.
     « Stockage domicile » → « Domicile ». Attention aux traits d'union du
     mot-clé source, une clé mal orthographiée passe en « non reconnu » sans
     autre signe.
+  - `dimensions` : un mot-clé par dimension (« dim100x65 » → « 100x65 »),
+    écrit directement au format harmonisé de l'app — sans conversion,
+    contrairement à `normaliserDimensions`, qui recorrige une saisie libre.
+    Vingt-trois entrées à ce jour ; chaque clé doit rester au format
+    « dimAxB » → « AxB », **A et B identiques dans les deux moitiés** — une
+    faute de frappe à cet endroit (constatée une fois, corrigée avant
+    d'être ajoutée) donnerait une dimension fausse plutôt qu'un rejet visible
+    en Remarques.
 - **Deux filets, sans lesquels une œuvre importée devient INVISIBLE** :
   - `statutParDefautImport` quand aucun mot-clé ne dit le sort. Un statut vide
     ne satisfait ni `estVenduOuDonne` ni `estEnReserve` : l'œuvre tombe entre
@@ -430,6 +438,15 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   colonnes de `Colonnes.swift` servent aux EXPORTS ; le tableau de la vue a ses
   `TableColumn` en dur (`tableVente`, `tableDon`, `tableReserve`). Une nouvelle
   feuille demande donc les deux.
+- **`NSUndoManager.setActionName(_:)` exige un groupe d'annulation OUVERT.**
+  `dupliquerSelection()` l'appelait sans `beginUndoGrouping()` au préalable :
+  l'exception Objective-C levée interrompait la commande sans le moindre
+  message dans l'interface — « la commande ne fait rien » comme seul
+  symptôme. `supprimerSelection()`, juste à côté dans le même fichier, avait
+  déjà le bon garde-fou (`beginUndoGrouping()` / `processPendingChanges()` /
+  `endUndoGrouping()`) ; `dupliquerSelection()` ne l'avait jamais reçu.
+  Vérifier ce garde-fou sur TOUTE future action de `VueFeuille` qui pose un
+  nom d'action d'annulation.
 - **Marge portée par un élément VOISIN plutôt que par celui qui en a besoin.**
   Rencontré plusieurs fois, dernièrement dans `VueDonsStructuree` : le
   récapitulatif s'est retrouvé collé à la première rangée de vignettes après
@@ -652,8 +669,15 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   champs, dans le même ordre** : éditeur (boîte de dialogue), inspecteur
   (colonne) et fiche iPhone. Ordre de référence : Prix · Type/Thème ·
   Dimensions/Format · Statut/Collection personnelle/Lieu de stockage/
-  Emplacement · Vendeur-Acheteur-Mode de vente (ou Destinataire-Mode de
-  vente) · Date · Remarques.
+  Emplacement · Vendeur-Acheteur-Mode de vente (ou Vendeur-Destinataire-Mode
+  de vente) · Date · Remarques.
+  - **Vendeur figure aussi sur un don**, depuis peu, AVANT Destinataire :
+    Vendeur dit qui a donné l'œuvre, Destinataire qui l'a reçue. Le champ
+    existait déjà sur le modèle (utilisé pour les ventes) ; seul son
+    affichage manquait pour cette feuille, aux trois surfaces à la fois.
+    Une reprise ponctuelle, `renseignerVendeurDons`, a inscrit « Florian »
+    sur tous les dons existants — en ÉCRASANT, le champ n'ayant jamais été
+    saisi nulle part pour cette feuille jusque-là.
   - **Type et Thème partagent le même encadré, CÔTE À CÔTE** — le genre
     d'objet et son sujet se lisent ensemble. Thème n'est donc plus dans
     l'encadré Statut. Même présentation que Dimensions/Format, déjà côte à
@@ -718,8 +742,9 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
       UIKit expose ce rappel (`willPerformPreviewActionForMenuWith`), SwiftUI
       non. La vue posée en overlay prend AUSSI le tap simple, faute de quoi
       elle le confisquerait à la carte SwiftUI en dessous.
-    - Le menu porte une entrée **« Ajouter aux favoris » INERTE** : le système
-      exige un menu, et la rubrique Favoris n'existe pas encore.
+    - Le menu porte une entrée **« Ajouter aux favoris »**, devenue « Retirer
+      des favoris » une fois l'œuvre favorite — voir la section Favoris plus
+      bas pour le mécanisme complet, apparu depuis.
     - `preferredContentSize` est **obligatoire** sur l'aperçu : sans elle il
       prend la dimension intrinsèque de l'image, soit des milliers de points.
       `TransitionVisionneuse.taillePreview` (320 × 420) sert DEUX fois — à
@@ -1222,7 +1247,7 @@ JavaScript, inexploitables par extraction) :
     - **Bascule via le menu contextuel iOS** (`InteractionApercu` dans
       `TransitionVisionneuse.swift`, donc les trois vues qui le partagent) :
       l'entrée « Ajouter aux favoris » n'était plus inerte, elle devient
-      « Supprimer des favoris » une fois l'œuvre favorite — libellé et icône
+      « Retirer des favoris » une fois l'œuvre favorite — libellé et icône
       recalculés à CHAQUE ouverture du menu, jamais périmés. L'œuvre reste à
       SA place d'origine ; elle apparaît EN PLUS dans Favoris, sans y être
       déplacée ni dupliquée.
@@ -1232,12 +1257,19 @@ JavaScript, inexploitables par extraction) :
       commande dédiée du menu Édition. Les trois libellés suivent la MÊME
       convention sur une sélection multiple : si au moins une œuvre visée
       n'est pas favorite, « Ajouter aux favoris » les marque TOUTES ; si
-      toutes le sont déjà, « Supprimer des favoris » les démarque toutes —
+      toutes le sont déjà, « Retirer des favoris » les démarque toutes —
       jamais un simple `.toggle()` par œuvre, qui mélangerait les états.
       `VueFeuille.basculerFavoriSelection()` est le point de passage unique
       pour la Table et le menu Édition ; `VueGalerie` calcule sa propre
       version localement (une cible de clic droit peut différer de la
       sélection remontée au menu Édition).
+    - **Menu contextuel de la Table (liste, macOS)** — celui qui sert aussi
+      Modifier/Dupliquer/Supprimer, voir plus bas — propose désormais
+      « Supprimer… » (avec les points de suspension, une confirmation
+      suivant) et la bascule des favoris, dans TOUTES les vues en
+      présentation Liste. Sur iPhone, le menu de la pression longue ne porte
+      QUE la bascule des favoris — pas de Modifier/Supprimer, l'app restant
+      en lecture seule côté édition sur cette plateforme.
     - **ESSAYÉ ET ABANDONNÉ — double-tap sur une vignette/ligne pour
       basculer le favori**, comme alternative au menu contextuel iOS.
       Techniquement, la bonne méthode UIKit a été posée : un second
