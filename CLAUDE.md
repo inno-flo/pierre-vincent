@@ -1542,3 +1542,10 @@ JavaScript, inexploitables par extraction) :
   supprimé. Il n'existe plus de génération automatique de données de test au
   lancement, y compris sur une installation neuve. Les données réelles
   doivent être introduites par les mécanismes d'importation de l'application.
+
+- **Cache des vignettes borné** (`CacheVignettes.swift`) : le dictionnaire qui
+  conservait toutes les vignettes préparées pendant la session a été remplacé
+  par un `NSCache` limité à 48 entrées. Cette limite est commune aux variantes
+  carrées des listes et aux variantes avec ratio de la galerie. Les vignettes
+  anciennes peuvent donc être évacuées automatiquement, notamment sous
+  pression mémoire, puis recréées à la demande si nécessaire.

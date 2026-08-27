@@ -17,8 +17,15 @@ import UIKit
 final class CacheVignettes {
     static let shared = CacheVignettes()
 
-    // Cache mémoire : nom de fichier -> vignette déjà préparée.
-    private var cache: [String: ImagePlateforme] = [:]
+    // Cache mémoire borné : nom de fichier -> vignette déjà préparée.
+    // La limite est commune aux variantes carrée et avec ratio : les images
+    // anciennes sont évacuées automatiquement, notamment sous pression
+    // mémoire, au lieu de rester en mémoire pendant toute la session.
+    private let cache: NSCache<NSString, ImagePlateforme> = {
+        let cache = NSCache<NSString, ImagePlateforme>()
+        cache.countLimit = 48
+        return cache
+    }()
     // Noms en cours de chargement, pour éviter de lancer deux fois le même.
     private var enCours: Set<String> = []
 
@@ -36,7 +43,10 @@ final class CacheVignettes {
         // Clé distincte selon le mode : un même fichier peut avoir une version
         // carrée (liste) ET une version au ratio d'origine (galerie).
         let cle = preserverRatio ? nom + "|ratio" : nom
-        if let dejaLa = cache[cle] { quandPrete(dejaLa); return }
+        if let dejaLa = cache.object(forKey: cle as NSString) {
+            quandPrete(dejaLa)
+            return
+        }
         if enCours.contains(cle) { return }
         enCours.insert(cle)
 
@@ -59,7 +69,7 @@ final class CacheVignettes {
             Task { @MainActor in
                 self.enCours.remove(cle)
                 if let v = vignette {
-                    self.cache[cle] = v
+                    self.cache.setObject(v, forKey: cle as NSString)
                     quandPrete(v)
                 }
             }
@@ -75,7 +85,8 @@ final class CacheVignettes {
 
     /// Renvoie une vignette déjà en cache si présente (sans en déclencher).
     func vignettePrete(nom: String, preserverRatio: Bool = false) -> ImagePlateforme? {
-        cache[preserverRatio ? nom + "|ratio" : nom]
+        let cle = preserverRatio ? nom + "|ratio" : nom
+        return cache.object(forKey: cle as NSString)
     }
 
     /// Fabrique une petite image à partir du fichier d'origine.
