@@ -137,6 +137,31 @@ extension Color {
         #endif
     }
 
+    /// Fond d'une TUILE posée DANS une carte — le troisième niveau.
+    ///
+    /// **Sans lui, les tuiles de la Synthèse étaient invisibles** : elles
+    /// utilisaient `fondLegende`, exactement comme la carte qui les contient,
+    /// donc une teinte sur la même teinte. Le défaut ne datait pas de
+    /// l'inversion des fonds — c'était gris sur gris avant, blanc sur blanc
+    /// après —, seule sa couleur a changé.
+    ///
+    /// iOS a une hiérarchie à trois niveaux faite pour cela : page
+    /// (`systemGrouped`, 242) → carte (`secondarySystemGrouped`, 255) → tuile
+    /// (`tertiarySystemGrouped`, 242). L'alternance clair/blanc/clair est
+    /// voulue par Apple ; en sombre elle est progressive (0 → 28 → 44).
+    ///
+    /// **Sur macOS, `windowBackgroundColor` ne convient PAS** : il vaut
+    /// exactement `controlBackgroundColor`, celui des cartes (255,255,255 en
+    /// clair comme 30,30,30 en sombre). D'où `underPageBackgroundColor`, seul
+    /// à s'en distinguer réellement.
+    static var fondTuile: Color {
+        #if os(macOS)
+        return Color(nsColor: .underPageBackgroundColor)
+        #else
+        return Color(uiColor: .tertiarySystemGroupedBackground)
+        #endif
+    }
+
     /// Texte sur la légende. Noir/blanc selon le mode clair/sombre.
     static var texteLegende: Color {
         #if os(macOS)

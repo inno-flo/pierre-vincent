@@ -1210,6 +1210,26 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - `fondGroupe`, créée un temps pour la seule sidebar, a été **absorbée par
     `cremeFond`** : les deux désignaient la même couleur, et deux noms pour une
     même teinte finissent par diverger.
+  - **TROIS niveaux, pas deux** : une tuile posée DANS une carte a son propre
+    fond, `fondTuile`. Sans lui, les tuiles de la **Synthèse** étaient
+    INVISIBLES : elles utilisaient `fondLegende`, exactement comme la carte qui
+    les contient. Le défaut **ne datait pas de l'inversion** — c'était gris sur
+    gris avant, blanc sur blanc après ; seule sa couleur a changé.
+    - iOS : page (`systemGrouped`, 242) → carte (`secondarySystemGrouped`,
+      255) → tuile (`tertiarySystemGrouped`, 242). L'alternance
+      clair/blanc/clair est voulue par Apple ; en sombre elle est progressive
+      (0 → 28 → 44).
+    - **macOS : `windowBackgroundColor` ne convient PAS pour une tuile** — il
+      vaut EXACTEMENT `controlBackgroundColor`, celui des cartes (255,255,255
+      en clair comme 30,30,30 en sombre). D'où `underPageBackgroundColor`.
+    - **Corollaire à connaître** : sur macOS, la page et les cartes ont donc la
+      même couleur, et c'est la **bordure orange** de `carte(titre:)` qui les
+      sépare — pas un écart de teinte. Retirer cette bordure y ferait
+      disparaître les cartes.
+    - Vérifié dans les autres vues : partout ailleurs `fondLegende` sert de
+      carte posée DIRECTEMENT sur la page (récapitulatifs, cartes de vignette
+      avec leur légende), donc blanc sur gris. La Synthèse était la seule à
+      imbriquer.
 - **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
   `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
   (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en
