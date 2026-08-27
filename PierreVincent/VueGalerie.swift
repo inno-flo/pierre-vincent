@@ -263,7 +263,7 @@ struct VueGalerie: View {
             let cibles = selection.contains(o.id) ? selection : [o.id]
             let visees = oeuvres.filter { cibles.contains($0.id) }
             let toutFavori = !visees.isEmpty && visees.allSatisfy { $0.favori }
-            Button(toutFavori ? "Supprimer des favoris" : "Ajouter aux favoris") {
+            Button(toutFavori ? "Retirer des favoris" : "Ajouter aux favoris") {
                 let nouvelEtat = !toutFavori
                 for v in visees { v.favori = nouvelEtat }
                 try? context.save()

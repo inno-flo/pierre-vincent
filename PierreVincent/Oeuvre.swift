@@ -352,6 +352,27 @@ enum RepriseDonnees {
         return compte
     }
 
+    /// Renseigne « Florian » comme Vendeur sur toutes les œuvres de la
+    /// feuille « Œuvres données ».
+    ///
+    /// **ÉCRASE une valeur existante**, comme `remplirFeuilleReserve` : le
+    /// champ Vendeur vient d'être ajouté à l'affichage des dons (il dit qui a
+    /// donné l'œuvre, avant Destinataire) et n'était jusque-là saisi nulle
+    /// part pour cette feuille — il n'y a donc rien à perdre à l'écraser, et
+    /// c'est le seul moyen de le renseigner d'un coup sur tout l'historique.
+    @discardableResult
+    @MainActor
+    static func renseignerVendeurDons(context: ModelContext) -> Int {
+        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
+        var compte = 0
+        for o in toutes where o.feuille == .oeuvresDonnees {
+            o.vendeur = "Florian"
+            compte += 1
+        }
+        if compte > 0 { try? context.save() }
+        return compte
+    }
+
     /// Rattrape les œuvres au statut VIDE, invisibles dans toutes les vues.
     ///
     /// Cas rencontré après un import de photos sans mots-clés IPTC : l'œuvre

@@ -266,6 +266,33 @@ enum CorrespondanceMotsCles {
         "stockage domicile":       "Domicile",
     ]
 
+    /// Mot-clé → valeur du champ **Dimensions** — un mot-clé par dimension,
+    /// écrite dans le format harmonisé de l'app (« 100x65 », voir
+    /// `normaliserDimensions`).
+    private static let dimensions: [String: String] = [
+        "dim100x65": "100x65",
+        "dim110x75": "110x75",
+        "dim45x64":  "45x64",
+        "dim45x65":  "45x65",
+        "dim48x48":  "48x48",
+        "dim50x25":  "50x25",
+        "dim50x32":  "50x32",
+        "dim50x40":  "50x40",
+        "dim50x65":  "50x65",
+        "dim50x70":  "50x70",
+        "dim65x22":  "65x22",
+        "dim72x102": "72x102",
+        "dim72x89":  "72x89",
+        "dim28x60":  "28x60",
+        "dim67x95":  "67x95",
+        "dim62x45":  "62x45",
+        "dim60x60":  "60x60",
+        "dim47x47":  "47x47",
+        "dim60x80":  "60x80",
+        "dim73x75":  "73x75",
+        "dim39x25":  "39x25",
+    ]
+
     /// Mots-clés recopiés **à l'identique** dans le champ **Emplacement**.
     private static let emplacements: Set<String> = [
         "collection personnelle carton 1",
@@ -310,6 +337,8 @@ enum CorrespondanceMotsCles {
                 ecrire(v, dans: \.type, sur: o)
             } else if let v = lieuxStockage[cle] {
                 ecrire(v, dans: \.lieuStockage, sur: o)
+            } else if let v = dimensions[cle] {
+                ecrire(v, dans: \.dimensions, sur: o)
             } else if emplacements.contains(cle) {
                 // Recopié tel quel, avec sa casse d'origine.
                 ecrire(mot.trimmingCharacters(in: .whitespacesAndNewlines),

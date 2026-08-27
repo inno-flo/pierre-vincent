@@ -418,6 +418,8 @@ struct ContentView: View {
     // `tapisDonnesRanges` : les tapis au statut « Donné » rejoignent la
     // feuille des dons, seule façon pour eux d'apparaître dans la rubrique.
     @AppStorage("tapisDonnesRanges") private var tapisDonnesRanges = false
+    // `vendeurDonsRenseigne` : « Florian » comme Vendeur sur tous les dons.
+    @AppStorage("vendeurDonsRenseigne") private var vendeurDonsRenseigne = false
     // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
     // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
     // clés à chaque lancement — les deux grands blocs dépliés, les quatre
@@ -777,6 +779,14 @@ struct ContentView: View {
             if !tapisDonnesRanges {
                 RepriseDonnees.rangerTapisDonnes(context: context)
                 tapisDonnesRanges = true
+            }
+
+            // Reprise ponctuelle : « Florian » comme Vendeur sur tous les
+            // dons — le champ vient d'être ajouté à l'affichage de cette
+            // feuille. Voir `renseignerVendeurDons`.
+            if !vendeurDonsRenseigne {
+                RepriseDonnees.renseignerVendeurDons(context: context)
+                vendeurDonsRenseigne = true
             }
 
             // Suppression des doublons d'import : feuille « Tableaux vendus »

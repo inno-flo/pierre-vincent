@@ -151,7 +151,7 @@ struct InteractionApercu: UIViewRepresentable {
                 // à chaque ouverture du menu, donc jamais périmés.
                 let estFavori = self?.oeuvre.favori ?? false
                 let bascule = UIAction(
-                    title: estFavori ? "Supprimer des favoris" : "Ajouter aux favoris",
+                    title: estFavori ? "Retirer des favoris" : "Ajouter aux favoris",
                     image: UIImage(systemName: estFavori ? "star.slash" : "star")
                 ) { [weak self] _ in
                     guard let self else { return }

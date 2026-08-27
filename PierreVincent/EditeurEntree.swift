@@ -146,11 +146,14 @@ struct EditeurEntree: View {
                             }
                             // Cellule Statut + Thème + Emplacement.
                             celluleEditeur { blocSuivi }
-                            // Cellule Destinataire + Mode de vente — pour les
-                            // dons seulement : une œuvre en réserve n'a fait
-                            // l'objet d'aucune transaction.
+                            // Cellule Vendeur + Destinataire + Mode de vente —
+                            // pour les dons seulement : une œuvre en réserve
+                            // n'a fait l'objet d'aucune transaction. Vendeur
+                            // dit qui a donné l'œuvre, Destinataire qui l'a
+                            // reçue — placé AVANT, dans cet ordre.
                             if !estReserve {
                                 celluleEditeur {
+                                    champTexte("Vendeur", $vendeur, champ: .vendeur)
                                     champTexte("Destinataire", $destinataire, champ: .destinataire)
                                     champTexte("Mode de vente", $modeVente, champ: .modeVente)
                                 }

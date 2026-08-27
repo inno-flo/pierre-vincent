@@ -332,11 +332,13 @@ struct VueFeuille: View {
                         ligneInspecteur("Emplacement", o.emplacement)
                     }
 
-                    // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de
+                    // Cellule 5 : Vendeur-Acheteur, ou Vendeur-Destinataire
+                    // pour un don (qui a donné, qui a reçu), puis Mode de
                     // vente. Rien pour la réserve : aucune transaction.
                     if !estReserve {
                         celluleInspecteur {
                             if estDon {
+                                ligneInspecteur("Vendeur", o.vendeur)
                                 ligneInspecteur("Destinataire", o.destinataire)
                                 ligneInspecteur("Mode de vente", o.modeVente)
                             } else {
@@ -1404,7 +1406,7 @@ struct VueFeuille: View {
             if selection.count == 1 {
                 Button("Dupliquer") { dupliquerSelection() }
             }
-            Button("Supprimer", role: .destructive) { confirmerSuppression = true }
+            Button("Supprimer…", role: .destructive) { confirmerSuppression = true }
             Divider()
         }
         // Pendant Mac du menu contextuel iOS — même bascule que la commande
@@ -1412,7 +1414,7 @@ struct VueFeuille: View {
         // le signal `@AppStorage` sert à faire remonter l'action jusqu'au
         // menu Édition (une scène différente), il n'a pas à transiter par
         // là pour un menu posé sur la vue elle-même.
-        Button(selectionToutFavorite ? "Supprimer des favoris" : "Ajouter aux favoris") {
+        Button(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris") {
             basculerFavoriSelection()
         }
     }
@@ -1510,8 +1512,16 @@ struct VueFeuille: View {
         copie.destinataire = o.destinataire
         copie.photoNom     = ""   // photo volontairement vide
 
-        context.undoManager?.setActionName("Dupliquer l'entrée")
+        // `setActionName` exige un groupe d'annulation OUVERT — sans
+        // `beginUndoGrouping()` avant, NSUndoManager lève une exception
+        // ("no undo grouping in progress") qui plantait la commande sans
+        // aucun message dans l'interface. Même patron que `supprimerSelection`.
+        let undo = context.undoManager
+        undo?.beginUndoGrouping()
+        undo?.setActionName("Dupliquer l'entrée")
         context.insert(copie)
+        context.processPendingChanges()
+        undo?.endUndoGrouping()
         try? context.save()
         selection = [copie.id]
     }

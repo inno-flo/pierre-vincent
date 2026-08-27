@@ -796,11 +796,13 @@ struct DetailiOS: View {
                 ligne("Emplacement", oeuvre.emplacement)
             }
 
-            // Cellule 5 : Vendeur, Acheteur (ou Destinataire), Mode de vente.
-            // Rien pour la réserve : aucune transaction n'a eu lieu.
+            // Cellule 5 : Vendeur-Acheteur, ou Vendeur-Destinataire pour un
+            // don (qui a donné, qui a reçu), puis Mode de vente. Rien pour la
+            // réserve : aucune transaction n'a eu lieu.
             if oeuvre.feuille != .reserve {
                 cellule {
                     if estFeuilleDon {
+                        ligne("Vendeur", oeuvre.vendeur)
                         ligne("Destinataire", oeuvre.destinataire)
                         ligne("Mode de vente", oeuvre.modeVente)
                     } else {

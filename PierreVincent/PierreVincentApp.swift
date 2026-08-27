@@ -256,7 +256,7 @@ struct PierreVincentApp: App {
 
                 Divider()
 
-                Button(selectionEstToutFavorite ? "Supprimer des favoris" : "Ajouter aux favoris") {
+                Button(selectionEstToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris") {
                     signalBasculerFavori += 1
                 }
                 .disabled(editeurOuvert || !uneSelectionExiste)
