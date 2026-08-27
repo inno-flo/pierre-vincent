@@ -1482,6 +1482,14 @@ JavaScript, inexploitables par extraction) :
   donc PAS à pouvoir la passer à l'appel, il faut aussi étendre l'`init`.
   Rencontré deux fois.
 
+- **macOS — premier répondant des vues Liste** (`VueFeuille.swift`) : la
+  sélection bleue native pouvait devenir grise après un changement de
+  rubrique, car le `NSTableView` partagé restait un tableau sélectionné mais
+  inactif. `ForceSelectionBleueTableau` réimpose `selectionHighlightStyle =
+  .regular` et rend le tableau de contenu premier répondant dès qu'un clic est
+  effectué dans ses limites. Le correctif ne touche pas la sidebar, dont la
+  sélection marron personnalisée reste inchangée.
+
 - **macOS — sélection bleue des vues Liste** (`VueFeuille.swift`) : la couleur
   de fond de sélection reste celle de la `Table` native de macOS, donc bleue,
   dans toutes les rubriques et quel que soit l'ordre d'ouverture. Le composant

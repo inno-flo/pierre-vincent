@@ -1829,14 +1829,53 @@ private struct DefilementTableau: NSViewRepresentable {
 /// Réaffirme le style de sélection standard des tableaux de contenu.
 /// La sidebar conserve son traitement marron indépendant.
 private struct ForceSelectionBleueTableau: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
+    func makeNSView(context: Context) -> NSView {
+        VueSelectionBleueTableau(frame: .zero)
+    }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            guard let table = DefilementTableau.tableauProche(de: nsView) else { return }
-            if table.selectionHighlightStyle != .regular {
-                table.selectionHighlightStyle = .regular
+        (nsView as? VueSelectionBleueTableau)?.appliquerStyle()
+    }
+
+    private final class VueSelectionBleueTableau: NSView {
+        private var moniteur: Any?
+
+        func appliquerStyle() {
+            DispatchQueue.main.async { [weak self] in
+                guard let self,
+                      let table = DefilementTableau.tableauProche(de: self) else { return }
+                if table.selectionHighlightStyle != .regular {
+                    table.selectionHighlightStyle = .regular
+                }
             }
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let moniteur { NSEvent.removeMonitor(moniteur) }
+            moniteur = nil
+            guard window != nil else { return }
+
+            appliquerStyle()
+            moniteur = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+                guard let self,
+                      self.window?.isKeyWindow == true,
+                      let table = DefilementTableau.tableauProche(de: self),
+                      event.window === table.window else { return event }
+
+                let position = table.convert(event.locationInWindow, from: nil)
+                guard table.bounds.contains(position) else { return event }
+
+                // Le clic doit rendre le tableau de contenu actif. Sinon
+                // AppKit conserve l'apparence grise d'une sélection inactive,
+                // même si la ligne vient bien d'être sélectionnée.
+                table.window?.makeFirstResponder(table)
+                return event
+            }
+        }
+
+        deinit {
+            if let moniteur { NSEvent.removeMonitor(moniteur) }
         }
     }
 }
