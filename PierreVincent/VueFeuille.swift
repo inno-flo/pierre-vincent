@@ -107,6 +107,10 @@ struct VueFeuille: View {
     @State private var confirmerSuppression = false
     // Confirmation de l'annulation du dernier import.
     @State private var confirmerAnnulationImport = false
+    // Confirmation de la recompression des photos, et bilan calculé avant de
+    // demander : la question annonce ainsi des chiffres réels.
+    @State private var confirmerRecompression = false
+    @State private var bilanRecompression: RecompressionPhotos.Bilan?
     // URL de l'image à prévisualiser via Quick Look (barre d'espace).
     @State private var apercuURL: URL?
     // Position courante dans la visionneuse intégrée (nil = fermée).
@@ -604,6 +608,12 @@ struct VueFeuille: View {
                  + "supprimées définitivement. Les œuvres saisies à la main et "
                  + "les imports antérieurs ne sont pas touchés.")
         }
+        .alert("Recompresser les photos ?", isPresented: $confirmerRecompression) {
+            Button("Recompresser", role: .destructive) { lancerRecompression() }
+            Button("Ne rien faire", role: .cancel) {}
+        } message: {
+            Text(messageRecompression)
+        }
         // Quick Look natif : affiche l'image de la ligne sélectionnée.
         .apercuQuickLook($apercuURL)
         // Panneau centré unique : progression (indicateur) puis message final
@@ -663,11 +673,64 @@ struct VueFeuille: View {
     }
 
     /// Exécute l'action import/export demandée par le menu « Fichier ».
+    // MARK: Recompression des photos
+
+    /// Texte de la demande de confirmation, fondé sur le bilan réel.
+    private var messageRecompression: String {
+        guard let b = bilanRecompression else { return "" }
+        if b.rienAFaire {
+            return "Toutes les photos tiennent déjà sous "
+                + "\(RecompressionPhotos.formater(Int64(PhotoStore.poidsMaxImport))). "
+                + "Il n'y a rien à recompresser."
+        }
+        return "\(b.concernees) photo(s) dépassent "
+            + "\(RecompressionPhotos.formater(Int64(PhotoStore.poidsMaxImport))) "
+            + "et pèsent ensemble \(RecompressionPhotos.formater(b.poidsActuel)), "
+            + "sur \(RecompressionPhotos.formater(b.poidsTotal)) au total.\n\n"
+            + "Elles seront réduites et réencodées sur place. "
+            + "CETTE OPÉRATION EST DÉFINITIVE : les fichiers d'origine sont "
+            + "remplacés, et « Annuler » ne la défait pas. Exportez la base "
+            + "(Fichier › Exporter › Base…) avant de continuer si vous voulez "
+            + "pouvoir revenir en arrière."
+    }
+
+    /// Pèse le dossier AVANT de poser la question, pour que la confirmation
+    /// annonce des chiffres plutôt qu'une promesse.
+    private func preparerRecompression() {
+        let listeToutes = toutes
+        texteProgression = "Analyse des photos…"
+        exportEnCours = true
+        Task { @MainActor in
+            bilanRecompression = await RecompressionPhotos.analyser(oeuvres: listeToutes)
+            exportEnCours = false
+            confirmerRecompression = true
+        }
+    }
+
+    private func lancerRecompression() {
+        let listeToutes = toutes
+        texteProgression = "Recompression des photos…"
+        exportEnCours = true
+        Task { @MainActor in
+            let r = await RecompressionPhotos.executer(oeuvres: listeToutes,
+                                                       context: context)
+            exportEnCours = false
+            var texte = "\(r.recompressees) photo(s) recompressée(s), "
+                + "\(RecompressionPhotos.formater(r.octetsGagnes)) libéré(s)."
+            if r.echecs > 0 {
+                texte += " \(r.echecs) photo(s) illisible(s) ont été laissées "
+                    + "telles quelles."
+            }
+            messageImport = texte
+        }
+    }
+
     private func executerActionFichier(_ action: String) {
         switch action {
         case "importer":     importerDonnees()
         case "importerPhotos": importerPhotos()
         case "annulerImport": confirmerAnnulationImport = true
+        case "recompresser": preparerRecompression()
         case "csv":          exporterCSV()
         case "xls":          exporterXLS()
         case "dossier":      exporterDossier()

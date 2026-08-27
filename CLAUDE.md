@@ -320,6 +320,34 @@ diffèrent en tout.
       passe par `importerImageCompressee` comme les autres.
     - `enregistrer(image:)` **existe encore** et reste le seul chemin PNG de
       l'app. Elle n'a plus aucun appelant : ne pas s'en resservir.
+    - **Les photos DÉJÀ entrées par cette voie restent lourdes** : corriger
+      l'import ne réécrit pas le disque. D'où `RecompressionPhotos.swift`
+      (macOS), Fichier › « Recompresser les photos… ».
+- **`RecompressionPhotos` (macOS)** : rattrape les photos entrées avant que
+  toutes les voies d'import passent par `importerImageCompressee`. Mesuré sur
+  un PNG hérité de 19 Mo : **441 Ko après recompression, facteur 43**.
+  - **Ce n'est PAS une passe de `RepriseDonnees`, et ça ne doit pas le
+    devenir.** Les reprises tournent au lancement sur le fil principal :
+    recompresser des centaines d'images à ce moment-là gèlerait l'app à chaque
+    démarrage — exactement le défaut qu'on cherche à supprimer. C'est une
+    commande de menu, déclenchée quand l'utilisateur le décide.
+  - **L'ordre des quatre étapes est ce qui rend l'opération sûre** : peser,
+    fabriquer un NOUVEAU fichier (nom UUID distinct), n'écrire `photoNom`
+    qu'une fois ce fichier en place, supprimer l'ancien seulement après. Une
+    panne à n'importe quel moment laisse l'œuvre pointant sur un fichier
+    valide ; le pire résidu est un orphelin, que le nettoyage au lancement
+    efface.
+  - **Garde-fou** : si le fichier recompressé n'est pas plus léger que
+    l'original, il est jeté et l'original conservé. Une photo illisible est
+    laissée telle quelle et comptée en échec — jamais perdue.
+  - `analyser(oeuvres:)` pèse le dossier AVANT de poser la question : la
+    confirmation annonce des chiffres réels (nombre de photos concernées,
+    poids cumulé, poids total) au lieu d'une promesse vague.
+  - **L'opération n'est PAS annulable** — `Annuler` ne la défait pas, elle
+    réécrit des fichiers. L'alerte le dit en toutes lettres et invite à
+    exporter la base d'abord.
+  - Le balayage part des **œuvres**, pas du contenu du dossier : une photo
+    orpheline n'a pas à être recompressée, elle a vocation à disparaître.
 
 ## Thèmes de couleurs
 
