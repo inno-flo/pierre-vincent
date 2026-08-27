@@ -1520,3 +1520,10 @@ JavaScript, inexploitables par extraction) :
   sidebar, au fond du compteur de la sidebar, au compteur de la vue et aux
   trois pastilles de type Tableaux, Dessins et Tapis. Le bleu ardoise reste
   l'accent des autres rubriques de la Réserve.
+
+- **Accent système et Synthèse** (`project.pbxproj`, `Couleurs.swift`,
+  `VueSynthese.swift`) : le projet ne déclare plus le catalogue `AccentColor`
+  vide comme accent global, afin que la sidebar macOS utilise l'accent choisi
+  dans les réglages système, y compris après relance. Les fonds des tuiles de
+  Synthèse utilisent le fond secondaire standard gris (`fondLegende`), tandis
+  que le fond général reste le fond système.

@@ -136,7 +136,7 @@ struct VueSynthese: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondLegende))
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Données")
                                 .font(policeLibelle)
@@ -147,7 +147,7 @@ struct VueSynthese: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondLegende))
                     }
                     #endif
 
@@ -275,7 +275,7 @@ struct VueSynthese: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondLegende))
     }
 
     /// Tuile « nombre » : icône + label, grand chiffre orange, détail orange.
@@ -323,7 +323,7 @@ struct VueSynthese: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondLegende))
     }
 
     /// Tuile « lignes » : un titre et des paires libellé / valeur.
@@ -350,7 +350,7 @@ struct VueSynthese: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondLegende))
     }
 
     /// Tuile « vendeur » : libellé à gauche, montant orange à droite.
@@ -368,6 +368,6 @@ struct VueSynthese: View {
                 .foregroundStyle(Color.orangeInternational)
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.cremeFond))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondLegende))
     }
 }
