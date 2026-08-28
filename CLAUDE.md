@@ -403,6 +403,37 @@ diffèrent en tout.
     et les présentations plein écran.
   - Valeur par défaut : l'orange. Une vue qui ne déclare rien reste donc dans
     la teinte de « Ventes et dons ».
+- **`cremeFond` (macOS) : valeur FIXE, calée sur le gris de page iOS**, et non
+  plus `.windowBackgroundColor`. Sur macOS 26, cette couleur système résout en
+  BLANC PUR (255,255,255) — identique à `fondLegende`/`controlBackgroundColor`
+  — au lieu du gris de fenêtre traditionnel de macOS. Vérifié en rendant
+  réellement la couleur dans une `NSWindow` (pas seulement `resolvedColor`
+  hors contexte, qui peut tromper sur une couleur dynamique).
+  - Valeur retenue : **242,242,247 en clair**, exactement celle mesurée pour
+    `systemGroupedBackground` sur iOS — pour que la page ait la MÊME teinte
+    sur les deux plateformes. Le mode sombre garde le comportement système par
+    défaut (`windowBackgroundColor`, non concerné par ce défaut de macOS).
+  - **`fondTuile` calée sur `cremeFond`, sur macOS uniquement.**
+    `underPageBackgroundColor` (246,246,246), utilisé avant que `cremeFond`
+    ait sa propre valeur, en différait légèrement de la nouvelle valeur de
+    page (242,242,247) — un écart involontaire entre page et tuile.
+    Désormais `fondTuile == cremeFond` sur macOS, comme le fait déjà iOS en
+    clair (page et tuile valent toutes deux 242,242,247 ; seule la carte,
+    blanche, tranche entre les deux).
+  - **Piste à vérifier** : un bug signalé sur macOS montre deux tons
+    différents entre la barre de titre/outils et le bandeau de pastilles de
+    tri (`bandeauFiltres`, fond `.ultraThinMaterial`), visible seulement
+    Inspecteur ouvert. Recherche faite dans tout le code : **aucun fond
+    personnalisé n'est posé sur la colonne Inspecteur ni sur sa portion de
+    toolbar** — tout ce périmètre est rendu nativement par AppKit, hors de
+    portée de l'API publique SwiftUI (cohérent avec la campagne « NON
+    RÉSOLU » sur l'isolement du bouton Inspecteur, plus haut dans ce
+    fichier). Hypothèse retenue, non vérifiée à l'écran : le bandeau utilise
+    un matériau TRANSLUCIDE qui échantillonne le contenu défilant juste
+    derrière lui (`cremeFond`) ; tant que celui-ci était blanc pur, un écart
+    avec le gris natif de l'Inspecteur système aurait pu produire cette
+    scission visible à sa frontière. Le passage à 242,242,247 ci-dessus
+    devrait l'atténuer ou la faire disparaître — **à confirmer à l'écran**.
 
 ## Import de données depuis PDF (workflow établi)
 
@@ -1288,6 +1319,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
         la page donne un contraste réel (blanc sur gris 242) : c'est vrai côté
         iOS, PAS sur macOS, où les deux teintes coïncident. Ne pas généraliser
         l'un à l'autre.
+      - **CORRIGÉ depuis** : `cremeFond` a désormais une valeur FIXE sur
+        macOS (242,242,247 en clair), calée sur le gris de page iOS — voir
+        plus bas, section Couleurs. Ce paragraphe reste tel quel pour l'
+        historique du diagnostic ; l'écart blanc sur blanc qu'il décrit ne
+        se produit plus en clair depuis ce correctif.
 - **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
   `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
   (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en

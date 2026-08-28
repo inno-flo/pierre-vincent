@@ -114,9 +114,22 @@ extension Color {
     /// `fondGroupe`, créée un temps pour la seule sidebar, a été absorbée ici :
     /// les deux désignaient exactement la même couleur, et deux noms pour une
     /// même teinte finissent par diverger.
+    ///
+    /// **macOS : valeur FIXE, et non `.windowBackgroundColor`.** Sur macOS 26,
+    /// cette couleur système résout en BLANC PUR (255,255,255) — identique à
+    /// `fondLegende` — au lieu du gris de fenêtre traditionnel de macOS (voir
+    /// CLAUDE.md, « windowBackgroundColor = controlBackgroundColor »). La
+    /// valeur ci-dessous est calée sur le gris de page iOS
+    /// (`systemGroupedBackground`, mesuré à 242,242,247), pour un rendu
+    /// homogène entre les deux plateformes. Le mode sombre garde le
+    /// comportement système par défaut, non concerné par ce défaut de macOS.
     static var cremeFond: Color {
         #if os(macOS)
-        return Color(nsColor: .windowBackgroundColor)
+        return Color(nsColor: NSColor(name: nil) { app in
+            let sombre = app.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            if sombre { return .windowBackgroundColor }
+            return NSColor(red: 242/255, green: 242/255, blue: 247/255, alpha: 1)
+        })
         #else
         return Color(uiColor: .systemGroupedBackground)
         #endif
@@ -150,13 +163,17 @@ extension Color {
     /// (`tertiarySystemGrouped`, 242). L'alternance clair/blanc/clair est
     /// voulue par Apple ; en sombre elle est progressive (0 → 28 → 44).
     ///
-    /// **Sur macOS, `windowBackgroundColor` ne convient PAS** : il vaut
-    /// exactement `controlBackgroundColor`, celui des cartes (255,255,255 en
-    /// clair comme 30,30,30 en sombre). D'où `underPageBackgroundColor`, seul
-    /// à s'en distinguer réellement.
+    /// **Sur macOS, calée sur `cremeFond`** : il n'existe pas d'équivalent
+    /// natif à un troisième niveau « tertiaire » côté macOS, et
+    /// `underPageBackgroundColor` (246,246,246), utilisé avant que `cremeFond`
+    /// ait sa propre valeur fixe, en différait légèrement (242,242,247) —
+    /// un écart involontaire entre page et tuile. Les deux partagent
+    /// maintenant exactement la même teinte, comme le fait déjà iOS en mode
+    /// clair (page et tuile valent toutes deux 242,242,247 ; seule la carte,
+    /// blanche, tranche entre les deux).
     static var fondTuile: Color {
         #if os(macOS)
-        return Color(nsColor: .underPageBackgroundColor)
+        return cremeFond
         #else
         return Color(uiColor: .tertiarySystemGroupedBackground)
         #endif
