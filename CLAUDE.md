@@ -836,9 +836,9 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     qui y vivaient (« Tableaux donnés », « Dessins donnés ») en sont sorties.
   - **Carte « Prix de vente »**, ex-« Montants » : ses deux premières tuiles
     perdent le préfixe « Prix des » (« Tableaux », « Dessins ») — la carte le
-    dit désormais. Sa troisième tuile, « Catégories », n'est PAS concernée :
-    ses lignes internes s'appellent déjà « Tableaux »/« Dessins »/« Tapis »,
-    sans rapport avec les deux intitulés renommés.
+    dit désormais. Sa troisième tuile, **« Catégories », a été SUPPRIMÉE** :
+    le total par type qu'elle donnait figure déjà en détail sous chaque tuile
+    de la carte « Ventes ».
   - **Nouvelle carte « Dons »**, entre Prix de vente et Enchères : les deux tuiles
     qui viennent d'en être extraites, renommées « Tableaux » et « Dessins » —
     plus besoin de les distinguer de leurs pendants vendus, la carte s'en
@@ -846,10 +846,10 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     donc plus besoin de réserver la ligne de prix vide de `tuileNombre`
     (`reserverEspace`), qui ne servait qu'à aligner leur hauteur sur des
     tuiles à prix dans l'ancienne grille commune.
-  - **Le récapitulatif iOS « Vendues / Données »** (en tête de la carte
-    Ventes) n'a pas bougé : il reste un total global des dons, quand la
-    carte Dons en donne le détail par type — les deux se lisent comme un
-    total et son détail, pas comme un doublon.
+  - **Le récapitulatif iOS « Vendues / Données »**, en tête de la carte
+    Ventes, a été RETIRÉ : la carte Ventes a désormais un contenu IDENTIQUE
+    sur les deux plateformes. Il faisait doublon avec la nouvelle carte
+    « Dons », qui détaille les mêmes dons par type.
 - **iOS — Inventaire (sidebar), couleur de contraste sur la section choisie**
   (`ContentView.swift`) : la ligne se teinte (`Color.fondCelluleSidebarSelectionnee`,
   nouvelle couleur adaptative dans `Couleurs.swift`, distincte de l'orange de

@@ -119,41 +119,10 @@ struct VueSynthese: View {
             VStack(alignment: .leading, spacing: 16) {
 
                 // --- Carte VENTES ---
+                // Contenu IDENTIQUE sur les deux plateformes : le récapitulatif
+                // « Vendues / Données » qui n'existait que sur iOS a été retiré,
+                // devenu redondant avec la carte « Dons » qui détaille par type.
                 carte(titre: "Ventes") {
-                    #if os(iOS)
-                    // Récapitulatif Vendues / Données, sous le titre. Même
-                    // grille que les tuiles en dessous, pour que « Vendues »
-                    // tombe sous « Tableaux » et « Données » sous « Dessins ».
-                    // NOTE : « Données » reste ce compte GLOBAL des dons, quand
-                    // la carte « Dons » plus bas les détaille par type — les
-                    // deux se lisent comme un total et son détail, pas comme un
-                    // doublon.
-                    LazyVGrid(columns: colonnesTuiles, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Vendues")
-                                .font(policeLibelle)
-                                .foregroundStyle(Color.textePrincipal)
-                            Text("\(tableauxVendus.count + dessinsVendus.count + tapisVendus.count)")
-                                .font(policeValeur)
-                                .foregroundStyle(Color.orangeInternational)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondTuile))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Données")
-                                .font(policeLibelle)
-                                .foregroundStyle(Color.textePrincipal)
-                            Text("\(oeuvresDonnees.count)")
-                                .font(policeValeur)
-                                .foregroundStyle(Color.orangeInternational)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondTuile))
-                    }
-                    #endif
-
                     LazyVGrid(columns: colonnesTuiles, spacing: 10) {
                         tuileNombre(icone: "paintpalette", label: "Tableaux",
                                     valeur: "\(tableauxVendus.count)",
@@ -187,11 +156,9 @@ struct VueSynthese: View {
                             ("Le plus haut", formaterEuros(sD.max)),
                             ("Prix moyen", formaterEuros(sD.moyenne))
                         ])
-                        tuileLignes(titre: "Catégories", lignes: [
-                            ("Tableaux", formaterEuros(somme(tableauxVendus))),
-                            ("Dessins", formaterEuros(somme(dessinsVendus))),
-                            ("Tapis", formaterEuros(somme(tapisVendus)))
-                        ])
+                        // La tuile « Catégories » (total par type) a été
+                        // retirée : ce total figure déjà en détail sous
+                        // chaque tuile de la carte « Ventes ».
                     }
                 }
 
@@ -226,8 +193,6 @@ struct VueSynthese: View {
         .navigationTitle("")
         #endif
     }
-
-    // MARK: Récapitulatif mobile
 
     // MARK: Composants du thème
 
