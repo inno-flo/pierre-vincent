@@ -1263,10 +1263,31 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
       même couleur, et c'est la **bordure orange** de `carte(titre:)` qui les
       sépare — pas un écart de teinte. Retirer cette bordure y ferait
       disparaître les cartes.
-    - Vérifié dans les autres vues : partout ailleurs `fondLegende` sert de
-      carte posée DIRECTEMENT sur la page (récapitulatifs, cartes de vignette
-      avec leur légende), donc blanc sur gris. La Synthèse était la seule à
-      imbriquer.
+    - **CE N'EST PAS UN CAS ISOLÉ À LA SYNTHÈSE — c'est vrai de TOUTE l'app
+      sur macOS.** `cremeFond` (`windowBackgroundColor`) et `fondLegende`
+      (`controlBackgroundColor`) résolvent **tous deux en BLANC PUR
+      (255,255,255)** en mode clair sur macOS 26 — vérifié en rendant
+      réellement les deux couleurs dans une `NSWindow` et en lisant le pixel
+      obtenu, pas seulement via `resolvedColor` hors contexte de fenêtre (qui
+      peut donner une valeur par défaut trompeuse pour une couleur dynamique).
+      **Ce n'est pas un bug de l'app, c'est la valeur système actuelle** :
+      contrairement aux versions antérieures de macOS, où `windowBackgroundColor`
+      était un gris clair distinct des zones de contenu, le langage visuel
+      « Liquid Glass » de macOS 26 lui donne un blanc identique.
+      - Conséquence : le panneau de contenu (Galerie comprise) paraît
+        entièrement blanc, sans le gris de fenêtre traditionnel de macOS. **Ce
+        n'est pas une régression** — `cremeFond` fait exactement ce qu'il a
+        toujours fait, c'est la couleur système sous-jacente qui a changé.
+      - **La Galerie n'est PAS invisible pour autant** : ses vignettes ont
+        leur propre filet (`Color.filetVignette`, 1 px) et une ombre portée
+        (`shadow`), qui les séparent de la page sans dépendre d'un écart de
+        teinte. C'est cette technique — bordure ou ombre, jamais la seule
+        couleur — qu'il faut reprendre pour toute future carte macOS, la
+        Synthèse le faisant déjà avec sa bordure orange.
+      - **Vérifié uniquement sur iOS** que `fondLegende` posé directement sur
+        la page donne un contraste réel (blanc sur gris 242) : c'est vrai côté
+        iOS, PAS sur macOS, où les deux teintes coïncident. Ne pas généraliser
+        l'un à l'autre.
 - **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
   `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
   (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en
