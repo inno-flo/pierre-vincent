@@ -178,9 +178,13 @@ struct VueSynthese: View {
                 // --- Carte ENCHÈRES ET EXPOSITIONS ---
                 carte(titre: "Enchères et expositions") {
                     VStack(spacing: 10) {
-                        tuileVendeur("Artenchères", sommeVendeur("Artenchères"))
-                        tuileVendeur("Drôme Enchères", sommeVendeur("Drôme Enchères"))
-                        tuileVendeur("RempART", sommeVendeur("RempART"))
+                        // Le libellé affiché porte le millésime, mais le nom
+                        // cherché dans `sommeVendeur` reste celui écrit sur les
+                        // œuvres (champ `vendeur`) — les deux sont dissociés
+                        // pour ne pas casser le rapprochement des montants.
+                        tuileVendeur("Artenchères 2024", sommeVendeur("Artenchères"))
+                        tuileVendeur("Drôme Enchères 2025", sommeVendeur("Drôme Enchères"))
+                        tuileVendeur("RempART 2026", sommeVendeur("RempART"))
                     }
                 }
             }

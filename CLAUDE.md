@@ -850,6 +850,13 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     Ventes, a été RETIRÉ : la carte Ventes a désormais un contenu IDENTIQUE
     sur les deux plateformes. Il faisait doublon avec la nouvelle carte
     « Dons », qui détaille les mêmes dons par type.
+  - **Carte « Enchères et expositions »** : les trois libellés portent
+    désormais un millésime (« Artenchères 2024 », « Drôme Enchères 2025 »,
+    « RempART 2026 »). **Le libellé affiché et le nom cherché sont
+    DISSOCIÉS** : `sommeVendeur` continue de chercher le nom écrit sur les
+    œuvres (champ `vendeur`, sans millésime) — lui changer le libellé sans
+    ce garde-fou aurait mis tous les montants à 0 €, faute d'œuvre dont le
+    vendeur porterait littéralement l'année.
 - **iOS — Inventaire (sidebar), couleur de contraste sur la section choisie**
   (`ContentView.swift`) : la ligne se teinte (`Color.fondCelluleSidebarSelectionnee`,
   nouvelle couleur adaptative dans `Couleurs.swift`, distincte de l'orange de
