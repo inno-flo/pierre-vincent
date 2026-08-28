@@ -403,48 +403,60 @@ diffèrent en tout.
     et les présentations plein écran.
   - Valeur par défaut : l'orange. Une vue qui ne déclare rien reste donc dans
     la teinte de « Ventes et dons ».
-- **`cremeFond` (macOS) : valeur FIXE, calée sur le gris de page iOS**, et non
-  plus `.windowBackgroundColor`. Sur macOS 26, cette couleur système résout en
-  BLANC PUR (255,255,255) — identique à `fondLegende`/`controlBackgroundColor`
-  — au lieu du gris de fenêtre traditionnel de macOS. Vérifié en rendant
-  réellement la couleur dans une `NSWindow` (pas seulement `resolvedColor`
-  hors contexte, qui peut tromper sur une couleur dynamique).
-  - Valeur retenue : **242,242,247 en clair**, exactement celle mesurée pour
-    `systemGroupedBackground` sur iOS — pour que la page ait la MÊME teinte
-    sur les deux plateformes. Le mode sombre garde le comportement système par
-    défaut (`windowBackgroundColor`, non concerné par ce défaut de macOS).
-  - **`fondTuile` calée sur `cremeFond`, sur macOS uniquement.**
-    `underPageBackgroundColor` (246,246,246), utilisé avant que `cremeFond`
-    ait sa propre valeur, en différait légèrement de la nouvelle valeur de
-    page (242,242,247) — un écart involontaire entre page et tuile.
-    Désormais `fondTuile == cremeFond` sur macOS, comme le fait déjà iOS en
-    clair (page et tuile valent toutes deux 242,242,247 ; seule la carte,
-    blanche, tranche entre les deux).
+- **`cremeFond` (macOS) : reste sur `.windowBackgroundColor` — ESSAYÉ PUIS
+  REVERTÉ de le fixer.** Sur macOS 26, cette couleur système résout en BLANC
+  PUR (255,255,255) — identique à `fondLegende`/`controlBackgroundColor` — au
+  lieu du gris de fenêtre traditionnel de macOS. Vérifié en rendant réellement
+  la couleur dans une `NSWindow` (pas seulement `resolvedColor` hors contexte,
+  qui peut tromper sur une couleur dynamique).
+  - **Essayé** : une valeur FIXE (242,242,247, calée sur le gris de page
+    iOS mesuré pour `systemGroupedBackground`), pour une page à la même
+    teinte sur les deux plateformes.
+  - **RÉGRESSION CONSTATÉE À L'USAGE, revertée** : la barre de titre et la
+    toolbar natives de macOS suivent, elles, `.windowBackgroundColor` — une
+    couleur système dynamique dont la valeur réelle importe peu tant que le
+    contenu la reprend À L'IDENTIQUE, ce qui garantit leur synchronisation
+    PAR CONSTRUCTION, quelle que soit cette valeur. En la remplaçant par une
+    constante indépendante, le contenu a cessé de suivre ce que fait la
+    toolbar : ça a produit une VRAIE couture entre la barre de titre
+    (blanche, nativement) et le panneau de contenu (gris fixe) — un défaut
+    qui **n'existait pas avant ce changement**. `cremeFond` est donc revenu
+    sur `.windowBackgroundColor`, tel quel.
+  - **Ne plus fixer de valeur ici tant que la toolbar système reste hors de
+    portée de l'API publique SwiftUI** (voir la campagne « NON RÉSOLU » sur
+    l'isolement du bouton Inspecteur, plus bas) : aucun moyen de forcer la
+    toolbar native à suivre une teinte personnalisée, donc `cremeFond` doit
+    rester sur la MÊME source dynamique qu'elle. L'homogénéité de teinte
+    avec iOS, elle, reste hors d'atteinte sur macOS avec les outils publics
+    actuels — à rouvrir seulement si une nouvelle piste apparaît.
+  - **`fondTuile` reste sur `underPageBackgroundColor` (246,246,246), PAS
+    calée sur `cremeFond`.** Un essai bref les avait alignées quand
+    `cremeFond` avait sa valeur fixe (242,242,247) : `cremeFond` étant
+    revenu sur `.windowBackgroundColor`, qui vaut EXACTEMENT
+    `.controlBackgroundColor` (celui de la carte, `fondLegende`), une tuile
+    qui la suivrait redeviendrait invisible sur sa carte — exactement le bug
+    déjà corrigé une première fois pour la Synthèse.
+    `underPageBackgroundColor` reste le seul système à s'en distinguer
+    réellement, SANS avoir à suivre la toolbar : une tuile n'est jamais
+    visible depuis la barre de titre, rien ne l'y oblige.
   - **Bug corrigé — deux tons entre la barre de titre/outils et le bandeau
     de pastilles de tri**, visible Inspecteur ouvert (`bandeauFiltres`,
-    `VueFeuille.swift`). Recherche faite dans tout le code : aucun fond
-    personnalisé n'est posé sur la colonne Inspecteur ni sur sa portion de
-    toolbar — tout ce périmètre est rendu nativement par AppKit, hors de
-    portée de l'API publique SwiftUI (cohérent avec la campagne « NON
-    RÉSOLU » sur l'isolement du bouton Inspecteur, plus haut dans ce
-    fichier). **Aligner `cremeFond` sur le gris iOS (ci-dessus) n'a PAS
-    suffi** : le bug persistait.
-    - **Cause réelle** : le bandeau utilisait `.ultraThinMaterial`, un
-      matériau GÉNÉRIQUE qui échantillonne le contenu défilant juste derrière
-      lui (`cremeFond`), plutôt que la teinte réelle de la toolbar native.
-      Les deux barres calculaient donc leur rendu par deux voies différentes,
-      qui pouvaient diverger dès que l'Inspecteur changeait la composition de
-      la fenêtre.
-    - **Correctif** : `.background(.bar)` au lieu de `.ultraThinMaterial`.
-      `.bar` est le matériau SÉMANTIQUE que le système utilise pour ses
-      propres barres d'outils — il s'aligne sur le rendu natif de la toolbar
-      au lieu de recalculer le sien à partir du contenu. Élimine l'écart par
-      construction, plutôt qu'en ajustant une teinte de fond.
-    - Essais précédents avec les matériaux génériques, conservés en
-      commentaire pour mémoire : sans aucun fond, le contenu qui défile
-      passait NET derrière les pastilles ; `regularMaterial` faisait lire
-      toolbar et bandeau comme une seule barre lourde. `.bar` n'avait pas
-      encore été essayé à l'époque de ce tâtonnement.
+    `VueFeuille.swift`). Trois pistes tentées avant de trouver la vraie
+    cause :
+    1. aligner `cremeFond` sur le gris iOS (ci-dessus) — n'a pas suffi ;
+    2. `.background(.bar)` sur le bandeau au lieu de `.ultraThinMaterial` —
+       n'a pas suffi seul non plus, la cause n'étant pas le bandeau ;
+    3. fond opaque de diagnostic (`Color.cremeFond` sans transparence) sur
+       le bandeau — a permis de confirmer que le bandeau matchait déjà le
+       panneau de contenu, et que la VRAIE couture était ailleurs : entre la
+       toolbar native et CE panneau, à cause du `cremeFond` fixe (piste 1).
+    **Cause réelle et correctif** : la régression `cremeFond` décrite
+    plus haut. Une fois revertée, plus aucune divergence entre le contenu et
+    la toolbar native, donc plus de couture — quel que soit le matériau du
+    bandeau. `.bar` est néanmoins CONSERVÉ sur le bandeau plutôt que
+    revenir à `.ultraThinMaterial` : plus robuste par construction, il
+    s'aligne sur le rendu natif d'une barre système sans dépendre de ce qui
+    défile derrière lui.
 
 ## Import de données depuis PDF (workflow établi)
 
@@ -1330,11 +1342,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
         la page donne un contraste réel (blanc sur gris 242) : c'est vrai côté
         iOS, PAS sur macOS, où les deux teintes coïncident. Ne pas généraliser
         l'un à l'autre.
-      - **CORRIGÉ depuis** : `cremeFond` a désormais une valeur FIXE sur
-        macOS (242,242,247 en clair), calée sur le gris de page iOS — voir
-        plus bas, section Couleurs. Ce paragraphe reste tel quel pour l'
-        historique du diagnostic ; l'écart blanc sur blanc qu'il décrit ne
-        se produit plus en clair depuis ce correctif.
+      - **Un essai de valeur FIXE sur `cremeFond` (242,242,247, calée sur le
+        gris de page iOS) a été tenté puis REVERTÉ** — voir plus bas, section
+        Couleurs : ça cassait la synchronisation avec la toolbar native,
+        seule protection contre une VRAIE couture entre barre de titre et
+        contenu. `cremeFond` reste donc sur `.windowBackgroundColor`, et le
+        blanc sur blanc que ce paragraphe décrit **reste valable**.
 - **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
   `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
   (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en

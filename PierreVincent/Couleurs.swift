@@ -115,21 +115,30 @@ extension Color {
     /// les deux désignaient exactement la même couleur, et deux noms pour une
     /// même teinte finissent par diverger.
     ///
-    /// **macOS : valeur FIXE, et non `.windowBackgroundColor`.** Sur macOS 26,
-    /// cette couleur système résout en BLANC PUR (255,255,255) — identique à
-    /// `fondLegende` — au lieu du gris de fenêtre traditionnel de macOS (voir
-    /// CLAUDE.md, « windowBackgroundColor = controlBackgroundColor »). La
-    /// valeur ci-dessous est calée sur le gris de page iOS
-    /// (`systemGroupedBackground`, mesuré à 242,242,247), pour un rendu
-    /// homogène entre les deux plateformes. Le mode sombre garde le
-    /// comportement système par défaut, non concerné par ce défaut de macOS.
+    /// **macOS : `.windowBackgroundColor`, et RIEN D'AUTRE.**
+    ///
+    /// **ESSAYÉ PUIS REVERTÉ** : une valeur fixe (242,242,247, calée sur le
+    /// gris de page iOS) a été posée ici un temps, pour une homogénéité
+    /// visuelle entre les deux plateformes. **Régression constatée à
+    /// l'usage** : la barre de titre et la toolbar natives de macOS suivent,
+    /// elles, `.windowBackgroundColor` — une couleur SYSTÈME dynamique, dont
+    /// la vraie valeur nous est indifférente tant que le contenu la reprend
+    /// À L'IDENTIQUE. En la remplaçant par une constante indépendante, le
+    /// contenu a cessé de suivre ce que fait la toolbar : sur macOS 26, où
+    /// `.windowBackgroundColor` résout en BLANC PUR, ça a produit une VRAIE
+    /// couture entre la barre de titre (blanche, nativement) et le panneau
+    /// de contenu (gris fixe) — un défaut qui N'EXISTAIT PAS avant ce
+    /// changement, la couleur dynamique garantissant la synchronisation par
+    /// construction, quelle que soit sa valeur réelle.
+    ///
+    /// **Ne jamais fixer une valeur ici tant que la toolbar système reste
+    /// hors de portée de l'API publique SwiftUI** (voir la campagne « NON
+    /// RÉSOLU » sur l'isolement du bouton Inspecteur) : il n'existe aucun
+    /// moyen de forcer la toolbar native à suivre une teinte personnalisée,
+    /// donc `cremeFond` doit rester sur la MÊME source dynamique qu'elle.
     static var cremeFond: Color {
         #if os(macOS)
-        return Color(nsColor: NSColor(name: nil) { app in
-            let sombre = app.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            if sombre { return .windowBackgroundColor }
-            return NSColor(red: 242/255, green: 242/255, blue: 247/255, alpha: 1)
-        })
+        return Color(nsColor: .windowBackgroundColor)
         #else
         return Color(uiColor: .systemGroupedBackground)
         #endif
@@ -163,17 +172,19 @@ extension Color {
     /// (`tertiarySystemGrouped`, 242). L'alternance clair/blanc/clair est
     /// voulue par Apple ; en sombre elle est progressive (0 → 28 → 44).
     ///
-    /// **Sur macOS, calée sur `cremeFond`** : il n'existe pas d'équivalent
-    /// natif à un troisième niveau « tertiaire » côté macOS, et
-    /// `underPageBackgroundColor` (246,246,246), utilisé avant que `cremeFond`
-    /// ait sa propre valeur fixe, en différait légèrement (242,242,247) —
-    /// un écart involontaire entre page et tuile. Les deux partagent
-    /// maintenant exactement la même teinte, comme le fait déjà iOS en mode
-    /// clair (page et tuile valent toutes deux 242,242,247 ; seule la carte,
-    /// blanche, tranche entre les deux).
+    /// **Sur macOS, `underPageBackgroundColor` — PAS `cremeFond`.**
+    /// `cremeFond` a dû revenir sur `.windowBackgroundColor` (voir sa
+    /// documentation : le fixer causait une couture avec la toolbar native).
+    /// Or `.windowBackgroundColor` vaut EXACTEMENT `.controlBackgroundColor`,
+    /// celui de la CARTE (`fondLegende`) — une tuile qui suivrait `cremeFond`
+    /// redeviendrait donc invisible sur sa carte, exactement le bug déjà
+    /// corrigé une première fois pour la Synthèse. `underPageBackgroundColor`
+    /// (246,246,246) reste le seul système à s'en distinguer réellement,
+    /// SANS dépendre de la toolbar : rien ne l'oblige à la suivre, une tuile
+    /// n'étant jamais visible depuis la barre de titre.
     static var fondTuile: Color {
         #if os(macOS)
-        return cremeFond
+        return Color(nsColor: .underPageBackgroundColor)
         #else
         return Color(uiColor: .tertiarySystemGroupedBackground)
         #endif

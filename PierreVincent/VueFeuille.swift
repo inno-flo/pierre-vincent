@@ -1156,19 +1156,20 @@ struct VueFeuille: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        // `.bar`, et non `.ultraThinMaterial` : c'est le matériau SÉMANTIQUE
-        // que le système utilise pour ses propres barres d'outils, quel que
-        // soit ce qui défile derrière. `.ultraThinMaterial` échantillonne le
-        // contenu qui défile en dessous (`cremeFond`) — bug signalé : deux
-        // tons visibles entre la barre de titre et ce bandeau, Inspecteur
-        // ouvert, la toolbar native et ce bandeau ne convergeant alors plus
-        // vers la même teinte. `.bar` élimine cet écart en s'alignant sur le
-        // rendu natif de la toolbar au lieu de recalculer le sien.
+        // `.bar` : le matériau SÉMANTIQUE que le système utilise pour ses
+        // propres barres d'outils — il s'aligne sur le rendu natif de la
+        // toolbar au lieu de recalculer le sien à partir du contenu qui
+        // défile derrière. Choix robuste par construction, indépendant de la
+        // valeur réelle de `cremeFond` : la VRAIE cause de la couture
+        // signalée était ailleurs (voir `cremeFond` dans `Couleurs.swift`),
+        // mais `.bar` reste préférable à `.ultraThinMaterial` ici, l'un comme
+        // l'autre n'ayant de sens que pour matcher une barre système.
         //
-        // Essais précédents avec les matériaux génériques, conservés pour
-        // mémoire : sans aucun fond, le contenu qui défile passait NET
-        // derrière les pastilles ; `regularMaterial` faisait lire toolbar et
-        // bandeau comme une seule barre lourde.
+        // Essais précédents, conservés pour mémoire : sans aucun fond, le
+        // contenu qui défile passait NET derrière les pastilles ;
+        // `regularMaterial` faisait lire toolbar et bandeau comme une seule
+        // barre lourde ; un fond opaque (`cremeFond`) a servi de diagnostic
+        // pour confirmer que la cause était ailleurs.
         .background(.bar)
     }
 
