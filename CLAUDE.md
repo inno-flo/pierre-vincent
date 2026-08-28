@@ -420,20 +420,31 @@ diffèrent en tout.
     Désormais `fondTuile == cremeFond` sur macOS, comme le fait déjà iOS en
     clair (page et tuile valent toutes deux 242,242,247 ; seule la carte,
     blanche, tranche entre les deux).
-  - **Piste à vérifier** : un bug signalé sur macOS montre deux tons
-    différents entre la barre de titre/outils et le bandeau de pastilles de
-    tri (`bandeauFiltres`, fond `.ultraThinMaterial`), visible seulement
-    Inspecteur ouvert. Recherche faite dans tout le code : **aucun fond
+  - **Bug corrigé — deux tons entre la barre de titre/outils et le bandeau
+    de pastilles de tri**, visible Inspecteur ouvert (`bandeauFiltres`,
+    `VueFeuille.swift`). Recherche faite dans tout le code : aucun fond
     personnalisé n'est posé sur la colonne Inspecteur ni sur sa portion de
-    toolbar** — tout ce périmètre est rendu nativement par AppKit, hors de
+    toolbar — tout ce périmètre est rendu nativement par AppKit, hors de
     portée de l'API publique SwiftUI (cohérent avec la campagne « NON
     RÉSOLU » sur l'isolement du bouton Inspecteur, plus haut dans ce
-    fichier). Hypothèse retenue, non vérifiée à l'écran : le bandeau utilise
-    un matériau TRANSLUCIDE qui échantillonne le contenu défilant juste
-    derrière lui (`cremeFond`) ; tant que celui-ci était blanc pur, un écart
-    avec le gris natif de l'Inspecteur système aurait pu produire cette
-    scission visible à sa frontière. Le passage à 242,242,247 ci-dessus
-    devrait l'atténuer ou la faire disparaître — **à confirmer à l'écran**.
+    fichier). **Aligner `cremeFond` sur le gris iOS (ci-dessus) n'a PAS
+    suffi** : le bug persistait.
+    - **Cause réelle** : le bandeau utilisait `.ultraThinMaterial`, un
+      matériau GÉNÉRIQUE qui échantillonne le contenu défilant juste derrière
+      lui (`cremeFond`), plutôt que la teinte réelle de la toolbar native.
+      Les deux barres calculaient donc leur rendu par deux voies différentes,
+      qui pouvaient diverger dès que l'Inspecteur changeait la composition de
+      la fenêtre.
+    - **Correctif** : `.background(.bar)` au lieu de `.ultraThinMaterial`.
+      `.bar` est le matériau SÉMANTIQUE que le système utilise pour ses
+      propres barres d'outils — il s'aligne sur le rendu natif de la toolbar
+      au lieu de recalculer le sien à partir du contenu. Élimine l'écart par
+      construction, plutôt qu'en ajustant une teinte de fond.
+    - Essais précédents avec les matériaux génériques, conservés en
+      commentaire pour mémoire : sans aucun fond, le contenu qui défile
+      passait NET derrière les pastilles ; `regularMaterial` faisait lire
+      toolbar et bandeau comme une seule barre lourde. `.bar` n'avait pas
+      encore été essayé à l'époque de ce tâtonnement.
 
 ## Import de données depuis PDF (workflow établi)
 

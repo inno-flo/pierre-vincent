@@ -1156,15 +1156,20 @@ struct VueFeuille: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        // Matériau le PLUS FIN du catalogue, pour prolonger l'effet de verre
-        // de la toolbar sans l'épaissir : le contenu qui défile dessous doit
-        // être flouté comme il l'est sous la barre, et non passer net derrière
-        // les pastilles.
+        // `.bar`, et non `.ultraThinMaterial` : c'est le matériau SÉMANTIQUE
+        // que le système utilise pour ses propres barres d'outils, quel que
+        // soit ce qui défile derrière. `.ultraThinMaterial` échantillonne le
+        // contenu qui défile en dessous (`cremeFond`) — bug signalé : deux
+        // tons visibles entre la barre de titre et ce bandeau, Inspecteur
+        // ouvert, la toolbar native et ce bandeau ne convergeant alors plus
+        // vers la même teinte. `.bar` élimine cet écart en s'alignant sur le
+        // rendu natif de la toolbar au lieu de recalculer le sien.
         //
-        // Un essai précédent sans aucun fond laissait justement le contenu
-        // net ; un matériau plus épais (`regularMaterial`) faisait au
-        // contraire lire les deux barres comme un seul bandeau lourd.
-        .background(.ultraThinMaterial)
+        // Essais précédents avec les matériaux génériques, conservés pour
+        // mémoire : sans aucun fond, le contenu qui défile passait NET
+        // derrière les pastilles ; `regularMaterial` faisait lire toolbar et
+        // bandeau comme une seule barre lourde.
+        .background(.bar)
     }
 
     /// Compteur des œuvres affichées, à droite du bandeau. Il suit le filtre :
