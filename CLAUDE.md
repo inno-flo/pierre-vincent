@@ -827,9 +827,29 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   données), navigation Précédent/Suivant dans l'éditeur, bas de sidebar vide.
 - **iOS** : navigation liquid glass, swipe latéral fluide, barre de navigation
   transparente (titres en couleur système), défilement auto de la galerie.
-- **Vue Synthèse** : cartes (Œuvres, Montants, Enchères) contenant des tuiles.
-  Une tuile « Total des ventes » (somme euros tableaux + dessins + tapis) figure
-  dans le bloc Œuvres.
+- **Vue Synthèse** : cartes (Ventes, Prix de vente, Dons, Enchères) contenant
+  des tuiles. Une tuile « Total » (somme euros tableaux + dessins + tapis)
+  figure dans le bloc Ventes.
+  - **Carte « Ventes »**, ex-« Œuvres » : les trois tuiles de comptage n'ont
+    plus le mot « vendus » dans leur intitulé (« Tableaux », « Dessins »,
+    « Tapis ») — la carte elle-même le dit désormais. Les deux tuiles de dons
+    qui y vivaient (« Tableaux donnés », « Dessins donnés ») en sont sorties.
+  - **Carte « Prix de vente »**, ex-« Montants » : ses deux premières tuiles
+    perdent le préfixe « Prix des » (« Tableaux », « Dessins ») — la carte le
+    dit désormais. Sa troisième tuile, « Catégories », n'est PAS concernée :
+    ses lignes internes s'appellent déjà « Tableaux »/« Dessins »/« Tapis »,
+    sans rapport avec les deux intitulés renommés.
+  - **Nouvelle carte « Dons »**, entre Prix de vente et Enchères : les deux tuiles
+    qui viennent d'en être extraites, renommées « Tableaux » et « Dessins » —
+    plus besoin de les distinguer de leurs pendants vendus, la carte s'en
+    charge. Aucune n'a de prix (comme partout pour les dons), et elles n'ont
+    donc plus besoin de réserver la ligne de prix vide de `tuileNombre`
+    (`reserverEspace`), qui ne servait qu'à aligner leur hauteur sur des
+    tuiles à prix dans l'ancienne grille commune.
+  - **Le récapitulatif iOS « Vendues / Données »** (en tête de la carte
+    Ventes) n'a pas bougé : il reste un total global des dons, quand la
+    carte Dons en donne le détail par type — les deux se lisent comme un
+    total et son détail, pas comme un doublon.
 - **iOS — Inventaire (sidebar), couleur de contraste sur la section choisie**
   (`ContentView.swift`) : la ligne se teinte (`Color.fondCelluleSidebarSelectionnee`,
   nouvelle couleur adaptative dans `Couleurs.swift`, distincte de l'orange de
@@ -1158,6 +1178,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     vit, faute d'être vue. Supprimée, avec le paramètre `filtreParVendeur` de
     cette vue ; un commentaire dit sur place pourquoi il n'y en a pas, sans
     quoi la prochaine lecture y verra un oubli.
+  - **ESSAI VISUEL — le compteur perd son fond plein et son contour**, sur les
+    DEUX plateformes : `pastilleCompteur` (macOS, `VueFeuille.swift`) et
+    `compteur` (iOS, `BandeauTypes.swift`). Un simple texte dans l'accent de la
+    section, sans `Capsule`, pour qu'il ne se lise plus comme un bouton — il
+    n'en est pas un, contrairement aux pastilles de filtre à côté de lui.
+    **Ce composant est PARTAGÉ entre Galerie et Liste** (même instance,
+    au-dessus du contenu quel que soit le mode affiché) : il n'existe aucun
+    moyen de le styler différemment selon la présentation sans dupliquer le
+    code — le changement touche donc les deux modes à la fois, sur les deux
+    plateformes.
 - **Champ « Image »** en fin d'inspecteur et d'éditeur : poids, définition et
   nom du fichier stocké, via `PhotoStore.infosImage`. Sert à vérifier que la
   compression a tenu ses 450 Ko. Dans l'éditeur il est en lecture seule et

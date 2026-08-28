@@ -72,17 +72,18 @@ struct BandeauTypes: View {
     }
 
     /// Compteur, non interactif : une indication, pas un bouton.
+    ///
+    /// ESSAI VISUEL : ni contour ni fond plein, contrairement aux pastilles de
+    /// filtre voisines — un simple texte dans l'accent de la section, pour ne
+    /// plus lire comme un bouton alors qu'il n'en est pas un. Même patron que
+    /// `pastilleCompteur` sur macOS.
     private var compteur: some View {
         Text("\(nombreAffiche)")
             // Même corps que les pastilles, donc que les libellés de sidebar.
             .font(.body)
-            // Toujours rempli de l'accent de la section, texte blanc — comme
-            // sur macOS, contrairement aux pastilles de filtre qui ne se
-            // remplissent qu'une fois retenues.
-            .foregroundStyle(.white)
+            .foregroundStyle(accent)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background { Capsule().fill(accent) }
     }
 }
 

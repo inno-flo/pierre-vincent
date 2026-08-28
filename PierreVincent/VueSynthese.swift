@@ -4,7 +4,7 @@ import SwiftData
 /// Tableau de bord « Synthèse », thème « Graphite » (sombre fixe).
 ///
 /// Structure à deux niveaux (d'après la maquette Claude Design) :
-///  - de grandes CARTES par section (Œuvres, Montants, Enchères) ;
+///  - de grandes CARTES par section (Ventes, Prix de vente, Dons, Enchères) ;
 ///  - à l'intérieur, des TUILES (un ton plus clair) pour chaque élément.
 /// L'orange de marque n'est utilisé que sur les valeurs chiffrées.
 struct VueSynthese: View {
@@ -118,13 +118,16 @@ struct VueSynthese: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
-                // --- Carte ŒUVRES ---
-                carte(titre: "Œuvres") {
+                // --- Carte VENTES ---
+                carte(titre: "Ventes") {
                     #if os(iOS)
-                    // Récapitulatif Vendues / Données, sous le titre Œuvres.
-                    // Même grille que les tuiles en dessous, pour que « Vendues »
-                    // tombe sous « Tableaux vendus » et « Données » sous
-                    // « Dessins vendus ».
+                    // Récapitulatif Vendues / Données, sous le titre. Même
+                    // grille que les tuiles en dessous, pour que « Vendues »
+                    // tombe sous « Tableaux » et « Données » sous « Dessins ».
+                    // NOTE : « Données » reste ce compte GLOBAL des dons, quand
+                    // la carte « Dons » plus bas les détaille par type — les
+                    // deux se lisent comme un total et son détail, pas comme un
+                    // doublon.
                     LazyVGrid(columns: colonnesTuiles, spacing: 10) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Vendues")
@@ -152,38 +155,34 @@ struct VueSynthese: View {
                     #endif
 
                     LazyVGrid(columns: colonnesTuiles, spacing: 10) {
-                        tuileNombre(icone: "paintpalette", label: "Tableaux vendus",
+                        tuileNombre(icone: "paintpalette", label: "Tableaux",
                                     valeur: "\(tableauxVendus.count)",
                                     detail: formaterEuros(somme(tableauxVendus)))
-                        tuileNombre(icone: "pencil.and.outline", label: "Dessins vendus",
+                        tuileNombre(icone: "pencil.and.outline", label: "Dessins",
                                     valeur: "\(dessinsVendus.count)",
                                     detail: formaterEuros(somme(dessinsVendus)))
-                        tuileNombre(icone: "square.grid.3x3.square", label: "Tapis vendus",
+                        tuileNombre(icone: "square.grid.3x3.square", label: "Tapis",
                                     valeur: "\(tapisVendus.count)",
                                     detail: formaterEuros(somme(tapisVendus)))
-                        // Total des ventes = tableaux + dessins + tapis (en euros).
-                        // Placé à droite de « Tapis vendus » dans la grille 2 colonnes.
+                        // Total = tableaux + dessins + tapis (en euros).
+                        // Placé à droite de « Tapis » dans la grille 2 colonnes.
                         tuileTotalVentes()
-                        tuileNombre(icone: "gift", label: "Tableaux donnés",
-                                    valeur: "\(tableauxDonnes.count)", detail: nil,
-                                    reserverEspace: true)
-                        tuileNombre(icone: "gift", label: "Dessins donnés",
-                                    valeur: "\(dessinsDonnes.count)", detail: nil,
-                                    reserverEspace: true)
                     }
                 }
 
-                // --- Carte MONTANTS ---
-                carte(titre: "Montants") {
+                // --- Carte PRIX DE VENTE ---
+                carte(titre: "Prix de vente") {
                     let sT = stats(tableauxVendus)
                     let sD = stats(dessinsVendus)
                     VStack(spacing: 10) {
-                        tuileLignes(titre: "Prix des tableaux", lignes: [
+                        // La carte le dit désormais : plus besoin de répéter
+                        // « Prix des » dans chaque intitulé de tuile.
+                        tuileLignes(titre: "Tableaux", lignes: [
                             ("Le plus bas", formaterEuros(sT.min)),
                             ("Le plus haut", formaterEuros(sT.max)),
                             ("Prix moyen", formaterEuros(sT.moyenne))
                         ])
-                        tuileLignes(titre: "Prix des dessins", lignes: [
+                        tuileLignes(titre: "Dessins", lignes: [
                             ("Le plus bas", formaterEuros(sD.min)),
                             ("Le plus haut", formaterEuros(sD.max)),
                             ("Prix moyen", formaterEuros(sD.moyenne))
@@ -193,6 +192,19 @@ struct VueSynthese: View {
                             ("Dessins", formaterEuros(somme(dessinsVendus))),
                             ("Tapis", formaterEuros(somme(tapisVendus)))
                         ])
+                    }
+                }
+
+                // --- Carte DONS ---
+                // Les deux tuiles vivaient dans la carte « Ventes » ; en sortir
+                // leur redonne un intitulé simple (« Tableaux », « Dessins »),
+                // qui n'a plus à se distinguer de leurs pendants vendus.
+                carte(titre: "Dons") {
+                    LazyVGrid(columns: colonnesTuiles, spacing: 10) {
+                        tuileNombre(icone: "gift", label: "Tableaux",
+                                    valeur: "\(tableauxDonnes.count)", detail: nil)
+                        tuileNombre(icone: "gift", label: "Dessins",
+                                    valeur: "\(dessinsDonnes.count)", detail: nil)
                     }
                 }
 
@@ -250,7 +262,7 @@ struct VueSynthese: View {
     private func tuileTotalVentes() -> some View {
         let total = somme(tableauxVendus) + somme(dessinsVendus) + somme(tapisVendus)
         return VStack(alignment: .leading, spacing: 6) {
-            Text("Total des ventes")
+            Text("Total")
                 .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
                 .lineLimit(1)

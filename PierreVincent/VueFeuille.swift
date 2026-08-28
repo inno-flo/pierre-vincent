@@ -1167,17 +1167,17 @@ struct VueFeuille: View {
     /// Compteur des œuvres affichées, à droite du bandeau. Il suit le filtre :
     /// retenir un vendeur met à jour le nombre. Non interactif — c'est une
     /// indication, pas un bouton.
+    ///
+    /// ESSAI VISUEL : ni contour ni fond plein, contrairement aux pastilles de
+    /// filtre voisines — un simple texte dans l'accent de la section, pour ne
+    /// plus lire comme un bouton alors qu'il n'en est pas un.
     private var pastilleCompteur: some View {
         Text("\(listeAffichee.count)")
             // Même corps que les libellés de rubrique de la sidebar : 13 pt.
             .font(.system(size: 13))
-            // Toujours rempli de l'accent de la section (orange ou bleu
-            // ardoise), texte blanc — contrairement aux pastilles de filtre,
-            // qui ne se remplissent qu'une fois retenues.
-            .foregroundStyle(.white)
+            .foregroundStyle(accent)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background { Capsule().fill(accent) }
             .help("Nombre d'œuvres affichées")
     }
 
