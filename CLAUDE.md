@@ -457,6 +457,26 @@ diffèrent en tout.
     revenir à `.ultraThinMaterial` : plus robuste par construction, il
     s'aligne sur le rendu natif d'une barre système sans dépendre de ce qui
     défile derrière lui.
+  - **Persistant malgré tout ça** : la couture reste visible à l'usage. La
+    piste `cremeFond`/`.bar` n'était donc pas la bonne, ou pas la seule —
+    non résolue à ce stade.
+  - **Contournement essayé, RESTREINT au Catalogue de « Ventes et dons »
+    seulement** (`Categorie.pastillesTypeDansToolbar`, `ContentView.swift` +
+    `VueFeuille.swift`) : plutôt que de continuer à chercher pourquoi le
+    bandeau ne s'accorde pas avec la toolbar, ses pastilles de type sont
+    posées DIRECTEMENT dans la toolbar (nouveaux `ToolbarItem`), et le
+    bandeau lui-même disparaît pour cette rubrique — plus de bandeau, plus
+    de couture possible avec lui.
+    - Restreint à `.oeuvres` : seule rubrique n'ayant JAMAIS de filtre par
+      vendeur, ce qui simplifie ce premier essai à un seul jeu de pastilles
+      (`pastillesTypeToolbar`, réutilise `pastilleType(libelle:mot:)` — pas
+      de deuxième version à tenir d'accord).
+    - Le compteur (`pastilleCompteur`) suit dans la toolbar, séparé par un
+      `ToolbarSpacer(.fixed)`.
+    - **Toutes les autres rubriques à bandeau gardent l'ancien
+      comportement inchangé** (Ventes, Dons, Réserve, Favoris, sous-modes de
+      vente) : à étendre ailleurs seulement si ce premier essai convient à
+      l'usage.
 
 ## Import de données depuis PDF (workflow établi)
 

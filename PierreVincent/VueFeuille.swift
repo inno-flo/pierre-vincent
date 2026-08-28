@@ -50,6 +50,9 @@ struct VueFeuille: View {
 
     let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
     let visionneuseIntegree: Bool  // barre d'espace : visionneuse maison au lieu de Quick Look
+    /// Essai — pastilles de type dans la toolbar plutôt que dans le bandeau
+    /// translucide, voir `Categorie.pastillesTypeDansToolbar`.
+    let pastillesTypeDansToolbar: Bool
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
@@ -65,6 +68,7 @@ struct VueFeuille: View {
          symboleFiltreTous: String = "square.grid.2x2",
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
+         pastillesTypeDansToolbar: Bool = false,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
         self.feuilleAjout = feuilleAjout
@@ -81,6 +85,7 @@ struct VueFeuille: View {
         self.symboleFiltreTous = symboleFiltreTous
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
+        self.pastillesTypeDansToolbar = pastillesTypeDansToolbar
         self._nbSelection = nbSelection
     }
 
@@ -821,6 +826,15 @@ struct VueFeuille: View {
         if afficherMenuFiltreTypeToolbar && filtreParType {
             ToolbarItem { menuFiltreType }
         }
+        // Essai — Catalogue de « Ventes et dons » seulement : les MÊMES
+        // pastilles que le bandeau, mais posées directement dans la toolbar
+        // au lieu d'un bandeau translucide séparé en dessous. Voir
+        // `Categorie.pastillesTypeDansToolbar`.
+        if pastillesTypeDansToolbar && filtreParType {
+            ToolbarItem { pastillesTypeToolbar }
+            ToolbarSpacer(.fixed)
+            ToolbarItem { pastilleCompteur }
+        }
         // Galerie en tête : c'est la présentation par défaut à la première
         // ouverture d'une vue (`modeAffichage` vaut "icone").
         ToolbarItem {
@@ -1072,7 +1086,10 @@ struct VueFeuille: View {
         // devenaient pleines.
         contenuPrincipal
             .safeAreaInset(edge: .top, spacing: 0) {
-                if filtreParVendeur || filtreParType {
+                // Essai : ce bandeau disparaît pour les rubriques dont les
+                // pastilles sont passées dans la toolbar — voir
+                // `pastillesTypeDansToolbar`.
+                if !pastillesTypeDansToolbar && (filtreParVendeur || filtreParType) {
                     bandeauFiltres
                 }
             }
@@ -1123,6 +1140,19 @@ struct VueFeuille: View {
     ///   composés : les valeurs distinctes ne feraient pas deux pastilles mais
     ///   des dizaines.
     ///
+    /// Essai — les pastilles de TYPE seules (Catalogue n'a jamais de filtre
+    /// par vendeur), posées directement dans la toolbar. Mêmes pastilles que
+    /// `bandeauFiltres`, mêmes `pastilleType(libelle:mot:)` — pas de
+    /// deuxième version à tenir d'accord, seul l'endroit où elles sont
+    /// posées change.
+    private var pastillesTypeToolbar: some View {
+        HStack(spacing: 8) {
+            ForEach(typesFiltre, id: \.self) { mot in
+                pastilleType(libelle: libelleTypeFiltrable(mot), mot: mot)
+            }
+        }
+    }
+
     /// Le bandeau s'affiche dès que la rubrique le déclare, même sans aucune
     /// pastille : le compteur, lui, a toujours du sens.
     private var bandeauFiltres: some View {

@@ -332,6 +332,21 @@ enum Categorie: Hashable, Identifiable {
     /// Seul réglage restant : les VENDEURS eux-mêmes sont déduits des données
     /// sur les deux plateformes. La liste `filtresVendeur`, qui les nommait en
     /// dur, a disparu — elle proposait des entrées ne filtrant vers rien.
+    /// Essai — macOS : pastilles de type dans la TOOLBAR plutôt que dans le
+    /// bandeau (`bandeauFiltres`, `VueFeuille.swift`), qui reste posé mais
+    /// n'est plus affiché pour cette rubrique. Le bandeau utilise un fond
+    /// translucide qui ne s'accorde pas toujours avec la toolbar native
+    /// (bug signalé : deux tons visibles, Inspecteur ouvert) ; les pastilles
+    /// dans la toolbar elle-même héritent directement de son rendu, sans
+    /// recalculer le leur.
+    ///
+    /// **Restreint au SEUL Catalogue de « Ventes et dons » pour l'instant** —
+    /// à la demande explicite, le temps de juger le résultat avant de
+    /// l'étendre à d'autres rubriques. Vrai uniquement pour `.oeuvres` :
+    /// c'est la seule à n'avoir QUE des pastilles de type (jamais de
+    /// vendeur), ce qui simplifie ce premier essai.
+    var pastillesTypeDansToolbar: Bool { self == .oeuvres }
+
     var filtreParVendeur: Bool {
         guard case .modeVente(let m) = self else { return false }
         return Categorie.modesAvecFiltreVendeur.contains {
@@ -631,6 +646,7 @@ struct ContentView: View {
                                symboleFiltreTous: cat.symboleFiltreTous,
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
+                               pastillesTypeDansToolbar: cat.pastillesTypeDansToolbar,
                                nbSelection: $nbSelection)
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
                     // toute la vue à chaque changement de rubrique, donc aussi
