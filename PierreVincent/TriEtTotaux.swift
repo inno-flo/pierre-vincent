@@ -153,6 +153,14 @@ let afficherMenuFiltreTypeToolbar = false
 /// `true` restaure le bouton.
 let afficherBoutonCorbeilleToolbar = false
 
+/// Bouton de masquage des prix dans la barre d'outils macOS (Galerie et
+/// Liste) : essai à retirer sans supprimer le code.
+///
+/// **Retiré au profit de la seule commande « Masquer les prix » du menu
+/// Présentation** (`PierreVincentApp.swift`), qui pilote le MÊME
+/// `prixMasques`. Repasser à `true` restaure le bouton.
+let afficherBoutonPrixToolbar = false
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

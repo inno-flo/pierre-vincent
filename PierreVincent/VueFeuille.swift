@@ -799,7 +799,10 @@ struct VueFeuille: View {
         // Masquage des prix : sans objet là où les œuvres n'en ont pas —
         // Dons et Réserve. Le menu « Présentation » grise la commande au même
         // moment, via `signalSansPrix`.
-        if !rubriqueSansPrix {
+        //
+        // Essai : bouton masqué, voir `afficherBoutonPrixToolbar`. La
+        // commande du menu Présentation reste seule voie de bascule.
+        if afficherBoutonPrixToolbar && !rubriqueSansPrix {
             ToolbarSpacer(.fixed)
             ToolbarItem {
                 Button {

@@ -1366,6 +1366,12 @@ JavaScript, inexploitables par extraction) :
     dans `TriEtTotaux.swift`) : la commande « Supprimer » du menu Édition
     déclenche la même confirmation, et devient seule voie pour supprimer
     depuis Galerie et Liste. Code conservé, `true` restaure le bouton.
+  - **Bouton de masquage des prix MASQUÉ, essai** (`afficherBoutonPrixToolbar`
+    dans `TriEtTotaux.swift`) : même patron que le bouton de corbeille
+    ci-dessus. La commande « Masquer les prix » / « Afficher les prix » du
+    menu Présentation reste seule voie de bascule, elle pilote le MÊME
+    `prixMasques` et n'est pas concernée par ce drapeau. Code conservé,
+    `true` restaure le bouton.
   - **Bouton « Ajouter » piloté par `Categorie.feuilleAjout`, distinct de
     `feuille`.** `feuille` filtre les données ; `feuilleAjout` dit dans
     quelle feuille créer une œuvre, et vaut `nil` = pas de bouton. Une
