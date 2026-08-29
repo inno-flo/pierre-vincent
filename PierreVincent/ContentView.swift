@@ -521,9 +521,12 @@ struct ContentView: View {
                     // Rubrique ISOLÉE : une section sans en-tête et sans
                     // repli, détachée des deux blocs. Elle ne relève ni des
                     // ventes ni de la réserve — un favori peut venir de l'une
-                    // comme de l'autre.
-                    Section {
-                        lien(.favoris)
+                    // comme de l'autre. Absente s'il n'existe encore aucun
+                    // favori.
+                    if auMoinsUnFavori {
+                        Section {
+                            lien(.favoris)
+                        }
                     }
                     #endif
                     #if os(iOS)
@@ -558,9 +561,12 @@ struct ContentView: View {
                     // Rubrique ISOLÉE, détachée des deux blocs : elle ne
                     // relève ni des ventes ni de la réserve, un favori pouvant
                     // venir de l'une comme de l'autre. Pas de repliement non
-                    // plus — elle n'a qu'une ligne.
-                    Section {
-                        lien(.favoris)
+                    // plus — elle n'a qu'une ligne. Absente s'il n'existe
+                    // encore aucun favori.
+                    if auMoinsUnFavori {
+                        Section {
+                            lien(.favoris)
+                        }
                     }
                     #endif
                 }
@@ -901,6 +907,16 @@ struct ContentView: View {
         // sélection de la liste en bleu et perturbait la navigation ↑↓.
     }
 
+    /// Vrai dès qu'au moins une œuvre est marquée favorite, tous statuts et
+    /// toutes feuilles confondus. Gouverne l'affichage de la rubrique
+    /// « Favoris » dans la sidebar : une rubrique vide n'apprend rien et
+    /// n'a rien à montrer, sur les deux plateformes. Partagé (pas de
+    /// `#if os`) : utilisé aussi bien par `categoriesSidebar` (macOS) que
+    /// par les deux `Section` de la sidebar (macOS ET iOS).
+    private var auMoinsUnFavori: Bool {
+        toutes.contains { $0.favori }
+    }
+
     #if os(macOS)
     // MARK: Navigation clavier de la sidebar (macOS)
 
@@ -947,9 +963,11 @@ struct ContentView: View {
                 liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
         }
-        // Hors des deux blocs, et donc toujours présente : elle ne dépend
-        // d'aucun repli.
-        liste.append(.favoris)
+        // Hors des deux blocs, et donc jamais dépendante d'un repli — mais
+        // absente s'il n'existe encore aucun favori, voir `auMoinsUnFavori`.
+        if auMoinsUnFavori {
+            liste.append(.favoris)
+        }
         return liste
     }
 

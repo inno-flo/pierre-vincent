@@ -1683,8 +1683,13 @@ JavaScript, inexploitables par extraction) :
     `categoriesSidebar` suit ce même ordre pour la navigation ↑↓.
   - **Favoris est une rubrique ISOLÉE**, dans sa propre section sans en-tête
     ni repli, détachée des deux blocs : un favori pourra venir de l'un comme
-    de l'autre. Elle ne dépend d'aucun repli et figure donc toujours dans
-    `categoriesSidebar`.
+    de l'autre. Elle ne dépend d'aucun repli.
+    - **N'apparaît que s'il existe au moins un favori** (`auMoinsUnFavori`,
+      partagée entre les deux plateformes) : sur les DEUX `Section` de la
+      sidebar (macOS et iOS) ET dans `categoriesSidebar`, sans quoi ↑↓
+      mènerait à une rubrique invisible à l'écran. Propriété volontairement
+      posée EN DEHORS du bloc `#if os(macOS)` de `categoriesSidebar`, pour
+      rester utilisable par le rendu iOS aussi.
     - **Le champ `Oeuvre.favori` existe désormais** (Bool, défaut `false`,
       exporté en optionnel dans `.pvbase` comme tout champ ajouté après coup).
       La rubrique est donc passée d'une coquille vide à une VUE AGRÉGÉE
