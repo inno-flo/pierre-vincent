@@ -1598,22 +1598,34 @@ JavaScript, inexploitables par extraction) :
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à
   1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
 - **Sidebar — DÉROGATION assumée : aucune mémoire entre les sessions.**
-  Une sidebar système mémorise ses blocs repliés ; celle-ci non.
-  `PierreVincentApp.arrangerSidebar()` **réécrit** les six clés à chaque
-  lancement — les deux grands blocs dépliés, les **quatre sous-groupes
-  repliés** (les deux « Catégories », « Modes de vente », « Thèmes »).
-  L'ouverture montre ainsi les seules vues d'ensemble, six rubriques au lieu
-  d'une vingtaine. Les replis faits à la main ne valent donc que pour la
-  session.
+  Une sidebar système mémorise ses blocs repliés ; celle-ci non. Les six
+  états d'ouverture (`blocVentesOuvert`, `blocStockOuvert` et les quatre
+  sous-groupes) sont de simples `@State` dans `ContentView`, avec pour
+  défaut les deux grands blocs dépliés et les QUATRE sous-groupes repliés
+  (les deux « Catégories », « Modes de vente », « Thèmes »). L'ouverture
+  montre ainsi les seules vues d'ensemble, six rubriques au lieu d'une
+  vingtaine. Un `@State` n'a pas de mémoire d'une session à l'autre par
+  construction : les replis faits à la main ne valent donc que pour la
+  session, sans rien à écrire nulle part.
   - **Ce n'est pas un oubli, ne pas « réparer »** en remettant la
     mémorisation. Décision prise le 22 août 2026.
-  - Réécrire, et non poser des valeurs par défaut sur `@AppStorage` : un
-    défaut ne s'applique qu'à une clé **absente**, or ces clés existent déjà
-    sur toute installation ayant servi. Les défauts déclarés dans
-    `ContentView` suivent le même arrangement, mais ne sont qu'un garde-fou.
-  - L'`init` de `PierreVincentApp` a dû sortir du bloc `#if os(macOS)` pour
-    servir aux deux plateformes ; la ligne AppKit (`allowsAutomaticWindowTabbing`)
-    reste gardée à l'intérieur.
+  - **Étaient en `@AppStorage` au départ**, avec une réécriture des six clés
+    à chaque lancement (`PierreVincentApp.arrangerSidebar()`, depuis
+    supprimée) — un défaut de `@AppStorage` ne s'applique qu'à une clé
+    **absente**, or ces clés existaient déjà sur toute installation ayant
+    servi, d'où la réécriture systématique.
+  - **Passées en `@State` pour une tout autre raison** : `DisclosureGroup`
+    n'animait pas l'ouverture/fermeture des blocs malgré son animation
+    native habituelle — une mutation `@AppStorage` passe par `UserDefaults`,
+    dont la notification de changement n'arrive pas toujours dans la même
+    transaction qu'un `withAnimation`. Une fois établi que la persistance ne
+    servait déjà à rien au-delà de la session, le `@State` s'est imposé : il
+    anime de façon fiable ET retombe naturellement à sa valeur par défaut à
+    chaque lancement, l'un réglant l'autre.
+  - L'`init` de `PierreVincentApp` reste hors du bloc `#if os(macOS)` (utile
+    aux deux plateformes), mais ne fait plus que la ligne AppKit
+    (`allowsAutomaticWindowTabbing`), gardée à l'intérieur de son propre
+    `#if`.
 - **Structure de la sidebar** (`ContentView.swift`, enum `Categorie`),
   identique sur les deux plateformes :
 

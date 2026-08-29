@@ -59,31 +59,11 @@ struct PierreVincentApp: App {
         // les commandes « Afficher la barre d'onglets / tous les onglets ».
         NSWindow.allowsAutomaticWindowTabbing = false
         #endif
-        Self.arrangerSidebar()
-    }
-
-    /// Arrangement de la barre latérale au lancement, identique sur les deux
-    /// plateformes : les DEUX GRANDS BLOCS sont dépliés, et les QUATRE
-    /// sous-groupes repliés — les deux « Catégories », « Modes de vente » et
-    /// « Thèmes ».
-    ///
-    /// L'ouverture montre ainsi les seules vues d'ensemble, une poignée de
-    /// rubriques au lieu d'une vingtaine. Les sous-groupes se déplient à la
-    /// demande.
-    ///
-    /// Écrit à CHAQUE lancement, et non posé comme simple valeur par défaut de
-    /// `@AppStorage` : ces clés existent déjà chez qui a utilisé l'app, et une
-    /// valeur par défaut ne s'applique qu'à une clé absente — l'arrangement ne
-    /// serait donc jamais appliqué. Conséquence assumée : les replis faits à la
-    /// main ne survivent plus à la fermeture de l'app.
-    private static func arrangerSidebar() {
-        let reglages = UserDefaults.standard
-        reglages.set(true,  forKey: "blocVentesOuvert")
-        reglages.set(true,  forKey: "blocStockOuvert")
-        reglages.set(false, forKey: "sousBlocCategoriesOuvert")
-        reglages.set(false, forKey: "sousBlocModesVenteOuvert")
-        reglages.set(false, forKey: "sousBlocReserveCategoriesOuvert")
-        reglages.set(false, forKey: "sousBlocReserveThemesOuvert")
+        // L'arrangement de la sidebar au lancement (blocs dépliés, sous-groupes
+        // repliés) n'est plus écrit ici : c'est désormais la valeur par défaut
+        // des `@State` de `ContentView`, voir leur déclaration — plus besoin de
+        // le réécrire à chaque lancement, un `@State` n'a pas de mémoire entre
+        // deux lancements par construction.
     }
 
     /// Conteneur SwiftData : la base de données locale des œuvres.

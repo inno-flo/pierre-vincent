@@ -454,23 +454,31 @@ struct ContentView: View {
     @AppStorage("tapisDonnesRanges") private var tapisDonnesRanges = false
     // `vendeurDonsRenseigne` : « Florian » comme Vendeur sur tous les dons.
     @AppStorage("vendeurDonsRenseigne") private var vendeurDonsRenseigne = false
-    // Ouverture/fermeture des blocs de la sidebar. Les replis faits à la main
-    // valent pour la session : `PierreVincentApp.arrangerSidebar()` réécrit ces
-    // clés à chaque lancement — les deux grands blocs dépliés, les quatre
-    // sous-groupes repliés. Les valeurs ci-dessous ne servent donc que de
-    // garde-fou, et suivent le même arrangement.
+    // Ouverture/fermeture des blocs de la sidebar. **`@State`, et non
+    // `@AppStorage`** : essayé en `@AppStorage` d'abord, avec une réécriture
+    // au lancement (`PierreVincentApp.arrangerSidebar()`, depuis supprimée)
+    // pour retrouver les mêmes valeurs à chaque démarrage — les replis faits
+    // à la main ne valaient déjà que pour la session, l'écriture dans
+    // `UserDefaults` ne servait donc à rien au-delà de CETTE session.
+    // **Et elle avait un coût réel** : une mutation `@AppStorage` passe par
+    // `UserDefaults`, dont la notification de changement n'arrive pas
+    // toujours DANS la même transaction qu'un `withAnimation` — l'ouverture
+    // et la fermeture des blocs se faisaient alors sans transition, un
+    // « on/off » sec au lieu de l'animation native de `DisclosureGroup`.
+    // Un `@State` s'anime, lui, de façon fiable — et retombe naturellement à
+    // sa valeur par défaut à chaque lancement, exactement l'effet recherché.
     #if os(macOS)
     // Incrémente uniquement lorsqu'une rubrique est choisie : le relais
     // AppKit de la sidebar ne doit pas reprendre le focus lors d'une simple
     // mise à jour du contenu central.
     @State private var demandeFocusSidebar = 0
     #endif
-    @AppStorage("blocVentesOuvert") private var blocVentesOuvert = true
-    @AppStorage("blocStockOuvert") private var blocStockOuvert = true
-    @AppStorage("sousBlocCategoriesOuvert") private var sousBlocCategoriesOuvert = false
-    @AppStorage("sousBlocModesVenteOuvert") private var sousBlocModesVenteOuvert = false
-    @AppStorage("sousBlocReserveCategoriesOuvert") private var sousBlocReserveCategoriesOuvert = false
-    @AppStorage("sousBlocReserveThemesOuvert") private var sousBlocReserveThemesOuvert = false
+    @State private var blocVentesOuvert = true
+    @State private var blocStockOuvert = true
+    @State private var sousBlocCategoriesOuvert = false
+    @State private var sousBlocModesVenteOuvert = false
+    @State private var sousBlocReserveCategoriesOuvert = false
+    @State private var sousBlocReserveThemesOuvert = false
     #if os(iOS)
     // Import de la base sur iPhone (depuis un fichier .pvbase via Fichiers).
     @State private var importerBaseOuvert = false
