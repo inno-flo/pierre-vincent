@@ -97,8 +97,10 @@ enum Categorie: Hashable, Identifiable {
         case .reserveDessins:   return "pencil.and.outline"
         case .reserveTableaux:  return "paintpalette"
         case .reserveCollection: return "person"
-        // Même étoile que l'entrée « Ajouter aux favoris » du menu contextuel.
-        case .favoris:          return "star"
+        // Étoile PLEINE : distincte du contour du menu contextuel
+        // (« Ajouter aux favoris »/« Retirer des favoris »), qui dit une
+        // ACTION — ici il s'agit de la rubrique elle-même.
+        case .favoris:          return "star.fill"
         case .reserveTheme:     return "paintbrush.pointed"
         case .synthese:         return "chart.bar.doc.horizontal"
         // Les trois sous-rubriques de « Modes de vente » — et tout mode inédit
