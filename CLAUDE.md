@@ -1824,6 +1824,10 @@ JavaScript, inexploitables par extraction) :
   - Les libellés « Expositions » et « Ventes aux enchères » sont un **rendu
     au pluriel** dans `titre` ; la valeur stockée sur l'œuvre reste au
     singulier, et c'est elle que voient l'éditeur, l'inspecteur et le filtre.
+  - **« Vente privée » s'affiche « Directe »**, même principe que les deux
+    précédents : `titre` traduit, `modeVente` sur l'œuvre et
+    `modesDeVenteReference` restent « Vente privée ». Y toucher romprait la
+    reconnaissance des œuvres déjà classées dans ce mode.
 
 - **iOS — pas de récapitulatif dans Ventes ni dans Dons** : leur seule ligne
   (« Nombre de ventes », « Nombre de dons ») annonçait un nombre que le
@@ -1839,6 +1843,14 @@ JavaScript, inexploitables par extraction) :
     filtre d'abord, ce qu'il donne ensuite. Le récapitulatif porte depuis lors
     sa propre marge basse, que le bandeau lui donnait tant qu'il le suivait —
     encore un cas de marge tenue par le voisin.
+  - **« Ventes » et « Dons » en style NORMAL dans Catalogue seulement**
+    (`ligneRecap(gras:)`) : `estModeVentes` vaut `false` pour Catalogue, donc
+    `gras: false` s'y applique aux deux lignes (intitulé et compteur) — la
+    ligne « Dons » n'existe d'ailleurs QUE là, elle ne s'affiche jamais pour
+    une sous-rubrique de mode de vente. « Nombre de ventes », affichée dans
+    Ventes et ses sous-rubriques (`estModeVentes` vrai), garde son gras
+    d'origine — `gras: estModeVentes` au premier appel le distingue du
+    second, où `false` est fixe puisque cette ligne n'a qu'un seul contexte.
 - **iOS — le récapitulatif défile avec le contenu** dans toutes les vues.
   Placé au-dessus du `ScrollView` (ce qu'il était dans `VueiOS`), il restait
   ancré et la barre de navigation ne prenait pas sa transparence. En mode

@@ -378,12 +378,17 @@ struct VueOeuvresStructuree: View {
         if !recapInutile {
         VStack(spacing: 0) {
             ligneRecap(titre: estModeVentes ? "Nombre de ventes" : "Ventes",
-                       nombre: ventes.count) {
+                       nombre: ventes.count, gras: estModeVentes) {
                 withAnimation { proxy.scrollTo(ancreVentes, anchor: .top) }
             }
             if !estModeVentes {
                 Divider().padding(.leading, 20)
-                ligneRecap(titre: "Dons", nombre: dons.count) {
+                // `gras: false` : dans le Catalogue SEULEMENT (cette ligne ne
+                // s'affiche jamais dans les sous-rubriques de mode de vente,
+                // où `estModeVentes` vaut `true`) — style normal demandé pour
+                // « Ventes » et « Dons » et leurs compteurs. La ligne
+                // « Nombre de ventes » d'un mode de vente garde son gras.
+                ligneRecap(titre: "Dons", nombre: dons.count, gras: false) {
                     withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
                 }
             }
@@ -398,16 +403,18 @@ struct VueOeuvresStructuree: View {
         }
     }
 
-    private func ligneRecap(titre: String, nombre: Int,
+    private func ligneRecap(titre: String, nombre: Int, gras: Bool = true,
                             action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Text(titre)
                     .font(.headline)
+                    .fontWeight(gras ? nil : .regular)
                     .foregroundStyle(Color.texteLegende)
                 Spacer()
                 Text("\(nombre)")
-                    .font(.headline.bold())
+                    .font(.headline)
+                    .fontWeight(gras ? .bold : .regular)
                     .foregroundStyle(Color.orangeInternational)
             }
             .padding(.horizontal, 20)

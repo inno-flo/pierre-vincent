@@ -65,12 +65,19 @@ enum Categorie: Hashable, Identifiable {
         case .synthese:         return "Synthèse"
         // Forme d'affichage du mode : la rubrique regroupe PLUSIEURS ventes,
         // d'où le pluriel, alors que la valeur stockée sur une œuvre reste au
-        // singulier (« Exposition »). Un mode inédit garde son libellé tel
-        // quel, faute de forme plurielle connue.
+        // singulier (« Exposition »). « Vente privée » suit le même principe
+        // — libellé affiché DISSOCIÉ de la valeur stockée — mais pour un
+        // renommage complet plutôt qu'un pluriel : « Directe ». Le champ
+        // `modeVente` des œuvres, `modesDeVenteReference` et tout ce qui
+        // compare sur cette valeur restent inchangés, sans quoi les œuvres
+        // existantes cesseraient d'être reconnues comme relevant de ce mode.
+        // Un mode inédit garde son libellé tel quel, faute de correspondance
+        // connue.
         case .modeVente(let m):
             switch m.lowercased() {
             case "exposition":         return "Expositions"
             case "vente aux enchères": return "Ventes aux enchères"
+            case "vente privée":       return "Directe"
             default:                   return m
             }
         }
@@ -713,7 +720,8 @@ struct ContentView: View {
                         // de mode de vente : la même ligne s'applique aux
                         // trois, chacune recevant les pastilles que dit
                         // `Categorie.typesFiltre` — trois pour Ventes et
-                        // Vente privée, deux pour Exposition.
+                        // Vente privée (affichée « Directe »), deux pour
+                        // Exposition.
                         VueOeuvresStructuree(modesVente: cat.modesVente,
                                              filtreParVendeur: cat.filtreParVendeur,
                                              estModeVentes: true,
