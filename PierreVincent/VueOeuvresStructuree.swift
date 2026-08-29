@@ -589,8 +589,12 @@ struct VueOeuvresStructuree: View {
                         VStack(alignment: .leading, spacing: 3) {
                             if aUnPrix(o) {
                                 // Acheteur en premier, puis prix.
+                                // ESSAI VISUEL : `.headline` garde sa taille,
+                                // plus sa graisse — même traitement qu'en
+                                // Galerie.
                                 Text(o.acheteur.isEmpty ? "—" : o.acheteur)
                                     .font(.headline)
+                                    .fontWeight(.regular)
                                     .lineLimit(1)
                                 PrixText(o.prix)
                                     .font(.subheadline)
@@ -598,6 +602,7 @@ struct VueOeuvresStructuree: View {
                             } else {
                                 Text(o.destinataire.isEmpty ? "—" : o.destinataire)
                                     .font(.headline)
+                                    .fontWeight(.regular)
                             }
                             Text(o.type.isEmpty ? "—" : o.type)
                                 .font(.subheadline).foregroundStyle(.secondary)

@@ -501,8 +501,12 @@ struct VueiOS: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     if aUnPrix(o) {
                                         // Acheteur en premier (mis en avant), puis prix.
+                                        // ESSAI VISUEL : `.headline` garde sa
+                                        // taille, plus sa graisse — même
+                                        // traitement qu'en Galerie.
                                         Text(o.acheteur.isEmpty ? "—" : o.acheteur)
                                             .font(.headline)
+                                            .fontWeight(.regular)
                                             .lineLimit(1)
                                         PrixText(o.prix)
                                             .font(.subheadline)
@@ -525,10 +529,10 @@ struct VueiOS: View {
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
                                         Text(rangementVignette(o).valeur)
-                                            .font(.headline).lineLimit(1)
+                                            .font(.headline).fontWeight(.regular).lineLimit(1)
                                     } else if !o.destinataire.isEmpty {
                                         Text(o.destinataire)
-                                            .font(.headline).lineLimit(1)
+                                            .font(.headline).fontWeight(.regular).lineLimit(1)
                                     }
                                     // Le type n'est PAS affiché ici : ces vues ne
                                     // contiennent qu'un seul type d'œuvre.

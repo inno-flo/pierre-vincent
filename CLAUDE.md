@@ -1587,9 +1587,17 @@ JavaScript, inexploitables par extraction) :
   tenir d'accord** — chacune a son propre rendu, aucune n'est partagée :
   `VueGalerie.swift` (macOS ET iOS, via `VueFeuille`/`VueiOS`),
   `VueOeuvresStructuree.swift` (Catalogue/Ventes/modes de vente sur iPhone),
-  `VueDonsStructuree.swift` (Dons sur iPhone). Le mode LISTE de ces mêmes
-  vues n'est PAS concerné, seul le mode Galerie l'est — leurs lignes
-  `.headline` restent en gras.
+  `VueDonsStructuree.swift` (Dons sur iPhone).
+  - **Étendu au mode LISTE des mêmes vues iOS**, sur demande : `VueiOS.swift`
+    (Réserve/type/Favoris), `VueOeuvresStructuree.swift` et
+    `VueDonsStructuree.swift` ont chacune une seconde ligne `.headline` dans
+    leur `listeLignes`, distincte de celle de leur vignette de Galerie —
+    même correctif, même `.fontWeight(.regular)`, à répéter aux DEUX endroits
+    de chaque fichier.
+  - **macOS n'a rien de comparable** : le mode Liste y est un `Table`
+    (`VueFeuille.swift`), qui ne pose `.headline` sur aucune cellule — les
+    deux occurrences trouvées dans ce fichier sont un bandeau éphémère et un
+    titre de boîte de dialogue, sans rapport avec une ligne de liste.
 - **macOS — menu Édition : Select All / Delete / Undo / Redo remplacés,
   Couper/Copier/Coller recréés** (`PierreVincentApp.swift`).
   `CommandGroup(replacing: .pasteboard)` prend la main sur le bloc standard

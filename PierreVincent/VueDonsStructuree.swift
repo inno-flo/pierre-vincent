@@ -333,8 +333,10 @@ struct VueDonsStructuree: View {
                 HStack(spacing: 14) {
                         VignetteCachee(nom: o.photoNom, cote: 76)
                         VStack(alignment: .leading, spacing: 3) {
+                            // ESSAI VISUEL : `.headline` garde sa taille,
+                            // plus sa graisse — même traitement qu'en Galerie.
                             Text(o.destinataire.isEmpty ? "—" : o.destinataire)
-                                .font(.headline).lineLimit(1)
+                                .font(.headline).fontWeight(.regular).lineLimit(1)
                             if !o.dimensions.isEmpty {
                                 // Même corps qu'en galerie (.subheadline) :
                                 // c'est la même donnée, elle ne doit pas
