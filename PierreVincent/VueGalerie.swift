@@ -171,8 +171,9 @@ struct VueGalerie: View {
             // Bande blanche en légende, sous l'image.
             // Textes forcés en sombre car le fond reste blanc dans les deux modes.
             VStack(alignment: .leading, spacing: 5) {
-                // En gras : le nom de l'acheteur (pour la feuille « données »,
-                // le destinataire, qui joue le même rôle).
+                // Le nom de l'acheteur (pour la feuille « données », le
+                // destinataire, qui joue le même rôle) — `ligneGras` garde
+                // son nom mais plus son gras, voir ESSAI VISUEL plus bas.
                 if o.feuille == .reserve {
                     // Réserve : l'intitulé du champ d'abord, en gris, puis sa
                     // valeur — l'inverse se lisait mal, la valeur seule
@@ -184,8 +185,12 @@ struct VueGalerie: View {
                         .foregroundStyle(Color.texteLegende.opacity(0.6))
                         .lineLimit(1)
                 } else if nomEnGalerie {
+                    // ESSAI VISUEL : `.headline` garde sa taille, mais plus
+                    // sa graisse — même parti que les pastilles de filtre et
+                    // le récapitulatif de Catalogue, ailleurs dans l'app.
                     Text(ligneGras(o).isEmpty ? " " : ligneGras(o))
                         .font(.headline)
+                        .fontWeight(.regular)
                         .foregroundStyle(Color.texteLegende)
                         .lineLimit(1)
                 }

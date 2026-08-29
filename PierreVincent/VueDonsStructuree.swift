@@ -279,8 +279,12 @@ struct VueDonsStructuree: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 5) {
+                // ESSAI VISUEL : `.headline` garde sa taille, plus sa
+                // graisse — même vignette que `VueGalerie.swift`, à tenir
+                // d'accord avec elle.
                 Text(o.destinataire.isEmpty ? " " : o.destinataire)
                     .font(.headline)
+                    .fontWeight(.regular)
                     .foregroundStyle(Color.texteLegende)
                     .lineLimit(1)
                 HStack {

@@ -520,8 +520,12 @@ struct VueOeuvresStructuree: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 if nomEnGalerie {
+                    // ESSAI VISUEL : `.headline` garde sa taille, plus sa
+                    // graisse — même vignette que `VueGalerie.swift`, à
+                    // tenir d'accord avec elle.
                     Text(ligneNom(o).isEmpty ? " " : ligneNom(o))
                         .font(.headline)
+                        .fontWeight(.regular)
                         .foregroundStyle(Color.texteLegende)
                         .lineLimit(1)
                 }

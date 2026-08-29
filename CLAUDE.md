@@ -1580,6 +1580,16 @@ JavaScript, inexploitables par extraction) :
     graisse normale**, sur les deux plateformes (pastille de type, de
     vendeur, `BandeauTypes` iOS) : seuls le fond plein et le texte blanc
     marquent désormais la sélection.
+- **ESSAI VISUEL — les vignettes de Galerie perdent le gras de leur ligne de
+  nom** (acheteur, destinataire, ou emplacement en Réserve). `.font(.headline)`
+  garde sa TAILLE (13/17 pt selon la plateforme), seule sa graisse par défaut
+  est neutralisée via `.fontWeight(.regular)`. **TROIS vignettes distinctes à
+  tenir d'accord** — chacune a son propre rendu, aucune n'est partagée :
+  `VueGalerie.swift` (macOS ET iOS, via `VueFeuille`/`VueiOS`),
+  `VueOeuvresStructuree.swift` (Catalogue/Ventes/modes de vente sur iPhone),
+  `VueDonsStructuree.swift` (Dons sur iPhone). Le mode LISTE de ces mêmes
+  vues n'est PAS concerné, seul le mode Galerie l'est — leurs lignes
+  `.headline` restent en gras.
 - **macOS — menu Édition : Select All / Delete / Undo / Redo remplacés,
   Couper/Copier/Coller recréés** (`PierreVincentApp.swift`).
   `CommandGroup(replacing: .pasteboard)` prend la main sur le bloc standard
