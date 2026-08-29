@@ -1165,6 +1165,17 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - Sur iPhone, `.modeVente` est servi par **`VueOeuvresStructuree`**, pas par
     `VueiOS` — cette dernière ne sert que les rubriques par type et la Réserve.
     Les deux vues ont leur propre menu à tenir à jour.
+  - **« Toutes » (ex-« Tout ») porte `person.3`, PAS l'icône de la rubrique**
+    — seule EXCEPTION à la règle générale du menu de type, qui veut que
+    l'entrée sans filtre porte l'icône de la rubrique entière (voir plus
+    bas). L'icône de rubrique d'un mode de vente est `cart`, qui ne dit rien
+    du critère « vendeur » ; `person.3` rejoint la famille déjà utilisée par
+    `iconeMenu` pour le bouton lui-même (`person.3` sans filtre,
+    `person.fill` un vendeur retenu) et par les entrées de vendeur
+    (`person.fill`) — toute la famille « personne » raconte le même critère.
+  - **Le bouton du menu affiche TOUJOURS l'icône de l'élément retenu**
+    (`iconeMenu`) : `person.3` tant qu'aucun vendeur n'est choisi, sinon
+    `person.fill` — déjà le comportement en place, non un correctif.
 - **`modesSansNomEnGalerie` est une liste SÉPARÉE de `modesAvecFiltreVendeur`**,
   bien qu'elles contiennent aujourd'hui les mêmes deux valeurs. L'une décide
   d'un filtre, l'autre d'un affichage. Les fusionner ferait qu'ajouter une
@@ -1230,10 +1241,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - **L'icône du menu dit le CRITÈRE ACTIF**, exactement comme celle du menu
     de tri : le type retenu quand il y en a un, et sinon celle de l'entrée
     « Tout ». Cette dernière est **l'icône de la rubrique elle-même**
-    (`Categorie.symboleFiltreTous`), sans exception — « Tous » y désigne la
+    (`Categorie.symboleFiltreTous`) pour CE menu-ci — « Tous » y désigne la
     rubrique entière. Les cinq rubriques de Thèmes reçoivent donc le même
     `paintbrush.pointed` : il ne les distingue pas entre elles, mais il dit
-    bien « tous les thèmes ».
+    bien « tous les thèmes ». **Le menu de filtre par vendeur fait
+    exception** à cette règle, voir plus bas : son entrée « Toutes » porte
+    `person.3`, pas l'icône de la rubrique.
   - **Ce menu est RETIRÉ de la barre d'outils, sur les DEUX plateformes** —
     `menuFiltreType` (macOS), `MenuFiltreTypes` dans les trois vues iOS —
     gouvernés par le même drapeau `afficherMenuFiltreTypeToolbar`

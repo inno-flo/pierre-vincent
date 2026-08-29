@@ -70,7 +70,7 @@ struct VueOeuvresStructuree: View {
     @Namespace private var espaceZoom
 
 
-    @State private var vendeurFiltre: String = "Tout"
+    @State private var vendeurFiltre: String = "Toutes"
     // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
     // c'est un filtre de consultation, pas un réglage.
     @State private var typeRetenu: String?
@@ -92,7 +92,7 @@ struct VueOeuvresStructuree: View {
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
         if filtreParVendeur {
-            return vendeurFiltre == "Tout" ? "person.3" : "person.fill"
+            return vendeurFiltre == "Toutes" ? "person.3" : "person.fill"
         }
         switch triGalerie {
         case "acheteur":   return "person"
@@ -143,7 +143,7 @@ struct VueOeuvresStructuree: View {
     /// Œuvres vendues (tableaux + dessins + tapis), filtrées si besoin, triées.
     private var ventes: [Oeuvre] {
         var base = baseVentes
-        if filtreParVendeur && vendeurFiltre != "Tout" {
+        if filtreParVendeur && vendeurFiltre != "Toutes" {
             // Comparaison sur le seul champ Vendeur : les entrées du menu en
             // sont issues.
             base = base.filter {
@@ -291,15 +291,15 @@ struct VueOeuvresStructuree: View {
                 // 3. Filtre vendeur (vue Ventes) ou critère de tri standard.
                 if filtreParVendeur {
                     Menu {
-                        // « Tout » porte l'icône de la RUBRIQUE, même
-                        // convention que le « Tous » du menu de type : il y
-                        // désigne la rubrique entière. Les entrées de vendeur
-                        // prennent la leur dans la même famille que l'icône du
-                        // bouton (`person.3` / `person.fill`), sans quoi une
-                        // seule ligne du menu serait illustrée.
-                        Button { vendeurFiltre = "Tout" } label: {
-                            Label(vendeurFiltre == "Tout" ? "✓ Tout" : "Tout",
-                                  systemImage: symboleFiltreTous)
+                        // « Toutes » (les ventes) porte `person.3`, la
+                        // même icône que le bouton du menu quand rien n'est
+                        // retenu — plus l'icône générique de la rubrique
+                        // (`symboleFiltreTous`, « cart »), qui ne dit rien du
+                        // critère « vendeur ». Les entrées de vendeur
+                        // prennent `person.fill`, même famille.
+                        Button { vendeurFiltre = "Toutes" } label: {
+                            Label(vendeurFiltre == "Toutes" ? "✓ Toutes" : "Toutes",
+                                  systemImage: "person.3")
                         }
                         ForEach(vendeursPresents, id: \.self) { vendeur in
                             Button { vendeurFiltre = vendeur } label: {
