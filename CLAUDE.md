@@ -1528,8 +1528,8 @@ JavaScript, inexploitables par extraction) :
   - **Bouton « Ajouter » piloté par `Categorie.feuilleAjout`, distinct de
     `feuille`.** `feuille` filtre les données ; `feuilleAjout` dit dans
     quelle feuille créer une œuvre, et vaut `nil` = pas de bouton. Une
-    rubrique déjà filtrée par type ou par thème (Catégories de Ventes et
-    dons, Collection personnelle, Thèmes, Catégories de Réserve, Favoris)
+    rubrique déjà filtrée par type ou par thème (Supports de Ventes et dons,
+    Collection personnelle, Genres, Supports de Réserve, Favoris)
     n'en a plus : une œuvre créée sans ce critère y serait invisible
     aussitôt. Catalogue de « Ventes et dons » en gagne un — vue agrégée
     sans feuille propre, il cible « Tableaux vendus », le défaut du modèle
@@ -1632,22 +1632,32 @@ JavaScript, inexploitables par extraction) :
   ```
   ▼ VENTES ET DONS               ▼ RÉSERVE
        Catalogue                      Catalogue
-       Ventes                         Collection personnelle
-       Dons                         ▼ Thèmes
-       Synthèse                          …déduits des données
-     ▼ Modes de vente               ▼ Catégories
-          Expositions                    Tableaux
-          Ventes aux enchères            Dessins
+     ▼ Supports                       Collection personnelle
+          Tableaux                  ▼ Genres
+          Dessins                        …déduits des données
+          Tapis                     ▼ Supports
+       Ventes                            Tableaux
+     ▼ Modes de vente                    Dessins
+          Expositions
+          Ventes aux enchères           Favoris
           Vente privée
-          …tout mode inédit           Favoris
-     ▼ Catégories
-          Tableaux · Dessins · Tapis
+          …tout mode inédit
+       Dons
+       Synthèse
   ```
 
-  - **Thèmes avant Catégories dans la Réserve**, l'inverse de « Ventes et
-    dons » : c'est le thème qui range les cartons. `categoriesSidebar` doit
-    suivre le MÊME ordre, sans quoi ↑↓ sauterait d'une rubrique à l'autre
+  - **« Supports » et « Genres »** sont les libellés de sidebar — le champ
+    sous-jacent (`type`, `theme`) et les fonctions qui s'y rapportent
+    (`themesPresents`…) gardent leur ancien nom, « Catégories » et
+    « Thèmes » n'étaient que le texte affiché ici.
+  - **Genres avant Supports dans la Réserve**, l'inverse de « Ventes et
+    dons » : c'est le genre (thème) qui range les cartons. `categoriesSidebar`
+    doit suivre le MÊME ordre, sans quoi ↑↓ sauterait d'une rubrique à l'autre
     dans un ordre que rien à l'écran n'explique.
+  - **Ordre de « Ventes et dons »** : Catalogue, Supports, Ventes, Modes de
+    vente, Dons, Synthèse — les deux sous-groupes s'intercalent entre les
+    rubriques de premier niveau, ils ne sont plus regroupés à la fin.
+    `categoriesSidebar` suit ce même ordre pour la navigation ↑↓.
   - **Favoris est une rubrique ISOLÉE**, dans sa propre section sans en-tête
     ni repli, détachée des deux blocs : un favori pourra venir de l'un comme
     de l'autre. Elle ne dépend d'aucun repli et figure donc toujours dans

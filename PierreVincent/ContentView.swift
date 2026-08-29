@@ -906,15 +906,19 @@ struct ContentView: View {
     private var categoriesSidebar: [Categorie] {
         var liste: [Categorie] = []
         if blocVentesOuvert {
-            liste += [.oeuvres, .ventesRealisees, .oeuvresDonnees, .synthese]
             // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
-            // rubrique dans un ordre qui ne correspond à rien de visible.
+            // rubrique dans un ordre qui ne correspond à rien de visible :
+            // Catalogue, Supports, Ventes, Modes de vente, Dons, Synthèse.
+            liste.append(.oeuvres)
             if sousBlocCategoriesOuvert {
                 liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
             }
+            liste.append(.ventesRealisees)
             if sousBlocModesVenteOuvert {
                 liste += modesDeVentePresents.map { Categorie.modeVente($0) }
             }
+            liste.append(.oeuvresDonnees)
+            liste.append(.synthese)
         }
         if blocStockOuvert {
             liste.append(.reserveInventaire)
@@ -1134,21 +1138,22 @@ struct ContentView: View {
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
-        // Ventes et Dons sont au premier niveau, avec Catalogue et Synthèse :
-        // ce sont des vues d'ensemble, pas des catégories d'œuvres.
+        // Ordre d'affichage : Catalogue, Supports, Ventes, Modes de vente,
+        // Dons, Synthèse. Les deux sous-groupes repliables (Supports, Modes
+        // de vente) s'intercalent donc entre les rubriques de premier niveau
+        // au lieu d'être regroupés à la fin.
         lien(.oeuvres)
-        lien(.ventesRealisees)
-        lien(.oeuvresDonnees)
-        lien(.synthese)
-        // Sous-groupe repliable des catégories d'œuvres. `DisclosureGroup` et
-        // non `Section` : une `List` n'accepte pas de Section dans une Section.
+        // Sous-groupe repliable des catégories d'œuvres, ex-« Catégories ».
+        // `DisclosureGroup` et non `Section` : une `List` n'accepte pas de
+        // Section dans une Section.
         DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
             lien(.tableauxVendus)
             lien(.dessinsVendus)
             lien(.tapisVendus)
         } label: {
-            Text("Catégories").foregroundStyle(.secondary)
+            Text("Supports").foregroundStyle(.secondary)
         }
+        lien(.ventesRealisees)
         // Sous-groupe des modes de vente, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocModesVenteOuvert) {
             ForEach(modesDeVentePresents, id: \.self) { mode in
@@ -1157,6 +1162,8 @@ struct ContentView: View {
         } label: {
             Text("Modes de vente").foregroundStyle(.secondary)
         }
+        lien(.oeuvresDonnees)
+        lien(.synthese)
     }
 
     /// Modes de vente réellement présents dans les données, dans l'ordre
@@ -1210,7 +1217,8 @@ struct ContentView: View {
             lien(.reserveTableaux)
             lien(.reserveDessins)
         } label: {
-            Text("Catégories").foregroundStyle(.secondary)
+            // Ex-« Catégories ».
+            Text("Supports").foregroundStyle(.secondary)
         }
         // Sous-groupe des thèmes, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocReserveThemesOuvert) {
@@ -1218,7 +1226,9 @@ struct ContentView: View {
                 lien(.reserveTheme(theme))
             }
         } label: {
-            Text("Thèmes").foregroundStyle(.secondary)
+            // Ex-« Thèmes ». Le champ sous-jacent (`theme`, `themesPresents`)
+            // garde son nom — seul CE libellé de sidebar est renommé.
+            Text("Genres").foregroundStyle(.secondary)
         }
     }
 
