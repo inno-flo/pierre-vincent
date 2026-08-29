@@ -1094,11 +1094,15 @@ struct ContentView: View {
 
     // MARK: Contenu des deux grands blocs de la sidebar
     //
-    // Trois niveaux de hiérarchie :
-    //   1. grand intitulé   gris, sans gras — style natif d'un en-tête
-    //                       (Ventes et dons, Réserve)
-    //   2. sous-groupe      corps + semi-gras (Catégories, Modes de vente…)
-    //   3. libellé          corps normal      (Tableaux, Dessins…)
+    // Trois niveaux de hiérarchie, marqués par la seule INDENTATION native de
+    // la liste — plus par la graisse. Les en-têtes (grand intitulé ET
+    // sous-groupe) partagent désormais le même style gris sans gras, celui
+    // qu'un en-tête de sidebar a nativement ; les sous-groupes étaient en
+    // semi-gras, donc plus voyants que le grand intitulé qu'ils surplombent
+    // depuis que celui-ci a perdu sa graisse — hiérarchie inversée, corrigée.
+    //   1. grand intitulé   gris, sans gras (Ventes et dons, Réserve)
+    //   2. sous-groupe      gris, sans gras (Catégories, Modes de vente…)
+    //   3. libellé          corps normal, en couleur (Tableaux, Dessins…)
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
@@ -1115,7 +1119,7 @@ struct ContentView: View {
             lien(.dessinsVendus)
             lien(.tapisVendus)
         } label: {
-            Text("Catégories").fontWeight(.semibold)
+            Text("Catégories").foregroundStyle(.secondary)
         }
         // Sous-groupe des modes de vente, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocModesVenteOuvert) {
@@ -1123,7 +1127,7 @@ struct ContentView: View {
                 lien(.modeVente(mode))
             }
         } label: {
-            Text("Modes de vente").fontWeight(.semibold)
+            Text("Modes de vente").foregroundStyle(.secondary)
         }
     }
 
@@ -1178,7 +1182,7 @@ struct ContentView: View {
             lien(.reserveTableaux)
             lien(.reserveDessins)
         } label: {
-            Text("Catégories").fontWeight(.semibold)
+            Text("Catégories").foregroundStyle(.secondary)
         }
         // Sous-groupe des thèmes, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocReserveThemesOuvert) {
@@ -1186,7 +1190,7 @@ struct ContentView: View {
                 lien(.reserveTheme(theme))
             }
         } label: {
-            Text("Thèmes").fontWeight(.semibold)
+            Text("Thèmes").foregroundStyle(.secondary)
         }
     }
 

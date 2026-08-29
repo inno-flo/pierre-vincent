@@ -1339,13 +1339,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     - **Arbitrage assumé** : entre un en-tête vraiment hors de la carte et une
       animation native fiable, la seconde a été choisie. Ne pas retenter le
       `header:` + `if` sans une autre méthode pour l'animation.
-  - **Incohérence constatée, non corrigée** : les en-têtes de SOUS-groupe
-    (« Catégories », « Modes de vente », « Thèmes ») gardent
-    `.fontWeight(.semibold)`, plus lourd que les deux grands en-têtes
-    ci-dessus, désormais sans graisse. La hiérarchie voulue à l'origine
-    (niveau 1 plus marqué que le niveau 2) s'est donc inversée en cours de
-    route. Signalé, pas tranché : aligner les sous-groupes sur le même style
-    plat demande une décision, pas juste une correction technique.
+  - **Incohérence corrigée** : les en-têtes de SOUS-groupe (« Catégories »,
+    « Modes de vente », « Thèmes ») portaient `.fontWeight(.semibold)`, plus
+    lourd que les deux grands en-têtes ci-dessus depuis que ceux-ci ont perdu
+    leur graisse — hiérarchie inversée. Alignés sur le même style plat : gris
+    (`.foregroundStyle(.secondary)`), sans graisse imposée. Code PARTAGÉ entre
+    les deux plateformes (`contenuVentesEtDons`/`contenuStock`, utilisés par
+    le `Section(isExpanded:)` macOS ET le `DisclosureGroup` iOS) : le
+    correctif s'applique donc aux deux d'un coup, sans code à dupliquer.
+    Les trois niveaux de la sidebar se distinguent désormais par
+    l'INDENTATION native de la liste, plus par la graisse.
 - **iOS — l'app suit PARTOUT la sémantique GROUPÉE : page grise, cartes
   blanches.** Deux couleurs, et deux seulement, portent tous les fonds des
   vues ; elles forment une PAIRE et doivent rester du même jeu.
