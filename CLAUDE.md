@@ -1318,25 +1318,34 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     d'abord sur macOS : même style natif que tous les autres en-têtes de la
     sidebar, sans police ni graisse imposées, `.foregroundStyle(.secondary)`
     explicite.
-  - **iOS — les mêmes en-têtes SORTIS de leur bloc.** Posés comme `label:`
-    d'un `DisclosureGroup`, ils restaient une ligne DU bloc groupé — même
-    carte blanche que son contenu — au lieu d'un en-tête flottant au-dessus,
-    comme sur macOS. Sortir un en-tête de la carte demande de renoncer au
-    `DisclosureGroup` : `boutonEnTeteBloc(_:ouvert:)` pose à la main, dans le
-    vrai `header:` d'une `Section` (rendu par le système EN DEHORS de la
-    carte), un bouton qui bascule l'état d'ouverture avec une flèche
-    pivotante — ce que `DisclosureGroup` offrait, refait manuellement
-    puisqu'il fallait sortir de son mécanisme. Le contenu du bloc devient un
-    simple `if ouvert { … }` dans la `Section`. Même style que macOS : aucune
-    police ni graisse imposée, `.foregroundStyle(.secondary)` explicite.
-    `Section(isExpanded:)` reste hors de propos ici, pour la raison déjà
-    connue : ignoré par `.insetGrouped`.
-    - **Transition brutale, corrigée** : `DisclosureGroup` animait le
-      repli tout seul ; le simple `if ouvert { … }` qui l'a remplacé, non —
-      une `List` n'anime l'apparition/disparition d'un bloc de lignes que si
-      elles portent un `.transition()` explicite. Posé sur `contenuVentesEtDons`
-      / `contenuStock` : `.opacity.combined(with: .move(edge: .top))`, la même
-      combinaison que la transition de fiche iPhone (`DetailiOS`).
+  - **iOS — sortir ces en-têtes de leur bloc : ESSAYÉ, REVERTÉ.** Posés comme
+    `label:` d'un `DisclosureGroup`, ils restent une ligne DU bloc groupé —
+    même carte blanche que son contenu — au lieu d'un en-tête flottant
+    au-dessus, comme sur macOS. Un essai les a sortis dans le vrai `header:`
+    d'une `Section` (rendu par le système EN DEHORS de la carte), avec un
+    bouton posé à la main pour retrouver le bascule d'ouverture et une flèche
+    pivotante à la place du chevron natif.
+    - **Cause du revert** : une `List` sur iOS n'anime l'apparition ou la
+      disparition de lignes brutes (un simple `if ouvert { … }`) que si elles
+      passent par un mécanisme de diff qu'elle reconnaît — `ForEach` avec
+      `onDelete`/`onMove`, ou `DisclosureGroup` lui-même. Un `.transition()`
+      posé sur le contenu n'y changeait rien : l'ouverture/fermeture devenait
+      « on/off » au lieu de glisser, régression constatée à l'usage.
+    - **Revert complet** : retour à `DisclosureGroup`, qui anime nativement et
+      sans ce risque. L'en-tête redevient donc techniquement la première
+      ligne de sa carte — pas un en-tête flottant comme sur macOS — mais
+      garde le style discret voulu : aucune police ni graisse imposée,
+      `.foregroundStyle(.secondary)` explicite, comme sur macOS.
+    - **Arbitrage assumé** : entre un en-tête vraiment hors de la carte et une
+      animation native fiable, la seconde a été choisie. Ne pas retenter le
+      `header:` + `if` sans une autre méthode pour l'animation.
+  - **Incohérence constatée, non corrigée** : les en-têtes de SOUS-groupe
+    (« Catégories », « Modes de vente », « Thèmes ») gardent
+    `.fontWeight(.semibold)`, plus lourd que les deux grands en-têtes
+    ci-dessus, désormais sans graisse. La hiérarchie voulue à l'origine
+    (niveau 1 plus marqué que le niveau 2) s'est donc inversée en cours de
+    route. Signalé, pas tranché : aligner les sous-groupes sur le même style
+    plat demande une décision, pas juste une correction technique.
 - **iOS — l'app suit PARTOUT la sémantique GROUPÉE : page grise, cartes
   blanches.** Deux couleurs, et deux seulement, portent tous les fonds des
   vues ; elles forment une PAIRE et doivent rester du même jeu.

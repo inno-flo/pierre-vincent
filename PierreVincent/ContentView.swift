@@ -514,33 +514,37 @@ struct ContentView: View {
                     #if os(iOS)
                     // Sur iOS, `Section(isExpanded:)` n'est honoré qu'avec
                     // `listStyle(.sidebar)` : en `.insetGrouped`, le paramètre
-                    // est ignoré et la section n'est pas repliable.
+                    // est ignoré et la section n'est pas repliable. On passe
+                    // donc par un `DisclosureGroup`, qui l'est toujours.
                     //
-                    // Un `DisclosureGroup` en label RESTAIT DANS le bloc :
-                    // posé comme label d'un `DisclosureGroup`, l'en-tête
-                    // devenait une ligne DU bloc groupé (même carte blanche
-                    // que son contenu), pas un en-tête flottant au-dessus
-                    // comme sur macOS. En sortir demande de renoncer à
-                    // `DisclosureGroup` : le repli est piloté à la main via
-                    // un bouton posé dans `header:`, la vraie zone d'en-tête
-                    // d'une `Section`, rendue EN DEHORS de la carte groupée.
-                    // Même style qu'sur macOS : aucune police ni graisse
-                    // imposée, `.foregroundStyle(.secondary)` explicite.
+                    // **REVERT assumé** : un temps sorti dans le vrai `header:`
+                    // d'une `Section` pour ne plus faire partie de la carte
+                    // groupée (comme sur macOS) — mais une `List` sur iOS
+                    // n'anime l'apparition/disparition de lignes brutes que si
+                    // elles passent par un mécanisme de diff qu'elle reconnaît
+                    // (`ForEach` avec `onDelete`/`onMove`, ou `DisclosureGroup`
+                    // lui-même) ; un simple `if ouvert { … }` ne l'est pas, et
+                    // aucun `.transition()` n'y changeait rien. L'ouverture
+                    // devenait « on/off » au lieu de glisser. Revenu à
+                    // `DisclosureGroup` pour retrouver cette animation NATIVE,
+                    // garantie par le système plutôt que reconstruite à la
+                    // main — l'en-tête redevient donc la première ligne de sa
+                    // carte, mais garde le style discret voulu : aucune police
+                    // ni graisse imposée, `.foregroundStyle(.secondary)`
+                    // explicite, comme sur macOS.
                     Section {
-                        if blocVentesOuvert {
+                        DisclosureGroup(isExpanded: $blocVentesOuvert) {
                             contenuVentesEtDons
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        } label: {
+                            Text("Ventes et dons").foregroundStyle(.secondary)
                         }
-                    } header: {
-                        boutonEnTeteBloc("Ventes et dons", ouvert: $blocVentesOuvert)
                     }
                     Section {
-                        if blocStockOuvert {
+                        DisclosureGroup(isExpanded: $blocStockOuvert) {
                             contenuStock
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        } label: {
+                            Text("Réserve").foregroundStyle(.secondary)
                         }
-                    } header: {
-                        boutonEnTeteBloc("Réserve", ouvert: $blocStockOuvert)
                     }
                     // Rubrique ISOLÉE, détachée des deux blocs : elle ne
                     // relève ni des ventes ni de la réserve, un favori pouvant
@@ -1090,40 +1094,11 @@ struct ContentView: View {
 
     // MARK: Contenu des deux grands blocs de la sidebar
     //
-    // Trois niveaux de hiérarchie, marqués par la taille ET la graisse :
-    //   1. grand intitulé   .title3 + gras   (Ventes et dons, Stock)
-    //   2. sous-groupe      corps + semi-gras (Catégories, Expositions…)
+    // Trois niveaux de hiérarchie :
+    //   1. grand intitulé   gris, sans gras — style natif d'un en-tête
+    //                       (Ventes et dons, Réserve)
+    //   2. sous-groupe      corps + semi-gras (Catégories, Modes de vente…)
     //   3. libellé          corps normal      (Tableaux, Dessins…)
-
-    #if os(iOS)
-    /// En-tête d'un grand bloc de la sidebar (« Ventes et dons », « Réserve »),
-    /// posé dans le `header:` d'une `Section` — la vraie zone d'en-tête,
-    /// rendue par le système EN DEHORS de la carte groupée, contrairement à
-    /// un `DisclosureGroup` posé en contenu, qui restait DANS le bloc.
-    ///
-    /// Le bouton fait à la main ce que `DisclosureGroup` offrait : basculer
-    /// `ouvert` avec une petite flèche qui pivote. `Section(isExpanded:)`
-    /// n'est pas une option ici, voir le commentaire sur son appel.
-    ///
-    /// Style identique à macOS : aucune police ni graisse imposée (le
-    /// système donne le corps `.headline` d'un en-tête `.insetGrouped`),
-    /// `.foregroundStyle(.secondary)` posé explicitement contre l'override
-    /// de toute la hiérarchie de `ContentView`.
-    private func boutonEnTeteBloc(_ titre: String, ouvert: Binding<Bool>) -> some View {
-        Button {
-            withAnimation { ouvert.wrappedValue.toggle() }
-        } label: {
-            HStack {
-                Text(titre)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .rotationEffect(.degrees(ouvert.wrappedValue ? 90 : 0))
-            }
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-    }
-    #endif
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
