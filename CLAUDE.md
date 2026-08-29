@@ -1331,6 +1331,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     police ni graisse imposée, `.foregroundStyle(.secondary)` explicite.
     `Section(isExpanded:)` reste hors de propos ici, pour la raison déjà
     connue : ignoré par `.insetGrouped`.
+    - **Transition brutale, corrigée** : `DisclosureGroup` animait le
+      repli tout seul ; le simple `if ouvert { … }` qui l'a remplacé, non —
+      une `List` n'anime l'apparition/disparition d'un bloc de lignes que si
+      elles portent un `.transition()` explicite. Posé sur `contenuVentesEtDons`
+      / `contenuStock` : `.opacity.combined(with: .move(edge: .top))`, la même
+      combinaison que la transition de fiche iPhone (`DetailiOS`).
 - **iOS — l'app suit PARTOUT la sémantique GROUPÉE : page grise, cartes
   blanches.** Deux couleurs, et deux seulement, portent tous les fonds des
   vues ; elles forment une PAIRE et doivent rester du même jeu.

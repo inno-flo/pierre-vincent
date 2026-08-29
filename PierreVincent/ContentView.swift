@@ -527,12 +527,18 @@ struct ContentView: View {
                     // Même style qu'sur macOS : aucune police ni graisse
                     // imposée, `.foregroundStyle(.secondary)` explicite.
                     Section {
-                        if blocVentesOuvert { contenuVentesEtDons }
+                        if blocVentesOuvert {
+                            contenuVentesEtDons
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     } header: {
                         boutonEnTeteBloc("Ventes et dons", ouvert: $blocVentesOuvert)
                     }
                     Section {
-                        if blocStockOuvert { contenuStock }
+                        if blocStockOuvert {
+                            contenuStock
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     } header: {
                         boutonEnTeteBloc("Réserve", ouvert: $blocStockOuvert)
                     }
