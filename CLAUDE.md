@@ -1310,6 +1310,14 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `listStyle(.sidebar)` fournit bien ce gris, mais le
     `.foregroundStyle(Color.textePrincipal)` appliqué à toute la hiérarchie de
     `ContentView` l'écrase.
+  - **Règle étendue aux DEUX grands en-têtes de bloc**, « Ventes et dons » et
+    « Réserve » : ils portaient `.title3` en gras (`policeGrandIntitule`),
+    bien plus voyant que les en-têtes de sous-groupe (« Catégories », « Modes
+    de vente »…) qu'ils surplombent — hiérarchie visuelle inversée par
+    rapport à la règle ci-dessus. Corrigé sur macOS SEULEMENT : même style
+    natif que tous les autres en-têtes de la sidebar, sans police ni graisse
+    imposées, `.foregroundStyle(.secondary)` explicite. `policeGrandIntitule`
+    reste utilisée sur iOS, où ces deux libellés n'ont pas été touchés.
 - **iOS — l'app suit PARTOUT la sémantique GROUPÉE : page grise, cartes
   blanches.** Deux couleurs, et deux seulement, portent tous les fonds des
   vues ; elles forment une PAIRE et doivent rester du même jeu.

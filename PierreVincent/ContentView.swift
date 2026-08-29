@@ -485,15 +485,23 @@ struct ContentView: View {
                     #if os(macOS)
                     // `Section(isExpanded:)` : mécanisme standard des sidebars
                     // macOS (le triangle d'affichage de Finder ou Mail).
+                    //
+                    // En-têtes SANS police ni graisse imposées : le style
+                    // standard Apple d'un en-tête de sidebar (petit corps,
+                    // gris, graisse normale) vient de `listStyle(.sidebar)`
+                    // lui-même. `.foregroundStyle(.secondary)` doit rester
+                    // posé explicitement : le `.foregroundStyle(Color
+                    // .textePrincipal)` appliqué à toute la hiérarchie de
+                    // `ContentView` écraserait sinon ce gris.
                     Section(isExpanded: $blocVentesOuvert) {
                         contenuVentesEtDons
                     } header: {
-                        Text("Ventes et dons").font(policeGrandIntitule).fontWeight(.bold)
+                        Text("Ventes et dons").foregroundStyle(.secondary)
                     }
                     Section(isExpanded: $blocStockOuvert) {
                         contenuStock
                     } header: {
-                        Text("Réserve").font(policeGrandIntitule).fontWeight(.bold)
+                        Text("Réserve").foregroundStyle(.secondary)
                     }
                     // Rubrique ISOLÉE : une section sans en-tête et sans
                     // repli, détachée des deux blocs. Elle ne relève ni des
