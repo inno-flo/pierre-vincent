@@ -1355,8 +1355,9 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 
   | | macOS | iOS (clair) | iOS (sombre) |
   |---|---|---|---|
-  | `cremeFond` — la PAGE | `windowBackgroundColor` | `systemGroupedBackground` (242,242,247) | noir |
+  | `cremeFond` — la PAGE | `windowBackgroundColor` | **crème fixe** (250,245,235) | noir (`systemGroupedBackground`) |
   | `fondLegende` — la CARTE | `controlBackgroundColor` | `secondarySystemGroupedBackground` (255,255,255) | (28,28,30) |
+  | `fondTuile` — la TUILE | `underPageBackgroundColor` | **même crème** (250,245,235) | (44,44,46) (`tertiarySystemGroupedBackground`) |
 
   - Auparavant, iOS avait l'inverse : page **blanche** (`systemBackground`) et
     cartes **grises** (`secondarySystemBackground`). Les deux valeurs ont été
@@ -1373,6 +1374,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   - `fondGroupe`, créée un temps pour la seule sidebar, a été **absorbée par
     `cremeFond`** : les deux désignaient la même couleur, et deux noms pour une
     même teinte finissent par diverger.
+  - **`cremeFond` et `fondTuile` REPASSÉS en crème fixe sur iOS, à la
+    demande** (250,245,235 — la teinte du thème d'origine, avant l'adoption
+    des couleurs système). Remplace le gris système en mode CLAIR
+    uniquement ; le mode sombre garde le fond système (noir / gris foncé
+    progressif), non concerné par la demande. `fondLegende` (la carte, en
+    blanc) n'est PAS touchée : ce n'est pas un « gris clair », la demande ne
+    la visait pas.
+    - **Le piège du fond fixe rencontré sur macOS ne s'applique pas ici** :
+      il venait de la nécessité de suivre `.windowBackgroundColor` pour
+      rester synchronisé avec la toolbar native, une contrainte propre à
+      macOS. iOS n'a pas de barre système dont le fond doive suivre
+      dynamiquement `systemGroupedBackground` de cette façon.
   - **TROIS niveaux, pas deux** : une tuile posée DANS une carte a son propre
     fond, `fondTuile`. Sans lui, les tuiles de la **Synthèse** étaient
     INVISIBLES : elles utilisaient `fondLegende`, exactement comme la carte qui

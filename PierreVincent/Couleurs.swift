@@ -140,7 +140,18 @@ extension Color {
         #if os(macOS)
         return Color(nsColor: .windowBackgroundColor)
         #else
-        return Color(uiColor: .systemGroupedBackground)
+        // Fond CRÈME fixe (250, 245, 235), la teinte du thème d'origine de
+        // l'app — à la place du gris système, à la demande, sur cette seule
+        // plateforme. Le piège du fond fixe sur macOS (couture avec la
+        // toolbar native, voir plus haut) NE S'APPLIQUE PAS ici : iOS n'a
+        // aucune barre système dont le fond doive suivre dynamiquement
+        // `systemGroupedBackground`. Mode sombre INCHANGÉ : reste le fond
+        // système, seul le clair devient crème.
+        return Color(uiColor: UIColor { t in
+            t.userInterfaceStyle == .dark
+                ? .systemGroupedBackground
+                : UIColor(red: 250/255, green: 245/255, blue: 235/255, alpha: 1)
+        })
         #endif
     }
 
@@ -186,7 +197,15 @@ extension Color {
         #if os(macOS)
         return Color(nsColor: .underPageBackgroundColor)
         #else
-        return Color(uiColor: .tertiarySystemGroupedBackground)
+        // Même crème que `cremeFond` en clair — c'était aussi un fond gris
+        // clair système (`tertiarySystemGroupedBackground`). Mode sombre
+        // INCHANGÉ, pour garder l'alternance progressive de la hiérarchie
+        // à trois niveaux (page/carte/tuile) qui n'existe qu'en sombre.
+        return Color(uiColor: UIColor { t in
+            t.userInterfaceStyle == .dark
+                ? .tertiarySystemGroupedBackground
+                : UIColor(red: 250/255, green: 245/255, blue: 235/255, alpha: 1)
+        })
         #endif
     }
 
