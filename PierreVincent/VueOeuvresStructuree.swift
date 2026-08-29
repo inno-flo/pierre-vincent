@@ -92,7 +92,11 @@ struct VueOeuvresStructuree: View {
     /// Icône du bouton de menu selon le critère actif.
     private var iconeMenu: String {
         if filtreParVendeur {
-            return vendeurFiltre == "Toutes" ? "person.3" : "person.fill"
+            // « person », pas « person.fill » : c'est l'icône que porte
+            // chaque entrée de vendeur dans le menu (voir plus bas). Le
+            // bouton doit reprendre EXACTEMENT celle de l'élément retenu,
+            // pas une variante.
+            return vendeurFiltre == "Toutes" ? "person.3" : "person"
         }
         switch triGalerie {
         case "acheteur":   return "person"
@@ -296,7 +300,9 @@ struct VueOeuvresStructuree: View {
                         // retenu — plus l'icône générique de la rubrique
                         // (`symboleFiltreTous`, « cart »), qui ne dit rien du
                         // critère « vendeur ». Les entrées de vendeur
-                        // prennent `person.fill`, même famille.
+                        // prennent `person`, même famille — et le bouton du
+                        // menu reprend cette icône EXACTE une fois un
+                        // vendeur retenu (`iconeMenu`), pas une variante.
                         Button { vendeurFiltre = "Toutes" } label: {
                             Label(vendeurFiltre == "Toutes" ? "✓ Toutes" : "Toutes",
                                   systemImage: "person.3")

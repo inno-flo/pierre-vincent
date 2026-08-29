@@ -1171,11 +1171,17 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     bas). L'icône de rubrique d'un mode de vente est `cart`, qui ne dit rien
     du critère « vendeur » ; `person.3` rejoint la famille déjà utilisée par
     `iconeMenu` pour le bouton lui-même (`person.3` sans filtre,
-    `person.fill` un vendeur retenu) et par les entrées de vendeur
-    (`person.fill`) — toute la famille « personne » raconte le même critère.
+    `person` un vendeur retenu) et par les entrées de vendeur
+    (`person`) — toute la famille « personne » raconte le même critère.
   - **Le bouton du menu affiche TOUJOURS l'icône de l'élément retenu**
     (`iconeMenu`) : `person.3` tant qu'aucun vendeur n'est choisi, sinon
-    `person.fill` — déjà le comportement en place, non un correctif.
+    `person` un vendeur retenu.
+    - **Bug corrigé** : le bouton affichait `person.fill` une fois un
+      vendeur retenu, alors que ce vendeur est listé avec `person` dans
+      le menu — l'icône du bouton et celle de l'entrée sélectionnée
+      divergeaient, un signal trompeur. `iconeMenu` reprend désormais
+      `person`, l'icône EXACTE de l'entrée, plutôt qu'une variante
+      `.fill` de la même famille.
 - **`modesSansNomEnGalerie` est une liste SÉPARÉE de `modesAvecFiltreVendeur`**,
   bien qu'elles contiennent aujourd'hui les mêmes deux valeurs. L'une décide
   d'un filtre, l'autre d'un affichage. Les fusionner ferait qu'ajouter une
