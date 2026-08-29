@@ -1433,21 +1433,31 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
         seule protection contre une VRAIE couture entre barre de titre et
         contenu. `cremeFond` reste donc sur `.windowBackgroundColor`, et le
         blanc sur blanc que ce paragraphe décrit **reste valable**.
-- **iOS — sidebar : NE PAS repeindre le fond d'une liste groupée.**
-  `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`
-  (légèrement gris), les blocs en `secondarySystemGroupedBackground` (blanc en
-  mode clair) — et c'est cet écart, et lui seul, qui détache visuellement les
-  blocs. La sidebar portait `.scrollContentBackground(.hidden)` suivi d'un
-  `.background(Color.cremeFond)`, hérité du thème crème : depuis le passage aux
-  couleurs système, `cremeFond` vaut `systemBackground`, donc **blanc**. Le fond
-  de la vue prenait ainsi la couleur des blocs et **toute la sidebar devenait
-  uniformément blanche**, sans plus aucune séparation visible.
-  - Correctif : retirer l'override et laisser le style natif faire. Le fond de
-    la COLONNE (hors liste) utilise `Color.fondGroupe`, ajoutée pour l'occasion
-    dans `Couleurs.swift`, sinon la zone du bas trancherait sur la liste.
-  - **`fondGroupe` n'est pas `cremeFond`** : la première est le fond d'une liste
-    groupée, la seconde celui d'une vue ordinaire. Les confondre reproduit
-    exactement ce défaut.
+- **iOS — sidebar : repeindre le fond d'une liste groupée est DANGEREUX si la
+  couleur de repeint peut un jour coïncider avec celle des blocs.**
+  `.insetGrouped` distingue DEUX fonds — la vue en `systemGroupedBackground`,
+  les blocs en `secondarySystemGroupedBackground` (blanc en clair) — et c'est
+  cet écart, et lui seul, qui détache visuellement les blocs.
+  - **Épisode 1 — RETIRÉ.** La sidebar portait `.scrollContentBackground
+    (.hidden)` + `.background(Color.cremeFond)`, hérité du thème crème.
+    Après le passage aux couleurs système, `cremeFond` valait
+    `systemBackground`, donc BLANC — identique aux blocs. **Toute la sidebar
+    devenait uniformément blanche.** Retiré, style natif laissé faire.
+  - **Épisode 2 — REVENU, volontairement.** `cremeFond` a désormais sa propre
+    valeur crème fixe sur iOS (250,245,235 en clair — voir sa définition,
+    section Couleurs), genuinement distincte du blanc des blocs. La
+    condition dangereuse de l'épisode 1 n'est plus réunie : l'override peut
+    revenir sans risque, et sert désormais à donner à la PAGE de la sidebar
+    la même teinte crème que le reste de l'app, au lieu du gris système.
+  - **Leçon générale** : ce n'est pas l'override en lui-même qui est fautif,
+    c'est de repeindre avec une couleur dont la valeur peut, à l'insu de
+    cette vue, finir par coïncider avec celle des blocs. Avant de repeindre
+    le fond d'une liste groupée, vérifier que la couleur utilisée reste
+    structurellement distincte de `fondLegende` (la carte) — pas seulement
+    au moment où le code est écrit.
+  - Le fond de la COLONNE (hors liste) utilise directement `Color.cremeFond`
+    depuis que `fondGroupe`, qui portait cette valeur avant, en a été
+    absorbée — les deux étaient devenues la même couleur.
 - **iOS — sidebar, typographie** (`ContentView.swift`) : tailles relevées via
   `UIFont` (taille de texte « Large ») — body **17 pt**, headline 17 pt
   semi-gras, subheadline 15 pt, **footnote 13 pt**, caption 12/11 pt.

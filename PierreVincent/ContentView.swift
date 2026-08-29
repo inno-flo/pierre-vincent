@@ -566,15 +566,21 @@ struct ContentView: View {
                 }
                 #if os(iOS)
                 .listStyle(.insetGrouped)
-                // PAS de `.scrollContentBackground(.hidden)` suivi d'un fond
-                // peint à la main : `.insetGrouped` distingue DEUX fonds — la
-                // vue en `systemGroupedBackground` (gris), les blocs en
-                // `secondarySystemGroupedBackground` (blanc) — et c'est cet
-                // écart qui détache les blocs. Les repeindre avec `cremeFond`
-                // (soit `systemBackground`, donc BLANC) les alignait sur la
-                // couleur des blocs : toute la sidebar devenait uniformément
-                // blanche. L'override datait du thème crème, qui n'existe
-                // plus ; le style natif donne exactement le rendu voulu.
+                // `.scrollContentBackground(.hidden)` + fond peint à la
+                // main : repeint la PAGE de la liste en crème, sans toucher
+                // aux blocs (`secondarySystemGroupedBackground`, blancs, non
+                // concernés — cet override ne vise que le fond de la vue).
+                //
+                // **Un override identique avait été retiré ici** à une
+                // époque où `cremeFond` valait `systemBackground`, donc
+                // BLANC : repeindre avec alignait la page sur la couleur des
+                // blocs, et toute la sidebar devenait uniformément blanche.
+                // Depuis, `cremeFond` a sa propre valeur crème fixe sur iOS
+                // (voir sa définition), distincte du blanc des blocs — cette
+                // condition dangereuse n'est plus réunie, l'override peut
+                // revenir en toute sécurité.
+                .scrollContentBackground(.hidden)
+                .background(Color.cremeFond)
             #else
                 .listStyle(.sidebar)
                 // La sélection native devient grise lorsque le contenu
