@@ -514,21 +514,27 @@ struct ContentView: View {
                     #if os(iOS)
                     // Sur iOS, `Section(isExpanded:)` n'est honoré qu'avec
                     // `listStyle(.sidebar)` : en `.insetGrouped`, le paramètre
-                    // est ignoré et la section n'est pas repliable. On passe
-                    // donc par un `DisclosureGroup`, qui l'est toujours.
+                    // est ignoré et la section n'est pas repliable.
+                    //
+                    // Un `DisclosureGroup` en label RESTAIT DANS le bloc :
+                    // posé comme label d'un `DisclosureGroup`, l'en-tête
+                    // devenait une ligne DU bloc groupé (même carte blanche
+                    // que son contenu), pas un en-tête flottant au-dessus
+                    // comme sur macOS. En sortir demande de renoncer à
+                    // `DisclosureGroup` : le repli est piloté à la main via
+                    // un bouton posé dans `header:`, la vraie zone d'en-tête
+                    // d'une `Section`, rendue EN DEHORS de la carte groupée.
+                    // Même style qu'sur macOS : aucune police ni graisse
+                    // imposée, `.foregroundStyle(.secondary)` explicite.
                     Section {
-                        DisclosureGroup(isExpanded: $blocVentesOuvert) {
-                            contenuVentesEtDons
-                        } label: {
-                            Text("Ventes et dons").font(policeGrandIntitule).fontWeight(.bold)
-                        }
+                        if blocVentesOuvert { contenuVentesEtDons }
+                    } header: {
+                        boutonEnTeteBloc("Ventes et dons", ouvert: $blocVentesOuvert)
                     }
                     Section {
-                        DisclosureGroup(isExpanded: $blocStockOuvert) {
-                            contenuStock
-                        } label: {
-                            Text("Réserve").font(policeGrandIntitule).fontWeight(.bold)
-                        }
+                        if blocStockOuvert { contenuStock }
+                    } header: {
+                        boutonEnTeteBloc("Réserve", ouvert: $blocStockOuvert)
                     }
                     // Rubrique ISOLÉE, détachée des deux blocs : elle ne
                     // relève ni des ventes ni de la réserve, un favori pouvant
@@ -1083,11 +1089,35 @@ struct ContentView: View {
     //   2. sous-groupe      corps + semi-gras (Catégories, Expositions…)
     //   3. libellé          corps normal      (Tableaux, Dessins…)
 
-    /// Police des deux grands intitulés (« Ventes et dons », « Stock »).
-    /// `.title3` = 15 pt sur macOS, 20 pt sur iOS : plus gros que les libellés
-    /// de rubrique (13 / 17 pt) dans les deux cas, ce qui marque la hiérarchie
-    /// sans sortir du barème système.
-    private var policeGrandIntitule: Font { .title3 }
+    #if os(iOS)
+    /// En-tête d'un grand bloc de la sidebar (« Ventes et dons », « Réserve »),
+    /// posé dans le `header:` d'une `Section` — la vraie zone d'en-tête,
+    /// rendue par le système EN DEHORS de la carte groupée, contrairement à
+    /// un `DisclosureGroup` posé en contenu, qui restait DANS le bloc.
+    ///
+    /// Le bouton fait à la main ce que `DisclosureGroup` offrait : basculer
+    /// `ouvert` avec une petite flèche qui pivote. `Section(isExpanded:)`
+    /// n'est pas une option ici, voir le commentaire sur son appel.
+    ///
+    /// Style identique à macOS : aucune police ni graisse imposée (le
+    /// système donne le corps `.headline` d'un en-tête `.insetGrouped`),
+    /// `.foregroundStyle(.secondary)` posé explicitement contre l'override
+    /// de toute la hiérarchie de `ContentView`.
+    private func boutonEnTeteBloc(_ titre: String, ouvert: Binding<Bool>) -> some View {
+        Button {
+            withAnimation { ouvert.wrappedValue.toggle() }
+        } label: {
+            HStack {
+                Text(titre)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .rotationEffect(.degrees(ouvert.wrappedValue ? 90 : 0))
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+    }
+    #endif
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {

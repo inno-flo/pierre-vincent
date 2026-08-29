@@ -1311,13 +1311,26 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `.foregroundStyle(Color.textePrincipal)` appliqué à toute la hiérarchie de
     `ContentView` l'écrase.
   - **Règle étendue aux DEUX grands en-têtes de bloc**, « Ventes et dons » et
-    « Réserve » : ils portaient `.title3` en gras (`policeGrandIntitule`),
-    bien plus voyant que les en-têtes de sous-groupe (« Catégories », « Modes
-    de vente »…) qu'ils surplombent — hiérarchie visuelle inversée par
-    rapport à la règle ci-dessus. Corrigé sur macOS SEULEMENT : même style
-    natif que tous les autres en-têtes de la sidebar, sans police ni graisse
-    imposées, `.foregroundStyle(.secondary)` explicite. `policeGrandIntitule`
-    reste utilisée sur iOS, où ces deux libellés n'ont pas été touchés.
+    « Réserve » : ils portaient `.title3` en gras (`policeGrandIntitule`,
+    supprimée depuis, plus aucun appelant), bien plus voyant que les en-têtes
+    de sous-groupe (« Catégories », « Modes de vente »…) qu'ils surplombent —
+    hiérarchie visuelle inversée par rapport à la règle ci-dessus. Corrigé
+    d'abord sur macOS : même style natif que tous les autres en-têtes de la
+    sidebar, sans police ni graisse imposées, `.foregroundStyle(.secondary)`
+    explicite.
+  - **iOS — les mêmes en-têtes SORTIS de leur bloc.** Posés comme `label:`
+    d'un `DisclosureGroup`, ils restaient une ligne DU bloc groupé — même
+    carte blanche que son contenu — au lieu d'un en-tête flottant au-dessus,
+    comme sur macOS. Sortir un en-tête de la carte demande de renoncer au
+    `DisclosureGroup` : `boutonEnTeteBloc(_:ouvert:)` pose à la main, dans le
+    vrai `header:` d'une `Section` (rendu par le système EN DEHORS de la
+    carte), un bouton qui bascule l'état d'ouverture avec une flèche
+    pivotante — ce que `DisclosureGroup` offrait, refait manuellement
+    puisqu'il fallait sortir de son mécanisme. Le contenu du bloc devient un
+    simple `if ouvert { … }` dans la `Section`. Même style que macOS : aucune
+    police ni graisse imposée, `.foregroundStyle(.secondary)` explicite.
+    `Section(isExpanded:)` reste hors de propos ici, pour la raison déjà
+    connue : ignoré par `.insetGrouped`.
 - **iOS — l'app suit PARTOUT la sémantique GROUPÉE : page grise, cartes
   blanches.** Deux couleurs, et deux seulement, portent tous les fonds des
   vues ; elles forment une PAIRE et doivent rester du même jeu.
