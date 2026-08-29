@@ -1828,6 +1828,13 @@ JavaScript, inexploitables par extraction) :
     précédents : `titre` traduit, `modeVente` sur l'œuvre et
     `modesDeVenteReference` restent « Vente privée ». Y toucher romprait la
     reconnaissance des œuvres déjà classées dans ce mode.
+- **Sous-groupe « Supports » MASQUÉ, essai** (`afficherSupportsSidebar` dans
+  `TriEtTotaux.swift`) : dans les DEUX sections de la sidebar — « Ventes et
+  dons » et « Réserve » — sur les deux plateformes. Code conservé, `true`
+  restaure les deux d'un coup. `categoriesSidebar` (navigation clavier
+  macOS) ne propose plus ses rubriques (Tableaux/Dessins/Tapis vendus,
+  Tableaux/Dessins de la Réserve) tant que le drapeau est à `false` — sans
+  ce garde-fou, ↑↓ aurait pu s'arrêter sur une rubrique invisible à l'écran.
 
 - **iOS — pas de récapitulatif dans Ventes ni dans Dons** : leur seule ligne
   (« Nombre de ventes », « Nombre de dons ») annonçait un nombre que le

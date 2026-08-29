@@ -168,6 +168,12 @@ let afficherBoutonPrixToolbar = false
 /// Favoris ne sont pas concernés, voir `Categorie.estSectionVentesEtDons`.
 let afficherPastillesVentesEtDons = false
 
+/// Sous-groupe « Supports » (ex-« Catégories ») dans les DEUX sections de la
+/// sidebar — « Ventes et dons » et « Réserve » : essai, masqué sans
+/// supprimer le code. Repasser à `true` le restaure dans les deux sections
+/// d'un coup, sur les deux plateformes (`ContentView.swift`).
+let afficherSupportsSidebar = false
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

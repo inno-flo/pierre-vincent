@@ -918,7 +918,7 @@ struct ContentView: View {
             // rubrique dans un ordre qui ne correspond à rien de visible :
             // Catalogue, Supports, Ventes, Modes de vente, Dons, Synthèse.
             liste.append(.oeuvres)
-            if sousBlocCategoriesOuvert {
+            if afficherSupportsSidebar && sousBlocCategoriesOuvert {
                 liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
             }
             liste.append(.ventesRealisees)
@@ -933,7 +933,7 @@ struct ContentView: View {
             liste.append(.reserveCollection)
             // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
             // rubrique dans un ordre qui ne correspond à rien de visible.
-            if sousBlocReserveCategoriesOuvert {
+            if afficherSupportsSidebar && sousBlocReserveCategoriesOuvert {
                 liste.append(.reserveTableaux)
                 liste.append(.reserveDessins)
             }
@@ -1154,12 +1154,16 @@ struct ContentView: View {
         // Sous-groupe repliable des catégories d'œuvres, ex-« Catégories ».
         // `DisclosureGroup` et non `Section` : une `List` n'accepte pas de
         // Section dans une Section.
-        DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
-            lien(.tableauxVendus)
-            lien(.dessinsVendus)
-            lien(.tapisVendus)
-        } label: {
-            Text("Supports").foregroundStyle(.secondary)
+        //
+        // Essai : masqué, voir `afficherSupportsSidebar`.
+        if afficherSupportsSidebar {
+            DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
+                lien(.tableauxVendus)
+                lien(.dessinsVendus)
+                lien(.tapisVendus)
+            } label: {
+                Text("Supports").foregroundStyle(.secondary)
+            }
         }
         lien(.ventesRealisees)
         // Sous-groupe des modes de vente, construit d'après les données.
@@ -1221,12 +1225,16 @@ struct ContentView: View {
         lien(.reserveCollection)
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
-        DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
-            lien(.reserveTableaux)
-            lien(.reserveDessins)
-        } label: {
-            // Ex-« Catégories ».
-            Text("Supports").foregroundStyle(.secondary)
+        //
+        // Essai : masqué, voir `afficherSupportsSidebar`.
+        if afficherSupportsSidebar {
+            DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
+                lien(.reserveTableaux)
+                lien(.reserveDessins)
+            } label: {
+                // Ex-« Catégories ».
+                Text("Supports").foregroundStyle(.secondary)
+            }
         }
         // Sous-groupe des thèmes, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocReserveThemesOuvert) {
