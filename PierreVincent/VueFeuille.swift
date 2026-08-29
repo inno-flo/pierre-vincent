@@ -761,6 +761,23 @@ struct VueFeuille: View {
 
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
+        // Essai — Catalogue de « Ventes et dons » seulement : pastilles de
+        // type + compteur, alignées à GAUCHE de la toolbar. Placées AVANT le
+        // spacer flexible ci-dessous, qui pousse tout ce qui le SUIT vers la
+        // droite — les mettre après l'aurait fait pousser avec le reste.
+        //
+        // **Chaque pastille est son PROPRE `ToolbarItem`**, et non un seul
+        // `ToolbarItem` enveloppant un `HStack` de plusieurs boutons : posées
+        // ensemble, macOS les rendait comme un unique bouton englobant toute
+        // la rangée (bordure système autour du bloc entier), au lieu de
+        // pastilles indépendantes.
+        if pastillesTypeDansToolbar && filtreParType {
+            ForEach(typesFiltre, id: \.self) { mot in
+                ToolbarItem { pastilleType(libelle: libelleTypeFiltrable(mot), mot: mot) }
+            }
+            ToolbarItem { pastilleCompteur }
+        }
+
         // Spacer flexible en tête : pousse tous les boutons vers la droite
         // du panneau de contenu (jamais au-dessus de la colonne inspecteur).
         ToolbarSpacer(.flexible)
@@ -825,15 +842,6 @@ struct VueFeuille: View {
         // Retiré pour l'instant, comme sur iOS : voir `afficherMenuFiltreTypeToolbar`.
         if afficherMenuFiltreTypeToolbar && filtreParType {
             ToolbarItem { menuFiltreType }
-        }
-        // Essai — Catalogue de « Ventes et dons » seulement : les MÊMES
-        // pastilles que le bandeau, mais posées directement dans la toolbar
-        // au lieu d'un bandeau translucide séparé en dessous. Voir
-        // `Categorie.pastillesTypeDansToolbar`.
-        if pastillesTypeDansToolbar && filtreParType {
-            ToolbarItem { pastillesTypeToolbar }
-            ToolbarSpacer(.fixed)
-            ToolbarItem { pastilleCompteur }
         }
         // Galerie en tête : c'est la présentation par défaut à la première
         // ouverture d'une vue (`modeAffichage` vaut "icone").
@@ -1140,19 +1148,6 @@ struct VueFeuille: View {
     ///   composés : les valeurs distinctes ne feraient pas deux pastilles mais
     ///   des dizaines.
     ///
-    /// Essai — les pastilles de TYPE seules (Catalogue n'a jamais de filtre
-    /// par vendeur), posées directement dans la toolbar. Mêmes pastilles que
-    /// `bandeauFiltres`, mêmes `pastilleType(libelle:mot:)` — pas de
-    /// deuxième version à tenir d'accord, seul l'endroit où elles sont
-    /// posées change.
-    private var pastillesTypeToolbar: some View {
-        HStack(spacing: 8) {
-            ForEach(typesFiltre, id: \.self) { mot in
-                pastilleType(libelle: libelleTypeFiltrable(mot), mot: mot)
-            }
-        }
-    }
-
     /// Le bandeau s'affiche dès que la rubrique le déclare, même sans aucune
     /// pastille : le compteur, lui, a toujours du sens.
     private var bandeauFiltres: some View {
