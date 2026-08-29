@@ -1318,36 +1318,27 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     d'abord sur macOS : même style natif que tous les autres en-têtes de la
     sidebar, sans police ni graisse imposées, `.foregroundStyle(.secondary)`
     explicite.
-  - **iOS — sortir ces en-têtes de leur bloc, EN COURS D'ESSAI (2ᵉ tentative,
-    résultat non encore confirmé à l'écran).** Posés comme `label:` d'un
-    `DisclosureGroup`, ils restent une ligne DU bloc groupé — même carte
-    blanche que son contenu — au lieu d'un en-tête flottant au-dessus, comme
-    sur macOS. `boutonEnTeteBloc(_:ouvert:)` les sort dans le vrai `header:`
-    d'une `Section` (rendu par le système EN DEHORS de la carte), avec un
-    bouton posé à la main pour retrouver le bascule d'ouverture et une flèche
-    pivotante à la place du chevron natif ; le contenu du bloc devient un
+  - **iOS — en-têtes SORTIS de leur bloc, confirmé fluide à l'écran.** Posés
+    comme `label:` d'un `DisclosureGroup`, ils restaient une ligne DU bloc
+    groupé — même carte blanche que son contenu — au lieu d'un en-tête
+    flottant au-dessus, comme sur macOS. `boutonEnTeteBloc(_:ouvert:)` les
+    sort dans le vrai `header:` d'une `Section` (rendu par le système EN
+    DEHORS de la carte), avec un bouton qui bascule l'ouverture et une
+    flèche pivotante à la place du chevron natif ; le contenu du bloc est un
     `if ouvert { … }` portant un `.transition()`.
-    - **Premier essai, échoué** : combinait DEUX causes possibles à la
-      transition « on/off » — `blocVentesOuvert`/`blocStockOuvert` en
-      `@AppStorage` (dont la notification de changement n'arrive pas
-      toujours dans la même transaction qu'un `withAnimation` — voir plus
-      bas, section sidebar, pour ce défaut en détail) ET ce même `if` brut,
+    - **Deux tentatives ont été nécessaires.** La première combinait DEUX
+      causes possibles à une transition « on/off » constatée à l'usage :
+      `blocVentesOuvert`/`blocStockOuvert` en `@AppStorage` (voir plus bas,
+      section sidebar, pour ce défaut en détail) ET ce même `if` brut,
       qu'une `List` sur iOS n'anime de façon fiable que via un mécanisme de
       diff qu'elle reconnaît (`ForEach` + `onDelete`/`onMove`, ou
-      `DisclosureGroup`). Reverté à l'époque vers `DisclosureGroup`, sans
-      savoir laquelle des deux causes dominait.
-    - **Passage en `@State` depuis** : la cause `@AppStorage` est corrigée
-      (voir plus bas), et confirmée seule responsable dans le cas
-      `DisclosureGroup` — l'animation y est redevenue fluide.
-    - **Ce second essai reteste `header:` + `if`, cette fois avec l'état déjà
-      assaini.** S'il anime correctement, le `if` brut n'était pas en cause :
-      c'était `@AppStorage` depuis le début, et l'en-tête peut rester hors de
-      la carte. S'il reste saccadé, c'est bien le `if` qui pose problème
-      indépendamment de l'état, et il faudra revenir à `DisclosureGroup`
-      (déjà fait une fois, voir l'historique Git) ou trouver un troisième
-      mécanisme. **Non vérifié à l'écran au moment d'écrire ceci** — le
-      panneau du simulateur était indisponible (désactivé dans les réglages
-      de l'environnement, plutôt qu'en panne).
+      `DisclosureGroup`). Sans savoir laquelle des deux dominait, la première
+      tentative avait reverté vers `DisclosureGroup`.
+    - **Conclusion établie** : une fois l'état passé en `@State`
+      (voir plus bas), le MÊME `header:` + `if` a été retesté et s'anime
+      correctement. **`@AppStorage` était bien l'unique cause** — le `if` brut
+      n'a jamais posé de problème en lui-même. Ne pas réintroduire
+      `DisclosureGroup` ici en le confondant avec cette étape transitoire.
   - **Incohérence corrigée** : les en-têtes de SOUS-groupe (« Catégories »,
     « Modes de vente », « Thèmes ») portaient `.fontWeight(.semibold)`, plus
     lourd que les deux grands en-têtes ci-dessus depuis que ceux-ci ont perdu
