@@ -347,6 +347,24 @@ enum Categorie: Hashable, Identifiable {
     /// vendeur), ce qui simplifie ce premier essai.
     var pastillesTypeDansToolbar: Bool { self == .oeuvres }
 
+    /// Vrai pour toute rubrique du premier grand bloc de la sidebar,
+    /// « Ventes et dons » — Catalogue, Ventes, Dons, Synthèse et les
+    /// sous-catégories par mode de vente. Faux pour la Réserve et pour
+    /// Favoris, rubrique isolée hors des deux sections.
+    ///
+    /// Sert à `afficherPastillesVentesEtDons` (`TriEtTotaux.swift`), essai
+    /// qui désactive les pastilles de filtre et le compteur associé dans
+    /// TOUTE cette section d'un seul coup.
+    var estSectionVentesEtDons: Bool {
+        switch self {
+        case .oeuvres, .tableauxVendus, .dessinsVendus, .tapisVendus,
+             .oeuvresDonnees, .ventesRealisees, .modeVente, .synthese:
+            return true
+        default:
+            return false
+        }
+    }
+
     var filtreParVendeur: Bool {
         guard case .modeVente(let m) = self else { return false }
         return Categorie.modesAvecFiltreVendeur.contains {
@@ -647,6 +665,7 @@ struct ContentView: View {
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
                                pastillesTypeDansToolbar: cat.pastillesTypeDansToolbar,
+                               estSectionVentesEtDons: cat.estSectionVentesEtDons,
                                nbSelection: $nbSelection)
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
                     // toute la vue à chaque changement de rubrique, donc aussi

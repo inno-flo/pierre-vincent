@@ -53,6 +53,8 @@ struct VueFeuille: View {
     /// Essai — pastilles de type dans la toolbar plutôt que dans le bandeau
     /// translucide, voir `Categorie.pastillesTypeDansToolbar`.
     let pastillesTypeDansToolbar: Bool
+    /// Voir `Categorie.estSectionVentesEtDons` et `afficherPastillesVentesEtDons`.
+    let estSectionVentesEtDons: Bool
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
     @Binding var nbSelection: Int
 
@@ -69,6 +71,7 @@ struct VueFeuille: View {
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
          pastillesTypeDansToolbar: Bool = false,
+         estSectionVentesEtDons: Bool = false,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
         self.feuilleAjout = feuilleAjout
@@ -86,7 +89,15 @@ struct VueFeuille: View {
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
         self.pastillesTypeDansToolbar = pastillesTypeDansToolbar
+        self.estSectionVentesEtDons = estSectionVentesEtDons
         self._nbSelection = nbSelection
+    }
+
+    /// Pastilles de filtre et compteur visibles ? Faux uniquement pendant
+    /// l'essai `afficherPastillesVentesEtDons`, et seulement dans la section
+    /// qu'il vise — la Réserve et Favoris ne sont jamais concernés.
+    private var pastillesVisibles: Bool {
+        afficherPastillesVentesEtDons || !estSectionVentesEtDons
     }
 
     @Environment(\.modelContext) private var context
@@ -771,7 +782,7 @@ struct VueFeuille: View {
         // ensemble, macOS les rendait comme un unique bouton englobant toute
         // la rangée (bordure système autour du bloc entier), au lieu de
         // pastilles indépendantes.
-        if pastillesTypeDansToolbar && filtreParType {
+        if pastillesTypeDansToolbar && filtreParType && pastillesVisibles {
             ForEach(typesFiltre, id: \.self) { mot in
                 ToolbarItem { pastilleType(libelle: libelleTypeFiltrable(mot), mot: mot) }
             }
@@ -1097,7 +1108,7 @@ struct VueFeuille: View {
                 // Essai : ce bandeau disparaît pour les rubriques dont les
                 // pastilles sont passées dans la toolbar — voir
                 // `pastillesTypeDansToolbar`.
-                if !pastillesTypeDansToolbar && (filtreParVendeur || filtreParType) {
+                if !pastillesTypeDansToolbar && (filtreParVendeur || filtreParType) && pastillesVisibles {
                     bandeauFiltres
                 }
             }

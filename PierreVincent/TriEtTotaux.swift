@@ -161,6 +161,13 @@ let afficherBoutonCorbeilleToolbar = false
 /// `prixMasques`. Repasser à `true` restaure le bouton.
 let afficherBoutonPrixToolbar = false
 
+/// Pastilles de filtre (type ou vendeur) et compteur associé : essai,
+/// DÉSACTIVÉS pour toute la section « Ventes et dons » — Catalogue (dans la
+/// toolbar), Ventes, Dons, sous-catégories par mode de vente. Code conservé
+/// ; `true` les restaure d'un coup dans toute la section. La Réserve et
+/// Favoris ne sont pas concernés, voir `Categorie.estSectionVentesEtDons`.
+let afficherPastillesVentesEtDons = false
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

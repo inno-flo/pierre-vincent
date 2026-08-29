@@ -469,14 +469,27 @@ diffèrent en tout.
     de couture possible avec lui.
     - Restreint à `.oeuvres` : seule rubrique n'ayant JAMAIS de filtre par
       vendeur, ce qui simplifie ce premier essai à un seul jeu de pastilles
-      (`pastillesTypeToolbar`, réutilise `pastilleType(libelle:mot:)` — pas
-      de deuxième version à tenir d'accord).
-    - Le compteur (`pastilleCompteur`) suit dans la toolbar, séparé par un
-      `ToolbarSpacer(.fixed)`.
+      (`pastillesTypeDansToolbar`, réutilise `pastilleType(libelle:mot:)` —
+      pas de deuxième version à tenir d'accord).
     - **Toutes les autres rubriques à bandeau gardent l'ancien
       comportement inchangé** (Ventes, Dons, Réserve, Favoris, sous-modes de
       vente) : à étendre ailleurs seulement si ce premier essai convient à
       l'usage.
+    - **Disposition** : chaque pastille est son PROPRE `ToolbarItem`, et le
+      compteur (`pastilleCompteur`) un autre — regroupés dans un seul
+      `ToolbarItem` avec un `HStack`, macOS les rendait comme un unique
+      bouton englobant toute la rangée (bordure système autour du bloc
+      entier). L'ensemble est placé AVANT le `ToolbarSpacer(.flexible)` en
+      tête de `contenuBarreOutils`, ce qui l'aligne à GAUCHE pendant que ce
+      spacer pousse le reste de la toolbar à droite.
+  - **ESSAI — pastilles et compteur DÉSACTIVÉS dans toute la section
+    « Ventes et dons »** (`afficherPastillesVentesEtDons` dans
+    `TriEtTotaux.swift`, `false`) : couvre à la fois le bloc toolbar de
+    Catalogue ci-dessus et l'ancien bandeau de Ventes/Dons/modes de vente.
+    `Categorie.estSectionVentesEtDons` dit quelles rubriques sont concernées
+    (tout le premier bloc de la sidebar) ; la Réserve et Favoris n'y entrent
+    jamais. `VueFeuille.pastillesVisibles` combine les deux. Code conservé,
+    `true` restaure tout d'un coup dans toute la section.
 
 ## Import de données depuis PDF (workflow établi)
 
