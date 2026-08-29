@@ -1318,27 +1318,36 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     d'abord sur macOS : même style natif que tous les autres en-têtes de la
     sidebar, sans police ni graisse imposées, `.foregroundStyle(.secondary)`
     explicite.
-  - **iOS — sortir ces en-têtes de leur bloc : ESSAYÉ, REVERTÉ.** Posés comme
-    `label:` d'un `DisclosureGroup`, ils restent une ligne DU bloc groupé —
-    même carte blanche que son contenu — au lieu d'un en-tête flottant
-    au-dessus, comme sur macOS. Un essai les a sortis dans le vrai `header:`
+  - **iOS — sortir ces en-têtes de leur bloc, EN COURS D'ESSAI (2ᵉ tentative,
+    résultat non encore confirmé à l'écran).** Posés comme `label:` d'un
+    `DisclosureGroup`, ils restent une ligne DU bloc groupé — même carte
+    blanche que son contenu — au lieu d'un en-tête flottant au-dessus, comme
+    sur macOS. `boutonEnTeteBloc(_:ouvert:)` les sort dans le vrai `header:`
     d'une `Section` (rendu par le système EN DEHORS de la carte), avec un
     bouton posé à la main pour retrouver le bascule d'ouverture et une flèche
-    pivotante à la place du chevron natif.
-    - **Cause du revert** : une `List` sur iOS n'anime l'apparition ou la
-      disparition de lignes brutes (un simple `if ouvert { … }`) que si elles
-      passent par un mécanisme de diff qu'elle reconnaît — `ForEach` avec
-      `onDelete`/`onMove`, ou `DisclosureGroup` lui-même. Un `.transition()`
-      posé sur le contenu n'y changeait rien : l'ouverture/fermeture devenait
-      « on/off » au lieu de glisser, régression constatée à l'usage.
-    - **Revert complet** : retour à `DisclosureGroup`, qui anime nativement et
-      sans ce risque. L'en-tête redevient donc techniquement la première
-      ligne de sa carte — pas un en-tête flottant comme sur macOS — mais
-      garde le style discret voulu : aucune police ni graisse imposée,
-      `.foregroundStyle(.secondary)` explicite, comme sur macOS.
-    - **Arbitrage assumé** : entre un en-tête vraiment hors de la carte et une
-      animation native fiable, la seconde a été choisie. Ne pas retenter le
-      `header:` + `if` sans une autre méthode pour l'animation.
+    pivotante à la place du chevron natif ; le contenu du bloc devient un
+    `if ouvert { … }` portant un `.transition()`.
+    - **Premier essai, échoué** : combinait DEUX causes possibles à la
+      transition « on/off » — `blocVentesOuvert`/`blocStockOuvert` en
+      `@AppStorage` (dont la notification de changement n'arrive pas
+      toujours dans la même transaction qu'un `withAnimation` — voir plus
+      bas, section sidebar, pour ce défaut en détail) ET ce même `if` brut,
+      qu'une `List` sur iOS n'anime de façon fiable que via un mécanisme de
+      diff qu'elle reconnaît (`ForEach` + `onDelete`/`onMove`, ou
+      `DisclosureGroup`). Reverté à l'époque vers `DisclosureGroup`, sans
+      savoir laquelle des deux causes dominait.
+    - **Passage en `@State` depuis** : la cause `@AppStorage` est corrigée
+      (voir plus bas), et confirmée seule responsable dans le cas
+      `DisclosureGroup` — l'animation y est redevenue fluide.
+    - **Ce second essai reteste `header:` + `if`, cette fois avec l'état déjà
+      assaini.** S'il anime correctement, le `if` brut n'était pas en cause :
+      c'était `@AppStorage` depuis le début, et l'en-tête peut rester hors de
+      la carte. S'il reste saccadé, c'est bien le `if` qui pose problème
+      indépendamment de l'état, et il faudra revenir à `DisclosureGroup`
+      (déjà fait une fois, voir l'historique Git) ou trouver un troisième
+      mécanisme. **Non vérifié à l'écran au moment d'écrire ceci** — le
+      panneau du simulateur était indisponible (désactivé dans les réglages
+      de l'environnement, plutôt qu'en panne).
   - **Incohérence corrigée** : les en-têtes de SOUS-groupe (« Catégories »,
     « Modes de vente », « Thèmes ») portaient `.fontWeight(.semibold)`, plus
     lourd que les deux grands en-têtes ci-dessus depuis que ceux-ci ont perdu

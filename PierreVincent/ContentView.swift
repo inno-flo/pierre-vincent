@@ -522,37 +522,31 @@ struct ContentView: View {
                     #if os(iOS)
                     // Sur iOS, `Section(isExpanded:)` n'est honoré qu'avec
                     // `listStyle(.sidebar)` : en `.insetGrouped`, le paramètre
-                    // est ignoré et la section n'est pas repliable. On passe
-                    // donc par un `DisclosureGroup`, qui l'est toujours.
+                    // est ignoré et la section n'est pas repliable.
                     //
-                    // **REVERT assumé** : un temps sorti dans le vrai `header:`
-                    // d'une `Section` pour ne plus faire partie de la carte
-                    // groupée (comme sur macOS) — mais une `List` sur iOS
-                    // n'anime l'apparition/disparition de lignes brutes que si
-                    // elles passent par un mécanisme de diff qu'elle reconnaît
-                    // (`ForEach` avec `onDelete`/`onMove`, ou `DisclosureGroup`
-                    // lui-même) ; un simple `if ouvert { … }` ne l'est pas, et
-                    // aucun `.transition()` n'y changeait rien. L'ouverture
-                    // devenait « on/off » au lieu de glisser. Revenu à
-                    // `DisclosureGroup` pour retrouver cette animation NATIVE,
-                    // garantie par le système plutôt que reconstruite à la
-                    // main — l'en-tête redevient donc la première ligne de sa
-                    // carte, mais garde le style discret voulu : aucune police
-                    // ni graisse imposée, `.foregroundStyle(.secondary)`
-                    // explicite, comme sur macOS.
+                    // **DEUXIÈME ESSAI** de sortir l'en-tête de sa carte, une
+                    // fois `blocVentesOuvert`/`blocStockOuvert` passés en
+                    // `@State` (voir leur déclaration) : le premier essai
+                    // combinait DEUX causes possibles de la transition « on/
+                    // off » — l'état en `@AppStorage`, ET un `if` brut plutôt
+                    // que `DisclosureGroup`. La première est corrigée ; celui-
+                    // ci teste si la seconde suffisait à elle seule à casser
+                    // l'animation, ou si elle n'y était pour rien.
                     Section {
-                        DisclosureGroup(isExpanded: $blocVentesOuvert) {
+                        if blocVentesOuvert {
                             contenuVentesEtDons
-                        } label: {
-                            Text("Ventes et dons").foregroundStyle(.secondary)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                         }
+                    } header: {
+                        boutonEnTeteBloc("Ventes et dons", ouvert: $blocVentesOuvert)
                     }
                     Section {
-                        DisclosureGroup(isExpanded: $blocStockOuvert) {
+                        if blocStockOuvert {
                             contenuStock
-                        } label: {
-                            Text("Réserve").foregroundStyle(.secondary)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                         }
+                    } header: {
+                        boutonEnTeteBloc("Réserve", ouvert: $blocStockOuvert)
                     }
                     // Rubrique ISOLÉE, détachée des deux blocs : elle ne
                     // relève ni des ventes ni de la réserve, un favori pouvant
@@ -1111,6 +1105,32 @@ struct ContentView: View {
     //   1. grand intitulé   gris, sans gras (Ventes et dons, Réserve)
     //   2. sous-groupe      gris, sans gras (Catégories, Modes de vente…)
     //   3. libellé          corps normal, en couleur (Tableaux, Dessins…)
+
+    #if os(iOS)
+    /// En-tête d'un grand bloc de la sidebar, posé dans le `header:` d'une
+    /// `Section` — la vraie zone d'en-tête, rendue par le système EN DEHORS
+    /// de la carte groupée, contrairement à un `DisclosureGroup` posé en
+    /// contenu, qui reste DANS le bloc.
+    ///
+    /// Le bouton fait à la main ce que `DisclosureGroup` offrait : basculer
+    /// `ouvert` avec une petite flèche qui pivote. Style identique à macOS :
+    /// aucune police ni graisse imposée, `.foregroundStyle(.secondary)`
+    /// explicite.
+    private func boutonEnTeteBloc(_ titre: String, ouvert: Binding<Bool>) -> some View {
+        Button {
+            withAnimation { ouvert.wrappedValue.toggle() }
+        } label: {
+            HStack {
+                Text(titre)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .rotationEffect(.degrees(ouvert.wrappedValue ? 90 : 0))
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+    }
+    #endif
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
