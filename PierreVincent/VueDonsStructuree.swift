@@ -19,9 +19,6 @@ struct VueDonsStructuree: View {
     /// rubrique, voir `Categorie.typesFiltre` — elle en compte TROIS ici :
     /// un tapis figure parmi les dons.
     let typesFiltre: [String]
-    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
-    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
-    let symboleFiltreTous: String
 
 
     @Query private var toutes: [Oeuvre]
@@ -129,15 +126,6 @@ struct VueDonsStructuree: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
-                    // Filtre par type, en TÊTE de la capsule — gardé comme
-                    // dans les deux autres vues : une rubrique passée à zéro
-                    // type y afficherait sinon un menu vide.
-                    // Retiré pour l'instant : voir `afficherMenuFiltreTypeToolbar`.
-                    if afficherMenuFiltreTypeToolbar && !typesFiltre.isEmpty {
-                        MenuFiltreTypes(mots: typesFiltre,
-                                        symboleTous: symboleFiltreTous,
-                                        typeRetenu: $typeRetenu)
-                    }
                     // Galerie en tête : présentation par défaut à la première
                     // ouverture (`modeAffichage` vaut "icone").
                     Button { modeAffichage = "icone" } label: {

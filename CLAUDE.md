@@ -144,9 +144,16 @@ L'app gère des images, du texte et des montants en euros, et propose plusieurs 
     balayage large aurait déplacé un nombre inconnu de tableaux et de dessins,
     donc fait bouger plusieurs compteurs et le contenu des exports. Élargir la
     portée demande une NOUVELLE passe, celle-ci ayant consommé son drapeau.
-  - `purgerReserve` est **DÉBRANCHÉE** et doit le rester : écrite avant
-    l'analyse d'un export, elle visait la feuille `.reserve`, c'est-à-dire la
-    BONNE copie. La rebrancher détruirait la Réserve au premier lancement.
+  - `purgerReserve` a existé, **DÉBRANCHÉE**, le temps qu'un export confirme
+    qu'elle visait le mauvais lot : écrite avant l'analyse, elle ciblait la
+    feuille `.reserve`, qui s'est révélée être la BONNE copie — les vrais
+    doublons étaient ailleurs (`supprimerDoublonsImport`, au-dessus).
+    **Supprimée depuis** (audit de code, 30 août 2026), avec le bloc appelant
+    resté en commentaire dans `ContentView.swift` et le drapeau
+    `reservePurgee` qui le gardait : aucun appelant vivant, et une fonction
+    qui détruit toute la Réserve n'a pas sa place en dur dans le code une
+    fois son unique raison d'être révolue. L'historique reste ici ; le code
+    est dans Git si jamais besoin.
   **Une reprise ne rattrape pas un import ultérieur** : son drapeau est
   consommé au lancement. Un fichier réimporté doit donc déjà porter les
   bonnes valeurs.
@@ -332,8 +339,10 @@ diffèrent en tout.
       donc plusieurs mégaoctets au lieu de 450 Ko, et alourdissait ensuite le
       cache, les exports et les transferts `.pvbase`. Corrigé : cette voie
       passe par `importerImageCompressee` comme les autres.
-    - `enregistrer(image:)` **existe encore** et reste le seul chemin PNG de
-      l'app. Elle n'a plus aucun appelant : ne pas s'en resservir.
+    - `enregistrer(image:)` **et son helper `pngData(de:)` ont été
+      supprimés** (audit de code, 30 août 2026) : plus aucun appelant depuis
+      ce correctif. C'était le seul chemin PNG de l'app ; `enregistrerDonnees`
+      et `jpegData(de:)`, eux, restent et sont toujours utilisés.
     - **Les photos DÉJÀ entrées par cette voie restent lourdes** : corriger
       l'import ne réécrit pas le disque. D'où `RecompressionPhotos.swift`
       (macOS), Fichier › « Recompresser les photos… ».
@@ -482,6 +491,16 @@ diffèrent en tout.
       entier). L'ensemble est placé AVANT le `ToolbarSpacer(.flexible)` en
       tête de `contenuBarreOutils`, ce qui l'aligne à GAUCHE pendant que ce
       spacer pousse le reste de la toolbar à droite.
+    - **SUPPRIMÉ depuis (audit de code, 30 août 2026), pas seulement
+      masqué.** Quand `menuFiltreTypeToolbar` (voir plus bas, « RÉTABLI
+      depuis ») a été étendu à `.oeuvres`, `pastillesVisibles` a appris à
+      s'éteindre pour toute rubrique qui a ce menu — or `.oeuvres` a
+      TOUJOURS les deux à `true`, donc ce bloc ne pouvait plus jamais
+      s'afficher. Code mort de façon certaine (pas un essai qu'on hésite
+      encore à trancher) : supprimé avec la propriété
+      `Categorie.pastillesTypeDansToolbar` et le paramètre qui la portait
+      dans `VueFeuille`. `pastilleType`/`pastilleCompteur` restent, toujours
+      utilisées par `bandeauFiltres`.
   - **ESSAI — pastilles et compteur DÉSACTIVÉS dans toute la section
     « Ventes et dons »** (`afficherPastillesVentesEtDons` dans
     `TriEtTotaux.swift`, `false`) : couvre à la fois le bloc toolbar de
@@ -1016,9 +1035,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - **Visionneuses d'images — en place PARTOUT** (`Categorie.visionneuseIntegree`,
   qui renvoie désormais `true`). Elles remplacent Quick Look dans toutes les
   rubriques, sur les deux plateformes.
-  - Le drapeau est **conservé plutôt que supprimé**, et le code de Quick Look
-    reste derrière lui : renvoyer `false` suffit à revenir en arrière, sur
-    tout ou partie des rubriques.
+  - Le drapeau `visionneuseIntegree` (paramètre) est **conservé** — renvoyer
+    `false` sur `Categorie.visionneuseIntegree` suffirait à revenir en
+    arrière. **Le code de Quick Look, lui, a été supprimé** (audit de code,
+    30 août 2026) : `QuickLook.swift` en entier, `apercuURL` et
+    `.apercuQuickLook` dans `VueFeuille.swift`, et la branche de repli de
+    `declencherApercu()`. `Categorie.visionneuseIntegree` étant fixée à
+    `true` depuis un moment, cette branche n'était plus jamais atteinte par
+    AUCUNE rubrique — pas un essai à trancher, du code mort constaté. Pour
+    revenir à Quick Look sur une rubrique, il faudrait réécrire ce pont
+    (l'ancien code reste dans l'historique Git).
   - Sur iPhone, trois vues ont dû recevoir le geste — `VueiOS`,
     `VueOeuvresStructuree` et `VueDonsStructuree` — chacune ayant son propre
     rendu de vignettes. Sur Mac, `VueFeuille` sert toutes les rubriques : une
@@ -1179,18 +1205,17 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     l'œil (sans effet réel, `naviguer()` garde son propre garde-fou) même en
     bout de liste. Un `.foregroundStyle` explicite, conditionné sur la même
     règle que `.disabled`, est posé en plus sur chaque `Image`.
-- **Sidebar — zone du bas, conservée en commentaire** (`ContentView.swift`,
-  les deux plateformes) : le bas de la barre latérale est **vide**. Il a
-  successivement porté les pastilles de choix de thème, le bouton « G »
-  (mise en gras des en-têtes de section), puis la pastille de comparaison des
-  deux marrons de sélection — tous retirés une fois leur question tranchée :
-  les en-têtes sont en graisse normale, il n'y a plus de sélecteur de thème, et
-  le marron de sélection est arrêté.
-  L'emplacement est **gardé en commentaire** pour y poser au besoin des boutons
-  temporaires de test : deux blocs qui se renvoient l'un à l'autre, l'appel
-  dans la `VStack` de la sidebar (`Divider()` + `barreOutilsBas`) et la
-  propriété `barreOutilsBas` près de `lien()`. Les réactiver demande de
-  décommenter **les deux**, sinon la compilation échoue.
+- **Sidebar — zone du bas** (`ContentView.swift`, les deux plateformes) : le
+  bas de la barre latérale est **vide**. Il a successivement porté les
+  pastilles de choix de thème, le bouton « G » (mise en gras des en-têtes de
+  section), puis la pastille de comparaison des deux marrons de sélection —
+  tous retirés une fois leur question tranchée : les en-têtes sont en
+  graisse normale, il n'y a plus de sélecteur de thème, et le marron de
+  sélection est arrêté.
+  Le squelette `barreOutilsBas` qui restait en commentaire pour y reposer un
+  futur bouton de test a été **retiré** (audit de code, 30 août 2026) : du
+  texte-code inerte, pas un essai à bascule — Git garde l'historique si un
+  nouveau bouton de test est un jour utile ici.
 - **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
   rubrique affiche une pastille arrondie avec le nombre d'œuvres
   correspondant. Deux états, alignés sur le libellé qu'elles accompagnent :
@@ -1315,20 +1340,26 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     bien « tous les thèmes ». **Le menu de filtre par vendeur fait
     exception** à cette règle, voir plus bas : son entrée « Toutes » porte
     `person.3`, pas l'icône de la rubrique.
-  - **Ce menu est RETIRÉ de la barre d'outils, sur les DEUX plateformes** —
-    `menuFiltreType` (macOS), `MenuFiltreTypes` dans les trois vues iOS —
-    gouvernés par le même drapeau `afficherMenuFiltreTypeToolbar`
-    (`TriEtTotaux.swift`). Le bandeau ou la rangée de pastilles reste seul
-    moyen de filtrer par type. Code conservé plutôt que supprimé : repasser
-    le drapeau à `true` restaure le bouton partout d'un coup.
+  - **Ce menu a d'abord été RETIRÉ de la barre d'outils, sur les DEUX
+    plateformes** — `menuFiltreType` (macOS), `MenuFiltreTypes` dans les
+    trois vues iOS — gouvernés par un même drapeau
+    `afficherMenuFiltreTypeToolbar` (`TriEtTotaux.swift`), le bandeau ou la
+    rangée de pastilles restant seul moyen de filtrer par type.
   - **RÉTABLI depuis, mais SEULEMENT sur macOS** (`Categorie.menuFiltreTypeToolbar`,
     `ContentView.swift` + `VueFeuille.swift`) : posé dans la toolbar juste
-    APRÈS la capsule Galerie/Liste. Volontairement **découplé** du drapeau
-    `afficherMenuFiltreTypeToolbar` ci-dessus, qui gouverne aussi les trois
-    menus iOS équivalents — les réactiver aurait doublé les bandeaux de
-    pastilles déjà en place sur iOS pour le même filtre. Chaque entrée garde
-    sa propre icône (`symboleTypeFiltrable`), et l'icône du bouton suit
-    toujours le critère actif (`iconeMenu`, inchangé).
+    APRÈS la capsule Galerie/Liste. Chaque entrée garde sa propre icône
+    (`symboleTypeFiltrable`), et l'icône du bouton suit toujours le critère
+    actif (`iconeMenu`, inchangé).
+    - **`MenuFiltreTypes` (les 3 menus iOS) et `afficherMenuFiltreTypeToolbar`
+      SUPPRIMÉS depuis** (audit de code, 30 août 2026) : macOS a désormais son
+      propre mécanisme, indépendant, et iOS n'a jamais eu de suite prévue
+      pour eux — le bandeau de pastilles y suffit déjà. Le drapeau n'avait
+      plus aucun `if` à gouverner une fois les trois menus retirés, et la
+      struct `MenuFiltreTypes` plus aucun appelant. Les propriétés
+      `symboleFiltreTous` qui n'alimentaient qu'eux dans `VueiOS`,
+      `VueDonsStructuree` et `VueOeuvresStructuree` sont parties avec —
+      `BandeauTypes` (les pastilles) ne les utilisait pas, elle garde sa
+      propre icône « Tous » par défaut.
     - **D'abord restreint à Catalogue et Ventes**, puis **étendu à la
       Réserve et à Favoris** : Catalogue et Collection personnelle de la
       Réserve, toute sous-rubrique de Genres (`.reserveTheme`), et Favoris —
@@ -1651,16 +1682,18 @@ JavaScript, inexploitables par extraction) :
     d'une rubrique (`modeAffichage = "icone"`, une seule clé partagée par
     toute l'app). Une fois changé, le choix reste mémorisé jusqu'au prochain
     changement — comme avant, seul le défaut et l'ordre d'affichage bougent.
-  - **Bouton de corbeille MASQUÉ, essai** (`afficherBoutonCorbeilleToolbar`
-    dans `TriEtTotaux.swift`) : la commande « Supprimer » du menu Édition
-    déclenche la même confirmation, et devient seule voie pour supprimer
-    depuis Galerie et Liste. Code conservé, `true` restaure le bouton.
-  - **Bouton de masquage des prix MASQUÉ, essai** (`afficherBoutonPrixToolbar`
-    dans `TriEtTotaux.swift`) : même patron que le bouton de corbeille
-    ci-dessus. La commande « Masquer les prix » / « Afficher les prix » du
-    menu Présentation reste seule voie de bascule, elle pilote le MÊME
-    `prixMasques` et n'est pas concernée par ce drapeau. Code conservé,
-    `true` restaure le bouton.
+  - **Bouton de corbeille retiré de la toolbar** (essai devenu définitif) :
+    la commande « Supprimer » du menu Édition déclenche la même
+    confirmation, et est seule voie pour supprimer depuis Galerie et Liste.
+    Le drapeau `afficherBoutonCorbeilleToolbar` et son `if`, qui gardaient le
+    bouton en réserve, sont **supprimés** (audit de code, 30 août 2026) —
+    `labelSupprimer`, qui ne servait qu'à son libellé (« Supprimer (3) »),
+    est parti avec.
+  - **Bouton de masquage des prix retiré de la toolbar** (même sort, même
+    date) : la commande « Masquer les prix » / « Afficher les prix » du menu
+    Présentation reste seule voie de bascule, elle pilote le MÊME
+    `prixMasques` et n'était pas concernée par le drapeau
+    `afficherBoutonPrixToolbar`, supprimé avec son `if`.
   - **Bouton « Ajouter » piloté par `Categorie.feuilleAjout`, distinct de
     `feuille`.** `feuille` filtre les données ; `feuilleAjout` dit dans
     quelle feuille créer une œuvre, et vaut `nil` = pas de bouton. Une

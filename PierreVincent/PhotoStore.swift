@@ -38,19 +38,6 @@ enum PhotoStore {
         return dossier
     }
 
-    /// Enregistre une image en PNG dans le dossier Photos.
-    static func enregistrer(image: ImagePlateforme) -> String? {
-        guard let png = pngData(de: image) else { return nil }
-        let nom = UUID().uuidString + ".png"
-        let dest = dossierPhotos.appendingPathComponent(nom)
-        do {
-            try png.write(to: dest)
-            return nom
-        } catch {
-            return nil
-        }
-    }
-
     /// Enregistre des DONNÉES image brutes (déjà encodées : png, jpeg…) sans
     /// les décoder ni les réencoder. Beaucoup plus rapide et léger que de passer
     /// par une image en mémoire — utile à l'import massif depuis un fichier.
@@ -128,17 +115,6 @@ enum PhotoStore {
         guard !nom.isEmpty else { return }
         let url = dossierPhotos.appendingPathComponent(nom)
         try? FileManager.default.removeItem(at: url)
-    }
-
-    /// Convertit une image en données PNG.
-    static func pngData(de image: ImagePlateforme) -> Data? {
-        #if os(macOS)
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff) else { return nil }
-        return rep.representation(using: .png, properties: [:])
-        #else
-        return image.pngData()
-        #endif
     }
 
     /// Convertit une image en données JPEG (pour l'export « standard »).

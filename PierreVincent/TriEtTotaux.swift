@@ -134,33 +134,6 @@ func filtrerParType(_ liste: [Oeuvre], mot: String?) -> [Oeuvre] {
     return liste.filter { $0.type.localizedCaseInsensitiveContains(mot) }
 }
 
-/// Bouton de menu de filtre par type dans la barre d'outils, sur les DEUX
-/// plateformes : à retirer sans supprimer le code, faute de quoi il faudrait
-/// le réécrire s'il revient.
-///
-/// **Retiré partout où il apparaissait** — `menuFiltreType` dans
-/// `VueFeuille.swift` (macOS), `MenuFiltreTypes` dans `VueiOS`,
-/// `VueDonsStructuree` et `VueOeuvresStructuree` (iOS) — le bandeau ou la
-/// rangée de pastilles restant seul moyen de filtrer par type. Repasser à
-/// `true` le restaure partout d'un coup, un seul drapeau les gouvernant tous.
-let afficherMenuFiltreTypeToolbar = false
-
-/// Bouton de corbeille dans la barre d'outils macOS (Galerie et Liste) :
-/// essai à retirer sans supprimer le code.
-///
-/// **Retiré au profit de la seule commande « Supprimer » du menu Édition**
-/// (`VueFeuille.swift`), qui déclenche la MÊME confirmation. Repasser à
-/// `true` restaure le bouton.
-let afficherBoutonCorbeilleToolbar = false
-
-/// Bouton de masquage des prix dans la barre d'outils macOS (Galerie et
-/// Liste) : essai à retirer sans supprimer le code.
-///
-/// **Retiré au profit de la seule commande « Masquer les prix » du menu
-/// Présentation** (`PierreVincentApp.swift`), qui pilote le MÊME
-/// `prixMasques`. Repasser à `true` restaure le bouton.
-let afficherBoutonPrixToolbar = false
-
 /// Pastilles de filtre (type ou vendeur) et compteur associé : essai,
 /// DÉSACTIVÉS pour toute la section « Ventes et dons » — Catalogue (dans la
 /// toolbar), Ventes, Dons, sous-catégories par mode de vente. Code conservé

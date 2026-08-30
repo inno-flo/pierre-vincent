@@ -50,9 +50,6 @@ struct VueFeuille: View {
 
     let nomEnGalerie: Bool         // ligne de nom en tête de légende de vignette
     let visionneuseIntegree: Bool  // barre d'espace : visionneuse maison au lieu de Quick Look
-    /// Essai — pastilles de type dans la toolbar plutôt que dans le bandeau
-    /// translucide, voir `Categorie.pastillesTypeDansToolbar`.
-    let pastillesTypeDansToolbar: Bool
     /// Voir `Categorie.menuFiltreTypeToolbar` : menu de filtre par type posé
     /// après la capsule Galerie/Liste — Catalogue et Ventes.
     let menuFiltreTypeToolbar: Bool
@@ -73,7 +70,6 @@ struct VueFeuille: View {
          symboleFiltreTous: String = "square.grid.2x2",
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
-         pastillesTypeDansToolbar: Bool = false,
          menuFiltreTypeToolbar: Bool = false,
          estSectionVentesEtDons: Bool = false,
          nbSelection: Binding<Int>) {
@@ -92,7 +88,6 @@ struct VueFeuille: View {
         self.symboleFiltreTous = symboleFiltreTous
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
-        self.pastillesTypeDansToolbar = pastillesTypeDansToolbar
         self.menuFiltreTypeToolbar = menuFiltreTypeToolbar
         self.estSectionVentesEtDons = estSectionVentesEtDons
         self._nbSelection = nbSelection
@@ -134,8 +129,6 @@ struct VueFeuille: View {
     // demander : la question annonce ainsi des chiffres réels.
     @State private var confirmerRecompression = false
     @State private var bilanRecompression: RecompressionPhotos.Bilan?
-    // URL de l'image à prévisualiser via Quick Look (barre d'espace).
-    @State private var apercuURL: URL?
     // Position courante dans la visionneuse intégrée (nil = fermée).
     @State private var indexVisionneuse: Int?
     // Affichage du panneau Inspecteur (mode galerie uniquement).
@@ -640,8 +633,6 @@ struct VueFeuille: View {
         } message: {
             Text(messageRecompression)
         }
-        // Quick Look natif : affiche l'image de la ligne sélectionnée.
-        .apercuQuickLook($apercuURL)
         // Panneau centré unique : progression (indicateur) puis message final
         // (avec OK), toujours au même endroit.
         .overlay {
@@ -782,23 +773,6 @@ struct VueFeuille: View {
 
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
-        // Essai — Catalogue de « Ventes et dons » seulement : pastilles de
-        // type + compteur, alignées à GAUCHE de la toolbar. Placées AVANT le
-        // spacer flexible ci-dessous, qui pousse tout ce qui le SUIT vers la
-        // droite — les mettre après l'aurait fait pousser avec le reste.
-        //
-        // **Chaque pastille est son PROPRE `ToolbarItem`**, et non un seul
-        // `ToolbarItem` enveloppant un `HStack` de plusieurs boutons : posées
-        // ensemble, macOS les rendait comme un unique bouton englobant toute
-        // la rangée (bordure système autour du bloc entier), au lieu de
-        // pastilles indépendantes.
-        if pastillesTypeDansToolbar && filtreParType && pastillesVisibles {
-            ForEach(typesFiltre, id: \.self) { mot in
-                ToolbarItem { pastilleType(libelle: libelleTypeFiltrable(mot), mot: mot) }
-            }
-            ToolbarItem { pastilleCompteur }
-        }
-
         // Spacer flexible en tête : pousse tous les boutons vers la droite
         // du panneau de contenu (jamais au-dessus de la colonne inspecteur).
         ToolbarSpacer(.flexible)
@@ -817,17 +791,6 @@ struct VueFeuille: View {
                     .help("Ajouter une œuvre")
                 }
             }
-            // Essai : bouton masqué, voir `afficherBoutonCorbeilleToolbar`.
-            // La commande « Supprimer » du menu Édition déclenche la même
-            // confirmation.
-            if afficherBoutonCorbeilleToolbar {
-                ToolbarItem {
-                    Button(role: .destructive) {
-                        confirmerSuppression = true
-                    } label: { Label(labelSupprimer, systemImage: "trash") }
-                    .disabled(selection.isEmpty || barreOutilsInactive)
-                }
-            }
             if selection.count == 1 {
                 ToolbarItem {
                     Button {
@@ -838,24 +801,6 @@ struct VueFeuille: View {
                     } label: { Label("Modifier", systemImage: "pencil") }
                     .disabled(barreOutilsInactive)
                 }
-            }
-        }
-        // Masquage des prix : sans objet là où les œuvres n'en ont pas —
-        // Dons et Réserve. Le menu « Présentation » grise la commande au même
-        // moment, via `signalSansPrix`.
-        //
-        // Essai : bouton masqué, voir `afficherBoutonPrixToolbar`. La
-        // commande du menu Présentation reste seule voie de bascule.
-        if afficherBoutonPrixToolbar && !rubriqueSansPrix {
-            ToolbarSpacer(.fixed)
-            ToolbarItem {
-                Button {
-                    prixMasques.toggle()
-                } label: {
-                    Image(systemName: prixMasques ? "eye.slash" : "eye")
-                }
-                .disabled(barreOutilsInactive)
-                .help(prixMasques ? "Afficher les prix" : "Masquer les prix")
             }
         }
         ToolbarSpacer(.fixed)
@@ -876,11 +821,9 @@ struct VueFeuille: View {
             .help("Liste")
         }
         // Menu de filtre par type, JUSTE APRÈS la capsule Galerie/Liste —
-        // Catalogue et Ventes seulement, voir `Categorie.menuFiltreTypeToolbar`.
-        // Alternative aux pastilles du bandeau : même filtre, même état.
-        // Indépendant du drapeau `afficherMenuFiltreTypeToolbar`, qui gouverne
-        // en plus les trois menus équivalents sur iOS — ceux-là restent
-        // masqués, l'essai des pastilles y étant déjà en place.
+        // voir `Categorie.menuFiltreTypeToolbar`. Alternative aux pastilles
+        // du bandeau : même filtre, même état. iOS n'a pas son pendant : le
+        // bandeau de pastilles y reste seul moyen de filtrer par type.
         if menuFiltreTypeToolbar && filtreParType {
             ToolbarSpacer(.fixed)
             ToolbarItem { menuFiltreType }
@@ -1073,34 +1016,19 @@ struct VueFeuille: View {
     /// Ouvre l'aperçu de la ligne sélectionnée (barre d'espace).
     /// Un nouvel appui le referme, comme dans le Finder.
     ///
-    /// Deux chemins : la **visionneuse intégrée** dans les rubriques qui la
-    /// déclarent (essai en cours, Réserve › Catalogue), **Quick Look** partout
-    /// ailleurs. Le second n'a pas été touché.
+    /// Quick Look, qui servait de repli avant que la visionneuse intégrée ne
+    /// soit en place PARTOUT (`Categorie.visionneuseIntegree` vaut toujours
+    /// `true` désormais), a été retiré — plus aucune rubrique ne l'atteignait.
     private func declencherApercu() {
-        if visionneuseIntegree {
-            if indexVisionneuse != nil { indexVisionneuse = nil; return }
-            guard let id = selection.first,
-                  let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == id })
-            else { return }
-            indexVisionneuse = i
-            return
-        }
-        if QuickLookController.shared.estVisible {
-            QuickLookController.shared.fermer()
-            return
-        }
+        guard visionneuseIntegree else { return }
+        if indexVisionneuse != nil { indexVisionneuse = nil; return }
         guard let id = selection.first,
-              let o = oeuvres.first(where: { $0.id == id }),
-              !o.photoNom.isEmpty,
-              let url = PhotoStore.urlPhoto(nom: o.photoNom) else { return }
-        apercuURL = url
+              let i = oeuvresAvecPhoto.firstIndex(where: { $0.id == id })
+        else { return }
+        indexVisionneuse = i
     }
 
     // MARK: Barre d'outils (fond orange, titre + boutons blancs)
-
-    private var labelSupprimer: String {
-        selection.count > 1 ? "Supprimer (\(selection.count))" : "Supprimer"
-    }
 
     /// Titre de la fenêtre de confirmation, adapté au nombre d'entrées.
     private var titreConfirmation: String {
@@ -1122,10 +1050,7 @@ struct VueFeuille: View {
         // devenaient pleines.
         contenuPrincipal
             .safeAreaInset(edge: .top, spacing: 0) {
-                // Essai : ce bandeau disparaît pour les rubriques dont les
-                // pastilles sont passées dans la toolbar — voir
-                // `pastillesTypeDansToolbar`.
-                if !pastillesTypeDansToolbar && (filtreParVendeur || filtreParType) && pastillesVisibles {
+                if (filtreParVendeur || filtreParType) && pastillesVisibles {
                     bandeauFiltres
                 }
             }

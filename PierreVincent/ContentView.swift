@@ -340,27 +340,12 @@ enum Categorie: Hashable, Identifiable {
     /// Seul réglage restant : les VENDEURS eux-mêmes sont déduits des données
     /// sur les deux plateformes. La liste `filtresVendeur`, qui les nommait en
     /// dur, a disparu — elle proposait des entrées ne filtrant vers rien.
-    /// Essai — macOS : pastilles de type dans la TOOLBAR plutôt que dans le
-    /// bandeau (`bandeauFiltres`, `VueFeuille.swift`), qui reste posé mais
-    /// n'est plus affiché pour cette rubrique. Le bandeau utilise un fond
-    /// translucide qui ne s'accorde pas toujours avec la toolbar native
-    /// (bug signalé : deux tons visibles, Inspecteur ouvert) ; les pastilles
-    /// dans la toolbar elle-même héritent directement de son rendu, sans
-    /// recalculer le leur.
-    ///
-    /// **Restreint au SEUL Catalogue de « Ventes et dons » pour l'instant** —
-    /// à la demande explicite, le temps de juger le résultat avant de
-    /// l'étendre à d'autres rubriques. Vrai uniquement pour `.oeuvres` :
-    /// c'est la seule à n'avoir QUE des pastilles de type (jamais de
-    /// vendeur), ce qui simplifie ce premier essai.
-    var pastillesTypeDansToolbar: Bool { self == .oeuvres }
 
     /// Menu de filtre par type dans la toolbar macOS, POSÉ APRÈS la capsule
-    /// Galerie/Liste. Distinct du drapeau `afficherMenuFiltreTypeToolbar`
-    /// (`TriEtTotaux.swift`), qui gouverne aussi les trois menus équivalents
-    /// sur iOS : le réactiver aurait fait réapparaître ces menus-là aussi,
-    /// en plus des bandeaux de pastilles déjà en place sur iOS pour le même
-    /// filtre.
+    /// Galerie/Liste. Alternative macOS uniquement — iOS garde son bandeau
+    /// de pastilles comme seul moyen de filtrer par type, sans équivalent
+    /// menu (l'ancien menu iOS, `MenuFiltreTypes`, a été retiré : il faisait
+    /// double emploi avec ce bandeau).
     ///
     /// **Étendu à la Réserve et à Favoris** : Catalogue et Collection
     /// personnelle de la Réserve, toute sous-rubrique de Genres
@@ -475,9 +460,6 @@ struct ContentView: View {
     @AppStorage("statutsVidesRepares") private var statutsVidesRepares = false
     // `aGarderConverti` : neuvième passe, « À garder » devient « Disponible ».
     @AppStorage("aGarderConverti") private var aGarderConverti = false
-    // `reservePurgee` : purge ponctuelle de la Réserve, pour reprendre l'import
-    // de photos à zéro. DESTRUCTIF — voir `RepriseDonnees.purgerReserve`.
-    @AppStorage("reservePurgee") private var reservePurgee = false
     // `doublonsImportSupprimes` : suppression des doublons d'un import répété.
     @AppStorage("doublonsImportSupprimes") private var doublonsImportSupprimes = false
     // `collectionNormalisee` : le champ Collection personnelle devient binaire.
@@ -734,7 +716,6 @@ struct ContentView: View {
                                symboleFiltreTous: cat.symboleFiltreTous,
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
-                               pastillesTypeDansToolbar: cat.pastillesTypeDansToolbar,
                                menuFiltreTypeToolbar: cat.menuFiltreTypeToolbar,
                                estSectionVentesEtDons: cat.estSectionVentesEtDons,
                                nbSelection: $nbSelection)
@@ -750,8 +731,7 @@ struct ContentView: View {
                     // La vue « Œuvres » a une présentation structurée
                     // (récapitulatif + sections Ventes et Dons).
                     if cat == .oeuvres {
-                        VueOeuvresStructuree(typesFiltre: cat.typesFiltre,
-                                             symboleFiltreTous: cat.symboleFiltreTous)
+                        VueOeuvresStructuree(typesFiltre: cat.typesFiltre)
                             .id(cat)
                     } else if cat.estVenteRealisee {
                         // `estVenteRealisee` couvre AUSSI les sous-rubriques
@@ -765,12 +745,10 @@ struct ContentView: View {
                                              estModeVentes: true,
                                              titre: cat.titre,
                                              nomEnGalerie: cat.nomEnGalerie,
-                                             typesFiltre: cat.typesFiltre,
-                                             symboleFiltreTous: cat.symboleFiltreTous)
+                                             typesFiltre: cat.typesFiltre)
                             .id(cat)
                     } else if cat == .oeuvresDonnees {
-                        VueDonsStructuree(typesFiltre: cat.typesFiltre,
-                                          symboleFiltreTous: cat.symboleFiltreTous)
+                        VueDonsStructuree(typesFiltre: cat.typesFiltre)
                             .id(cat)
                     } else {
                         VueiOS(feuille: cat.feuille, titre: cat.titre,
@@ -781,7 +759,6 @@ struct ContentView: View {
                                collectionSeule: cat.collectionSeule,
                                favoriSeul: cat.favoriSeul,
                                typesFiltre: cat.typesFiltre,
-                               symboleFiltreTous: cat.symboleFiltreTous,
                                visionneuseIntegree: cat.visionneuseIntegree)
                             .id(cat)
                     }
@@ -896,15 +873,6 @@ struct ContentView: View {
                 doublonsImportSupprimes = true
             }
 
-            // PURGE DE LA RÉSERVE : DÉBRANCHÉE, elle visait le mauvais lot.
-            // L'export a montré que les œuvres de la Réserve sont la BONNE
-            // copie, et que les doublons se trouvent ailleurs — feuille
-            // « Tableaux vendus » avec un statut « Disponible », donc
-            // invisibles partout. Ne pas rebrancher `purgerReserve`.
-            // if !reservePurgee {
-            //     RepriseDonnees.purgerReserve(context: context)
-            //     reservePurgee = true
-            // }
         }
         #if os(iOS)
         .detecteSecoussePourPrix()
@@ -1097,26 +1065,6 @@ struct ContentView: View {
         .padding(.vertical, 8)
     }
     #endif
-
-    // VIDE. Le squelette est gardé en commentaire pour y reposer un bouton
-    // temporaire de test — c'est ce qu'a porté cette zone à chaque fois :
-    // pastilles de choix de thème, bouton « G » de mise en gras des en-têtes,
-    // puis pastille de comparaison des deux marrons de sélection. Chacun a été
-    // retiré une fois sa question tranchée.
-    //
-    // Le réactiver demande de décommenter LES DEUX blocs : celui-ci et l'appel
-    // dans la VStack de la sidebar (`Divider()` + `barreOutilsBas`).
-    //
-    // #if os(macOS)
-    // private var barreOutilsBas: some View {
-    //     HStack(spacing: 10) {
-    //         // …le bouton du moment…
-    //         Spacer()
-    //     }
-    //     .padding(.horizontal, 20)
-    //     .padding(.vertical, 10)
-    // }
-    // #endif
 
     // MARK: Lien de catégorie (barre latérale)
 

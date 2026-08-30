@@ -23,10 +23,6 @@ struct VueiOS: View {
     /// rubrique, voir `Categorie.typesFiltre`.
     let typesFiltre: [String]
 
-    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
-    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
-    let symboleFiltreTous: String
-
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
@@ -36,7 +32,6 @@ struct VueiOS: View {
          collectionSeule: Bool = false,
          favoriSeul: Bool = false,
          typesFiltre: [String] = [],
-         symboleFiltreTous: String = "square.grid.2x2",
          visionneuseIntegree: Bool = false) {
         self.feuille = feuille
         self.titre = titre
@@ -47,7 +42,6 @@ struct VueiOS: View {
         self.collectionSeule = collectionSeule
         self.favoriSeul = favoriSeul
         self.typesFiltre = typesFiltre
-        self.symboleFiltreTous = symboleFiltreTous
         self.visionneuseIntegree = visionneuseIntegree
     }
 
@@ -351,14 +345,6 @@ struct VueiOS: View {
             // que l'espacement par défaut d'un ToolbarItemGroup).
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
-
-                // 0. Filtre par type, en TÊTE de la capsule.
-                // Retiré pour l'instant : voir `afficherMenuFiltreTypeToolbar`.
-                if afficherMenuFiltreTypeToolbar && !typesFiltreAffiches.isEmpty {
-                    MenuFiltreTypes(mots: typesFiltreAffiches,
-                                    symboleTous: symboleFiltreTous,
-                                    typeRetenu: $typeRetenu)
-                }
 
                 // 1. Vue Galerie — en tête : présentation par défaut à la
                 // première ouverture (`modeAffichage` vaut "icone").

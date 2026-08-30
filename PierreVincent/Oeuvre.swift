@@ -238,35 +238,6 @@ enum RepriseDonnees {
         return cibles.count
     }
 
-    /// **PURGE — supprime DÉFINITIVEMENT toutes les œuvres de la Réserve**,
-    /// leurs photos comprises.
-    ///
-    /// Opération ponctuelle demandée pour reprendre à zéro un import de photos
-    /// dont les mots-clés n'étaient pas encore reconnus. Ce n'est PAS une
-    /// reprise de données : elle détruit, elle ne répare pas.
-    ///
-    /// Le critère est la seule feuille `.reserve` — le plus simple à vérifier.
-    /// Elle emporte donc aussi les premiers dessins d'essai.
-    ///
-    /// Comme toutes les passes, elle a son drapeau et ne se rejoue pas. **Ne
-    /// pas la rebrancher sans nouveau drapeau** : un lancement suffirait à
-    /// effacer une Réserve reconstituée entre-temps.
-    @discardableResult
-    @MainActor
-    static func purgerReserve(context: ModelContext) -> Int {
-        guard let toutes = try? context.fetch(FetchDescriptor<Oeuvre>()) else { return 0 }
-        var compte = 0
-        for o in toutes where o.feuille == .reserve {
-            // La photo est hors base : la supprimer explicitement, sinon elle
-            // resterait sur disque sans plus rien pour la référencer.
-            if !o.photoNom.isEmpty { PhotoStore.supprimerPhoto(nom: o.photoNom) }
-            context.delete(o)
-            compte += 1
-        }
-        if compte > 0 { try? context.save() }
-        return compte
-    }
-
     /// Ramène `collectionPersonnelle` à « Oui » ou « Non ».
     ///
     /// Les œuvres entrées avant l'existence du champ, ou avant qu'il ne

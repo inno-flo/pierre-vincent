@@ -28,24 +28,19 @@ struct VueOeuvresStructuree: View {
     /// Ventes, aucune pour les sous-rubriques de mode de vente, qui ont déjà
     /// leur filtre par vendeur.
     let typesFiltre: [String]
-    /// Symbole de l'entrée « Tous » du menu de filtre par type — l'icône de
-    /// la rubrique dans les deux Catalogue, la grille générique ailleurs.
-    let symboleFiltreTous: String
 
 
     // Cette vue déclare un init EXPLICITE : ajouter une propriété ne suffit
     // pas à pouvoir la passer à l'appel, il faut aussi l'étendre ici.
     init(modesVente: [String] = [], filtreParVendeur: Bool = false,
          estModeVentes: Bool = false, titre: String = "Catalogue",
-         nomEnGalerie: Bool = true, typesFiltre: [String] = [],
-         symboleFiltreTous: String = "square.grid.2x2") {
+         nomEnGalerie: Bool = true, typesFiltre: [String] = []) {
         self.modesVente = modesVente
         self.filtreParVendeur = filtreParVendeur
         self.estModeVentes = estModeVentes
         self.titre = titre
         self.nomEnGalerie = nomEnGalerie
         self.typesFiltre = typesFiltre
-        self.symboleFiltreTous = symboleFiltreTous
     }
 
     @Query private var toutes: [Oeuvre]
@@ -256,14 +251,6 @@ struct VueOeuvresStructuree: View {
             // Regroupés dans un HStack pour maîtriser l'espacement.
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
-
-                // 0. Filtre par type, en TÊTE de la capsule.
-                // Retiré pour l'instant : voir `afficherMenuFiltreTypeToolbar`.
-                if afficherMenuFiltreTypeToolbar && !typesFiltre.isEmpty {
-                    MenuFiltreTypes(mots: typesFiltre,
-                                    symboleTous: symboleFiltreTous,
-                                    typeRetenu: $typeRetenu)
-                }
 
                 // 1. Vue Galerie — en tête : présentation par défaut à la
                 // première ouverture (`modeAffichage` vaut "icone").
