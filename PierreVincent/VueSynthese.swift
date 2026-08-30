@@ -87,6 +87,22 @@ struct VueSynthese: View {
         oeuvresDonnees.filter { $0.type.localizedCaseInsensitiveContains("dessin") }
     }
 
+    /// Cinq destinataires ayant reçu le plus de dons : nom + nombre d'œuvres.
+    /// « Inconnu » et les valeurs vides sont écartés, un destinataire non
+    /// identifié ne désigne personne à classer.
+    private var topDestinataires: [(nom: String, nombre: Int)] {
+        var comptes: [String: Int] = [:]
+        for o in oeuvresDonnees {
+            let nom = o.destinataire.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !nom.isEmpty, nom != valeurInconnue else { continue }
+            comptes[nom, default: 0] += 1
+        }
+        return comptes
+            .sorted { $0.value > $1.value }
+            .prefix(5)
+            .map { (nom: $0.key, nombre: $0.value) }
+    }
+
     // MARK: Statistiques
 
     private func stats(_ liste: [Oeuvre]) -> (min: Double, max: Double, moyenne: Double) {
@@ -117,6 +133,38 @@ struct VueSynthese: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+
+                // --- Carte DONS ---
+                // Remontée en tête, avant Ventes, à la demande.
+                // Les deux tuiles vivaient dans la carte « Ventes » ; en sortir
+                // leur redonne un intitulé simple (« Tableaux », « Dessins »),
+                // qui n'a plus à se distinguer de leurs pendants vendus.
+                carte(titre: "Dons") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        LazyVGrid(columns: colonnesTuiles, spacing: 10) {
+                            tuileNombre(icone: "gift", label: "Tableaux",
+                                        valeur: "\(tableauxDonnes.count)", detail: nil)
+                            tuileNombre(icone: "gift", label: "Dessins",
+                                        valeur: "\(dessinsDonnes.count)", detail: nil)
+                        }
+                        // Sous-section « Destinataires » : les cinq personnes
+                        // ayant reçu le plus de dons. Même présentation que la
+                        // liste de la carte « Enchères et expositions »
+                        // (`tuileVendeur`), mais un COMPTE d'œuvres et non un
+                        // montant — `tuileDestinataire` en est le pendant.
+                        if !topDestinataires.isEmpty {
+                            Text("Destinataires")
+                                .font(policeValeur).fontWeight(.bold)
+                                .foregroundStyle(Color.textePrincipal)
+                                .padding(.top, 4)
+                            VStack(spacing: 10) {
+                                ForEach(topDestinataires, id: \.nom) { d in
+                                    tuileDestinataire(d.nom, d.nombre)
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // --- Carte VENTES ---
                 // Contenu IDENTIQUE sur les deux plateformes : le récapitulatif
@@ -159,19 +207,6 @@ struct VueSynthese: View {
                         // La tuile « Catégories » (total par type) a été
                         // retirée : ce total figure déjà en détail sous
                         // chaque tuile de la carte « Ventes ».
-                    }
-                }
-
-                // --- Carte DONS ---
-                // Les deux tuiles vivaient dans la carte « Ventes » ; en sortir
-                // leur redonne un intitulé simple (« Tableaux », « Dessins »),
-                // qui n'a plus à se distinguer de leurs pendants vendus.
-                carte(titre: "Dons") {
-                    LazyVGrid(columns: colonnesTuiles, spacing: 10) {
-                        tuileNombre(icone: "gift", label: "Tableaux",
-                                    valeur: "\(tableauxDonnes.count)", detail: nil)
-                        tuileNombre(icone: "gift", label: "Dessins",
-                                    valeur: "\(dessinsDonnes.count)", detail: nil)
                     }
                 }
 
@@ -345,6 +380,23 @@ struct VueSynthese: View {
                 .foregroundStyle(Color.textePrincipal)
             Spacer()
             PrixText(montant)
+                .font(policePrix)
+                .foregroundStyle(Color.orangeInternational)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondTuile))
+    }
+
+    /// Tuile « destinataire » : libellé à gauche, NOMBRE d'œuvres orange à
+    /// droite. Pendant de `tuileVendeur`, sans mise en forme monétaire — un
+    /// compte d'œuvres, pas un montant.
+    private func tuileDestinataire(_ nom: String, _ nombre: Int) -> some View {
+        HStack {
+            Text(nom)
+                .font(policeLibelle)
+                .foregroundStyle(Color.textePrincipal)
+            Spacer()
+            Text("\(nombre)")
                 .font(policePrix)
                 .foregroundStyle(Color.orangeInternational)
         }

@@ -98,11 +98,13 @@ struct VueFeuille: View {
         self._nbSelection = nbSelection
     }
 
-    /// Pastilles de filtre et compteur visibles ? Faux uniquement pendant
-    /// l'essai `afficherPastillesVentesEtDons`, et seulement dans la section
-    /// qu'il vise — la Réserve et Favoris ne sont jamais concernés.
+    /// Pastilles de filtre et compteur visibles ? Faux pendant l'essai
+    /// `afficherPastillesVentesEtDons` dans la section qu'il vise, ET pour
+    /// toute rubrique qui affiche à la place le menu de Support en toolbar
+    /// (`menuFiltreTypeToolbar`) — bandeau et menu font double emploi, une
+    /// rubrique n'a jamais les deux à la fois.
     private var pastillesVisibles: Bool {
-        afficherPastillesVentesEtDons || !estSectionVentesEtDons
+        !menuFiltreTypeToolbar && (afficherPastillesVentesEtDons || !estSectionVentesEtDons)
     }
 
     @Environment(\.modelContext) private var context

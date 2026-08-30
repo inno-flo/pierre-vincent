@@ -963,9 +963,10 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   données), navigation Précédent/Suivant dans l'éditeur, bas de sidebar vide.
 - **iOS** : navigation liquid glass, swipe latéral fluide, barre de navigation
   transparente (titres en couleur système), défilement auto de la galerie.
-- **Vue Synthèse** : cartes (Ventes, Prix de vente, Dons, Enchères) contenant
+- **Vue Synthèse** : cartes (**Dons**, Ventes, Prix de vente, Enchères) contenant
   des tuiles. Une tuile « Total » (somme euros tableaux + dessins + tapis)
-  figure dans le bloc Ventes.
+  figure dans le bloc Ventes. **Carte Dons remontée en TÊTE**, avant Ventes,
+  à la demande — l'ordre était Ventes/Prix de vente/Dons/Enchères au départ.
   - **Carte « Ventes »**, ex-« Œuvres » : les trois tuiles de comptage n'ont
     plus le mot « vendus » dans leur intitulé (« Tableaux », « Dessins »,
     « Tapis ») — la carte elle-même le dit désormais. Les deux tuiles de dons
@@ -975,13 +976,24 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     dit désormais. Sa troisième tuile, **« Catégories », a été SUPPRIMÉE** :
     le total par type qu'elle donnait figure déjà en détail sous chaque tuile
     de la carte « Ventes ».
-  - **Nouvelle carte « Dons »**, entre Prix de vente et Enchères : les deux tuiles
-    qui viennent d'en être extraites, renommées « Tableaux » et « Dessins » —
-    plus besoin de les distinguer de leurs pendants vendus, la carte s'en
-    charge. Aucune n'a de prix (comme partout pour les dons), et elles n'ont
-    donc plus besoin de réserver la ligne de prix vide de `tuileNombre`
-    (`reserverEspace`), qui ne servait qu'à aligner leur hauteur sur des
-    tuiles à prix dans l'ancienne grille commune.
+  - **Nouvelle carte « Dons »** (à l'origine entre Prix de vente et Enchères,
+    depuis remontée en tête de la vue) : les deux tuiles qui viennent d'en
+    être extraites, renommées « Tableaux » et « Dessins » — plus besoin de
+    les distinguer de leurs pendants vendus, la carte s'en charge. Aucune n'a
+    de prix (comme partout pour les dons), et elles n'ont donc plus besoin de
+    réserver la ligne de prix vide de `tuileNombre` (`reserverEspace`), qui
+    ne servait qu'à aligner leur hauteur sur des tuiles à prix dans
+    l'ancienne grille commune.
+    - **Sous-section « Destinataires »** : les CINQ personnes ayant reçu le
+      plus de dons, nom + nombre d'œuvres. `topDestinataires`
+      (`VueSynthese.swift`) groupe `oeuvresDonnees` par champ `destinataire`,
+      écarte les valeurs vides et « Inconnu » (un destinataire non identifié
+      ne désigne personne à classer), trie par nombre décroissant et ne
+      garde que les cinq premiers. **Même présentation que la carte
+      « Enchères et expositions »** (nom à gauche, valeur orange à droite) :
+      `tuileDestinataire` est le pendant de `tuileVendeur`, sans mise en
+      forme monétaire — un COMPTE d'œuvres, pas un montant. Absente si aucun
+      don n'a de destinataire identifié.
   - **Le récapitulatif iOS « Vendues / Données »**, en tête de la carte
     Ventes, a été RETIRÉ : la carte Ventes a désormais un contenu IDENTIQUE
     sur les deux plateformes. Il faisait doublon avec la nouvelle carte
@@ -1308,16 +1320,29 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     (`TriEtTotaux.swift`). Le bandeau ou la rangée de pastilles reste seul
     moyen de filtrer par type. Code conservé plutôt que supprimé : repasser
     le drapeau à `true` restaure le bouton partout d'un coup.
-  - **RÉTABLI depuis, mais SEULEMENT sur macOS, pour Catalogue et Ventes**
-    (`Categorie.menuFiltreTypeToolbar`, `ContentView.swift` + `VueFeuille.swift`) :
-    posé dans la toolbar juste APRÈS la capsule Galerie/Liste. Volontairement
-    **découplé** du drapeau `afficherMenuFiltreTypeToolbar` ci-dessus, qui
-    gouverne aussi les trois menus iOS équivalents — les réactiver aurait
-    doublé les bandeaux de pastilles déjà en place sur iOS pour le même
-    filtre. Chaque entrée garde sa propre icône (`symboleTypeFiltrable`),
-    et l'icône du bouton suit toujours le critère actif (`iconeMenu`,
-    inchangé). Les autres rubriques (Dons, modes de vente, Réserve, Favoris)
-    ne sont pas concernées : elles gardent leur bandeau de pastilles.
+  - **RÉTABLI depuis, mais SEULEMENT sur macOS** (`Categorie.menuFiltreTypeToolbar`,
+    `ContentView.swift` + `VueFeuille.swift`) : posé dans la toolbar juste
+    APRÈS la capsule Galerie/Liste. Volontairement **découplé** du drapeau
+    `afficherMenuFiltreTypeToolbar` ci-dessus, qui gouverne aussi les trois
+    menus iOS équivalents — les réactiver aurait doublé les bandeaux de
+    pastilles déjà en place sur iOS pour le même filtre. Chaque entrée garde
+    sa propre icône (`symboleTypeFiltrable`), et l'icône du bouton suit
+    toujours le critère actif (`iconeMenu`, inchangé).
+    - **D'abord restreint à Catalogue et Ventes**, puis **étendu à la
+      Réserve et à Favoris** : Catalogue et Collection personnelle de la
+      Réserve, toute sous-rubrique de Genres (`.reserveTheme`), et Favoris —
+      même présentation que Catalogue/Ventes, bandeau remplacé par ce menu.
+      `VueFeuille.pastillesVisibles` (essai `afficherPastillesVentesEtDons`,
+      voir plus haut) a dû apprendre une deuxième raison de masquer le
+      bandeau : `!menuFiltreTypeToolbar && (...)` — bandeau et menu font
+      double emploi, une rubrique n'a jamais les deux à la fois. **Pas les
+      sous-rubriques de Supports de la Réserve**
+      (`.reserveTableaux`/`.reserveDessins`) : leur `typesFiltre` est déjà
+      vide, filtrer par type une rubrique déjà filtrée par type n'aurait
+      aucun sens. Le menu de tri par critère (`menuTri`) reste absent de
+      toutes ces rubriques, sans rien à changer : `feuille != .reserve` et
+      `favoriSeul` l'excluaient déjà. Les modes de vente restent seuls à
+      garder leur bandeau de pastilles.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
@@ -1952,10 +1977,17 @@ JavaScript, inexploitables par extraction) :
     précédents : `titre` traduit, `modeVente` sur l'œuvre et
     `modesDeVenteReference` restent « Vente privée ». Y toucher romprait la
     reconnaissance des œuvres déjà classées dans ce mode.
-- **Sous-groupe « Supports » de « Ventes et dons » RÉTABLI** (Tableaux,
-  Dessins, Tapis) — l'essai qui le masquait est terminé pour cette section,
-  `categoriesSidebar` en tient compte à nouveau sans condition.
-  - **Celui de la RÉSERVE reste MASQUÉ, essai en cours**
+- **Sous-groupe « Supports » de « Ventes et dons » : rétabli puis APLATI,
+  macOS SEULEMENT.** D'abord rétabli comme sous-groupe repliable après
+  l'essai qui le masquait, puis supprimé à la demande sur macOS : Tableaux,
+  Dessins et Tapis sont désormais au MÊME NIVEAU que Catalogue, sans en-tête
+  « Supports » ni repli. `contenuVentesEtDons` (`ContentView.swift`), vue
+  PARTAGÉE, branche sur `#if os(macOS)` pour ce seul bloc — trois `lien(...)`
+  directs côté macOS, le `DisclosureGroup` d'origine inchangé côté iOS, qui
+  garde son sous-groupe repliable. `categoriesSidebar` (navigation clavier
+  macOS) suit : `.tableauxVendus/.dessinsVendus/.tapisVendus` y sont ajoutés
+  sans condition, il n'y a plus de repli à tester pour eux.
+  - **Celui de la RÉSERVE reste MASQUÉ, essai en cours, DEUX plateformes**
     (`afficherSupportsSidebarReserve` dans `TriEtTotaux.swift`) : les deux
     occurrences partageaient à l'origine un seul drapeau
     (`afficherSupportsSidebar`) ; rétablir Ventes et dons sans toucher à la
@@ -1965,6 +1997,11 @@ JavaScript, inexploitables par extraction) :
     rubriques (Tableaux/Dessins de la Réserve) tant que le drapeau est à
     `false` — sans ce garde-fou, ↑↓ aurait pu s'arrêter sur une rubrique
     invisible à l'écran.
+- **Ordre de « Ventes et dons » : Dons remonté AVANT Ventes et Modes de
+  vente**, sur les DEUX plateformes — Catalogue, (Supports), **Dons**,
+  Ventes, Modes de vente, Synthèse. `contenuVentesEtDons` (ordre partagé
+  macOS/iOS) et `categoriesSidebar` (navigation clavier macOS) suivent tous
+  deux ce nouvel ordre.
 
 - **iOS — pas de récapitulatif dans Ventes ni dans Dons** : leur seule ligne
   (« Nombre de ventes », « Nombre de dons ») annonçait un nombre que le

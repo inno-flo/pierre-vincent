@@ -356,12 +356,29 @@ enum Categorie: Hashable, Identifiable {
     var pastillesTypeDansToolbar: Bool { self == .oeuvres }
 
     /// Menu de filtre par type dans la toolbar macOS, POSÉ APRÈS la capsule
-    /// Galerie/Liste — Catalogue et Ventes seulement, à la demande. Distinct
-    /// du drapeau `afficherMenuFiltreTypeToolbar` (`TriEtTotaux.swift`), qui
-    /// gouverne aussi les trois menus équivalents sur iOS : le réactiver
-    /// aurait fait réapparaître ces menus-là aussi, en plus des bandeaux de
-    /// pastilles déjà en place sur iOS pour le même filtre.
-    var menuFiltreTypeToolbar: Bool { self == .oeuvres || self == .ventesRealisees }
+    /// Galerie/Liste. Distinct du drapeau `afficherMenuFiltreTypeToolbar`
+    /// (`TriEtTotaux.swift`), qui gouverne aussi les trois menus équivalents
+    /// sur iOS : le réactiver aurait fait réapparaître ces menus-là aussi,
+    /// en plus des bandeaux de pastilles déjà en place sur iOS pour le même
+    /// filtre.
+    ///
+    /// **Étendu à la Réserve et à Favoris** : Catalogue et Collection
+    /// personnelle de la Réserve, toute sous-rubrique de Genres
+    /// (`.reserveTheme`), et Favoris — même présentation que Catalogue/Ventes
+    /// de « Ventes et dons », bandeau de pastilles remplacé par ce menu
+    /// (voir `VueFeuille.pastillesVisibles`). **Pas les sous-rubriques de
+    /// Supports de la Réserve** (`.reserveTableaux`/`.reserveDessins`) : leur
+    /// `typesFiltre` est déjà vide, filtrer par type une rubrique déjà
+    /// filtrée par type n'aurait aucun sens.
+    var menuFiltreTypeToolbar: Bool {
+        if case .reserveTheme = self { return true }
+        switch self {
+        case .oeuvres, .ventesRealisees, .reserveInventaire, .reserveCollection, .favoris:
+            return true
+        default:
+            return false
+        }
+    }
 
     /// Vrai pour toute rubrique du premier grand bloc de la sidebar,
     /// « Ventes et dons » — Catalogue, Ventes, Dons, Synthèse et les
@@ -948,16 +965,16 @@ struct ContentView: View {
         if blocVentesOuvert {
             // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
             // rubrique dans un ordre qui ne correspond à rien de visible :
-            // Catalogue, Supports, Ventes, Modes de vente, Dons, Synthèse.
+            // Catalogue, Tableaux/Dessins/Tapis, Dons, Ventes, Modes de
+            // vente, Synthèse. Plus de sous-groupe « Supports » sur macOS,
+            // donc plus de repli à tester ici.
             liste.append(.oeuvres)
-            if sousBlocCategoriesOuvert {
-                liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
-            }
+            liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
+            liste.append(.oeuvresDonnees)
             liste.append(.ventesRealisees)
             if sousBlocModesVenteOuvert {
                 liste += modesDeVentePresents.map { Categorie.modeVente($0) }
             }
-            liste.append(.oeuvresDonnees)
             liste.append(.synthese)
         }
         if blocStockOuvert {
@@ -1180,11 +1197,19 @@ struct ContentView: View {
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
-        // Ordre d'affichage : Catalogue, Supports, Ventes, Modes de vente,
-        // Dons, Synthèse. Les deux sous-groupes repliables (Supports, Modes
-        // de vente) s'intercalent donc entre les rubriques de premier niveau
-        // au lieu d'être regroupés à la fin.
+        // Ordre d'affichage : Catalogue, (Supports), Dons, Ventes, Modes de
+        // vente, Synthèse. Le sous-groupe des modes de vente s'intercale donc
+        // entre les rubriques de premier niveau au lieu d'être regroupé à
+        // la fin.
         lien(.oeuvres)
+        #if os(macOS)
+        // Demande explicite : sur macOS, plus de sous-rubrique « Supports »
+        // ici — Tableaux/Dessins/Tapis sont au MÊME NIVEAU que Catalogue.
+        // iOS garde le sous-groupe repliable ci-dessous, inchangé.
+        lien(.tableauxVendus)
+        lien(.dessinsVendus)
+        lien(.tapisVendus)
+        #else
         // Sous-groupe repliable des catégories d'œuvres, ex-« Catégories ».
         // `DisclosureGroup` et non `Section` : une `List` n'accepte pas de
         // Section dans une Section.
@@ -1195,6 +1220,8 @@ struct ContentView: View {
         } label: {
             Text("Supports").foregroundStyle(.secondary)
         }
+        #endif
+        lien(.oeuvresDonnees)
         lien(.ventesRealisees)
         // Sous-groupe des modes de vente, construit d'après les données.
         DisclosureGroup(isExpanded: $sousBlocModesVenteOuvert) {
@@ -1204,7 +1231,6 @@ struct ContentView: View {
         } label: {
             Text("Modes de vente").foregroundStyle(.secondary)
         }
-        lien(.oeuvresDonnees)
         lien(.synthese)
     }
 
