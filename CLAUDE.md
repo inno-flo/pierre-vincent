@@ -759,8 +759,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
      **Retirés** : plus de `.background()`, de `.padding()` ni de
      `.frame()` sur l'icône — seuls `.buttonStyle(.plain)` et
      `.menuStyle(.borderlessButton)` + `.menuIndicator(.hidden)` restent, le
-     système fait le reste. Non encore reconfirmé à l'écran après ce
-     nettoyage.
+     système fait le reste. **Toujours pas satisfaisant à l'écran** après ce
+     nettoyage : icônes encore réduites par rapport à Galerie/Liste, et
+     espacement trop serré entre elles.
+  5. **`.imageScale(.large)` sur les DEUX icônes**, plus un `HStack(spacing:
+     8)`. Une `Image` nue (celles de `menuTri` et du bouton de sens) rend
+     plus petite qu'une icône portée par un `Label` (celles de Galerie,
+     Liste et Inspecteur) — `.imageScale(.large)` porte le SF Symbol à la
+     même taille SANS fixer de valeur en points. **`menuTri` reste sur
+     `Image` nue plutôt que `Label`** : un `Label` y avait déjà, par le
+     passé, fait disparaître l'icône dynamique du critère actif au profit
+     du seul mot « Trier » — voir le commentaire sur place. Non encore
+     reconfirmé à l'écran.
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement

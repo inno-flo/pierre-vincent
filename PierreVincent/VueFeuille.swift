@@ -908,7 +908,9 @@ struct VueFeuille: View {
                 // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
                 // le tri par dimensions y gardant du sens.
                 ToolbarItem {
-                    HStack(spacing: 2) {
+                    // Espacement à 8 pt, pour se rapprocher de celui, natif,
+                    // entre Galerie et Liste dans leur propre capsule.
+                    HStack(spacing: 8) {
                         if feuille != .reserve {
                             menuTri
                                 .menuStyle(.borderlessButton)
@@ -917,7 +919,10 @@ struct VueFeuille: View {
                         Button {
                             triCroissant.toggle()
                         } label: {
+                            // `.imageScale(.large)` : même correctif de
+                            // taille que `menuTri`, voir sa définition.
                             Image(systemName: "line.3.horizontal.decrease")
+                                .imageScale(.large)
                                 .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
                         }
                         .buttonStyle(.plain)
@@ -1016,7 +1021,12 @@ struct VueFeuille: View {
             // Image seule, comme sur iOS : avec un `Label`, la toolbar macOS
             // n'affiche que le titre (« Trier ») et l'icône du critère actif
             // — tout l'intérêt du réglage — passait à la trappe.
+            // `.imageScale(.large)` : sans lui, une `Image` nue rend plus
+            // petite qu'une icône de `Label` (Galerie/Liste/Inspecteur) —
+            // c'est la façon standard de porter un SF Symbol à la taille
+            // normale d'un bouton de toolbar, sans fixer de taille en points.
             Image(systemName: iconeMenuTri)
+                .imageScale(.large)
         }
         .help("Trier")
         .accessibilityLabel("Trier")
