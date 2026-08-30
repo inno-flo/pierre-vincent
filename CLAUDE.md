@@ -1636,6 +1636,15 @@ JavaScript, inexploitables par extraction) :
   (jamais au-dessus de la colonne Inspecteur). L'icône du menu de tri
   change dynamiquement selon le critère actif (eurosign / person / ruler),
   comme sur iOS.
+  - **Tooltips (`.help(...)`)** : Galerie, Liste et Ajouter (« Ajouter une
+    œuvre ») en ont désormais un, comme les autres boutons de la toolbar —
+    ils n'affichent qu'une icône, sans info-bulle rien ne disait leur nom au
+    survol. Le menu de filtre par Support (`menuFiltreType`) avait le sien
+    depuis le début, mais disait encore « Filtrer par type » ; renommé
+    « Filtrer par support » pour suivre le libellé affiché partout ailleurs
+    (Type → Support). Seul CE texte change — le champ `type` et les noms de
+    fonctions (`filtrerParType`…) gardent leur ancien nom, comme pour le
+    reste du renommage Type/Thème → Support/Genre.
   - **Bouton Galerie AVANT Liste**, dans les cinq endroits qui proposent ce
     choix (toolbar macOS, menu Présentation, et les trois barres d'outils
     iOS) : Galerie est la présentation par défaut à la première ouverture

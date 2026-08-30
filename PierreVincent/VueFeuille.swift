@@ -814,6 +814,7 @@ struct VueFeuille: View {
                         editionEntree = o
                     } label: { Label("Ajouter", systemImage: "plus") }
                     .disabled(barreOutilsInactive)
+                    .help("Ajouter une œuvre")
                 }
             }
             // Essai : bouton masqué, voir `afficherBoutonCorbeilleToolbar`.
@@ -865,12 +866,14 @@ struct VueFeuille: View {
                 modeAffichage = "icone"
             } label: { Label("Galerie", systemImage: "square.grid.2x2") }
             .disabled(modeAffichage == "icone" || barreOutilsInactive)
+            .help("Galerie")
         }
         ToolbarItem {
             Button {
                 modeAffichage = "liste"
             } label: { Label("Liste", systemImage: "list.bullet") }
             .disabled(modeAffichage == "liste" || barreOutilsInactive)
+            .help("Liste")
         }
         // Menu de filtre par type, JUSTE APRÈS la capsule Galerie/Liste —
         // Catalogue et Ventes seulement, voir `Categorie.menuFiltreTypeToolbar`.
@@ -965,7 +968,7 @@ struct VueFeuille: View {
             Image(systemName: typeRetenu.map(symboleTypeFiltrable)
                               ?? symboleFiltreTous)
         }
-        .help("Filtrer par type")
+        .help("Filtrer par support")
     }
 
 
