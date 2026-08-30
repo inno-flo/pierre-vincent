@@ -880,14 +880,23 @@ struct VueFeuille: View {
             // fasse un tri sensé. Retiré comme sur iOS, la galerie et la
             // liste restant seules présentations.
             if !favoriSeul {
-                ToolbarItemGroup {
-                    // Menu de critère : sans objet dans la Réserve, dont les
-                    // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
-                    // le tri par dimensions y gardant du sens.
-                    if feuille != .reserve {
+                // Deux `ToolbarItem` NUS, adjacents et SANS `ToolbarSpacer`
+                // entre eux — comme Galerie/Liste juste au-dessus, seul
+                // motif qui produise réellement une capsule commune sur ce
+                // système. `ToolbarItemGroup`, essayé d'abord, rendait
+                // chaque bouton dans son propre cercle séparé — l'inverse de
+                // l'effet recherché.
+                //
+                // Menu de critère : sans objet dans la Réserve, dont les
+                // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
+                // le tri par dimensions y gardant du sens.
+                if feuille != .reserve {
+                    ToolbarItem {
                         menuTri
                             .disabled(barreOutilsInactive)
                     }
+                }
+                ToolbarItem {
                     Button {
                         triCroissant.toggle()
                     } label: {

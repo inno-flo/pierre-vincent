@@ -724,6 +724,19 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   AppKit dessine la sélection en bleu quand le tableau a le focus clavier, en
   gris sinon — comportement système. La surbrillance neutralisée par
   `DesactiveSurbrillanceSidebar` ne concerne QUE la barre latérale.
+- **Capsule commune à plusieurs boutons de toolbar macOS : PAS
+  `ToolbarItemGroup`.** Essayé pour grouper le menu de tri et le bouton de
+  sens dans une même capsule (`VueFeuille.swift`) : rendait chaque bouton
+  dans son propre cercle séparé, l'inverse de l'effet recherché — vérifié à
+  l'écran (capture fournie par l'utilisateur, la mienne restant bloquée dans
+  cet environnement).
+  **Ce qui marche** : deux `ToolbarItem` NUS, adjacents, SANS wrapper ni
+  `ToolbarSpacer` entre eux — exactement le motif déjà en place pour
+  Galerie/Liste juste au-dessus, qui produit bien une capsule commune sur ce
+  système. La capsule vient donc de l'ADJACENCE de `ToolbarItem` bruts, pas
+  d'une API de groupage explicite. `ToolbarSpacer(.fixed)` reste la façon de
+  SÉPARER deux groupes (avant/après la paire tri+sens, pour l'isoler de
+  Galerie/Liste d'un côté et de l'Inspecteur de l'autre).
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
