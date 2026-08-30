@@ -87,10 +87,11 @@ struct VueSynthese: View {
         oeuvresDonnees.filter { $0.type.localizedCaseInsensitiveContains("dessin") }
     }
 
-    /// Cinq destinataires ayant reçu le plus de dons : nom + nombre d'œuvres.
-    /// « Inconnu » et les valeurs vides sont écartés, un destinataire non
-    /// identifié ne désigne personne à classer.
-    private var topDestinataires: [(nom: String, nombre: Int)] {
+    /// TOUS les destinataires ayant reçu au moins un don : nom + nombre
+    /// d'œuvres, triés du plus grand nombre au plus petit. « Inconnu » et les
+    /// valeurs vides sont écartés, un destinataire non identifié ne désigne
+    /// personne à classer.
+    private var destinatairesTries: [(nom: String, nombre: Int)] {
         var comptes: [String: Int] = [:]
         for o in oeuvresDonnees {
             let nom = o.destinataire.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -99,7 +100,6 @@ struct VueSynthese: View {
         }
         return comptes
             .sorted { $0.value > $1.value }
-            .prefix(5)
             .map { (nom: $0.key, nombre: $0.value) }
     }
 
@@ -147,18 +147,19 @@ struct VueSynthese: View {
                             tuileNombre(icone: "gift", label: "Dessins",
                                         valeur: "\(dessinsDonnes.count)", detail: nil)
                         }
-                        // Sous-section « Destinataires » : les cinq personnes
-                        // ayant reçu le plus de dons. Même présentation que la
-                        // liste de la carte « Enchères et expositions »
+                        // Sous-section « Destinataires » : TOUTES les
+                        // personnes ayant reçu au moins un don, triées par
+                        // nombre décroissant. Même présentation que la liste
+                        // de la carte « Enchères et expositions »
                         // (`tuileVendeur`), mais un COMPTE d'œuvres et non un
                         // montant — `tuileDestinataire` en est le pendant.
-                        if !topDestinataires.isEmpty {
+                        if !destinatairesTries.isEmpty {
                             Text("Destinataires")
                                 .font(policeValeur).fontWeight(.bold)
                                 .foregroundStyle(Color.textePrincipal)
                                 .padding(.top, 4)
                             VStack(spacing: 10) {
-                                ForEach(topDestinataires, id: \.nom) { d in
+                                ForEach(destinatairesTries, id: \.nom) { d in
                                     tuileDestinataire(d.nom, d.nombre)
                                 }
                             }

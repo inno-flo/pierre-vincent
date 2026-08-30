@@ -984,12 +984,13 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     réserver la ligne de prix vide de `tuileNombre` (`reserverEspace`), qui
     ne servait qu'à aligner leur hauteur sur des tuiles à prix dans
     l'ancienne grille commune.
-    - **Sous-section « Destinataires »** : les CINQ personnes ayant reçu le
-      plus de dons, nom + nombre d'œuvres. `topDestinataires`
-      (`VueSynthese.swift`) groupe `oeuvresDonnees` par champ `destinataire`,
-      écarte les valeurs vides et « Inconnu » (un destinataire non identifié
-      ne désigne personne à classer), trie par nombre décroissant et ne
-      garde que les cinq premiers. **Même présentation que la carte
+    - **Sous-section « Destinataires »** : TOUTES les personnes ayant reçu au
+      moins un don, nom + nombre d'œuvres. `destinatairesTries`
+      (`VueSynthese.swift`, ex-`topDestinataires` — renommée après le retrait
+      de la limite à cinq, qui ne correspondait plus à ce qu'elle renvoie)
+      groupe `oeuvresDonnees` par champ `destinataire`, écarte les valeurs
+      vides et « Inconnu » (un destinataire non identifié ne désigne personne
+      à classer), trie par nombre décroissant. **Même présentation que la carte
       « Enchères et expositions »** (nom à gauche, valeur orange à droite) :
       `tuileDestinataire` est le pendant de `tuileVendeur`, sans mise en
       forme monétaire — un COMPTE d'œuvres, pas un montant. Absente si aucun
