@@ -341,8 +341,11 @@ struct VueFeuille: View {
                     // regroupement et même présentation que dans l'éditeur.
                     celluleInspecteur {
                         HStack(alignment: .top, spacing: 16) {
-                            ligneInspecteur("Type", o.type)
-                            ligneInspecteur("Thème", o.theme)
+                            // Libellés « Support »/« Genre », ex-« Type »/
+                            // « Thème » : les champs sous-jacents (`type`,
+                            // `theme`) gardent leur ancien nom.
+                            ligneInspecteur("Support", o.type)
+                            ligneInspecteur("Genre", o.theme)
                         }
                     }
 

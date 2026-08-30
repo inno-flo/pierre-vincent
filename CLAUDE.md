@@ -899,6 +899,15 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     cellule, au lieu de piler les champs. La fiche iPhone avait encore
     Dimensions/Format superposés — corrigée pour rejoindre les deux autres
     surfaces, qui doivent rester identiques.
+  - **Libellés affichés « Support » et « Genre »**, aux TROIS surfaces —
+    ex-« Type » et « Thème ». Les champs sous-jacents (`type`, `theme`,
+    `choixType`, `typesOeuvre`) gardent leur ancien nom ; seul le texte
+    montré à l'écran change (`champType()`/`champTexte` dans l'éditeur,
+    `ligneInspecteur` dans l'inspecteur, `ligne` dans la fiche iPhone).
+    **Les colonnes du tableau macOS (mode Liste) et les exports gardent
+    « Type »/« Thème »** : la demande visait les vues de Détail, pas ces
+    deux-là — `TableColumn` dans `VueFeuille.swift` et `Colonnes.swift` n'ont
+    pas été touchés.
 - **Le caractère « don » se lit sur l'ŒUVRE (`o.feuille`), jamais sur la
   rubrique affichée.** Dans les vues agrégées (Inventaire, Ventes), la feuille
   de la rubrique vaut `nil` : l'inspecteur affichait donc Prix/Vendeur/

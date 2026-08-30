@@ -776,8 +776,10 @@ struct DetailiOS: View {
             // même présentation que sur Mac (éditeur et inspecteur).
             cellule {
                 HStack(alignment: .top, spacing: 16) {
-                    ligne("Type", oeuvre.type)
-                    ligne("Thème", oeuvre.theme)
+                    // Libellés « Support »/« Genre », ex-« Type »/« Thème » :
+                    // les champs sous-jacents gardent leur ancien nom.
+                    ligne("Support", oeuvre.type)
+                    ligne("Genre", oeuvre.theme)
                 }
             }
 

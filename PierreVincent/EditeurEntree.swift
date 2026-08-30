@@ -102,7 +102,7 @@ struct EditeurEntree: View {
                             celluleEditeur {
                                 HStack(alignment: .top, spacing: 16) {
                                     champType()
-                                    champTexte("Thème", $theme, champ: .theme)
+                                    champTexte("Genre", $theme, champ: .theme)
                                 }
                             }
                             // Cellule Dimensions + Format, CÔTE À CÔTE — et non
@@ -133,7 +133,7 @@ struct EditeurEntree: View {
                             celluleEditeur {
                                 HStack(alignment: .top, spacing: 16) {
                                     champType()
-                                    champTexte("Thème", $theme, champ: .theme)
+                                    champTexte("Genre", $theme, champ: .theme)
                                 }
                             }
                             // Cellule Dimensions + Format, CÔTE À CÔTE — et non
@@ -483,7 +483,9 @@ struct EditeurEntree: View {
     /// sur laquelle s'appuient les rubriques par catégorie.
     private func champType() -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("Type").font(.body).fontWeight(.bold).foregroundStyle(.secondary)
+            // Libellé affiché « Support », ex-« Type » : le champ sous-jacent
+            // (`type`, `choixType`, `typesOeuvre`) garde son ancien nom.
+            Text("Support").font(.body).fontWeight(.bold).foregroundStyle(.secondary)
             Picker("", selection: $type) {
                 ForEach(choixType, id: \.self) { valeur in
                     Text(valeur).tag(valeur)
