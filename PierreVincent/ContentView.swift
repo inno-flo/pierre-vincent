@@ -355,6 +355,14 @@ enum Categorie: Hashable, Identifiable {
     /// vendeur), ce qui simplifie ce premier essai.
     var pastillesTypeDansToolbar: Bool { self == .oeuvres }
 
+    /// Menu de filtre par type dans la toolbar macOS, POSÉ APRÈS la capsule
+    /// Galerie/Liste — Catalogue et Ventes seulement, à la demande. Distinct
+    /// du drapeau `afficherMenuFiltreTypeToolbar` (`TriEtTotaux.swift`), qui
+    /// gouverne aussi les trois menus équivalents sur iOS : le réactiver
+    /// aurait fait réapparaître ces menus-là aussi, en plus des bandeaux de
+    /// pastilles déjà en place sur iOS pour le même filtre.
+    var menuFiltreTypeToolbar: Bool { self == .oeuvres || self == .ventesRealisees }
+
     /// Vrai pour toute rubrique du premier grand bloc de la sidebar,
     /// « Ventes et dons » — Catalogue, Ventes, Dons, Synthèse et les
     /// sous-catégories par mode de vente. Faux pour la Réserve et pour
@@ -711,6 +719,7 @@ struct ContentView: View {
                                nomEnGalerie: cat.nomEnGalerie,
                                visionneuseIntegree: cat.visionneuseIntegree,
                                pastillesTypeDansToolbar: cat.pastillesTypeDansToolbar,
+                               menuFiltreTypeToolbar: cat.menuFiltreTypeToolbar,
                                estSectionVentesEtDons: cat.estSectionVentesEtDons,
                                nbSelection: $nbSelection)
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
@@ -941,7 +950,7 @@ struct ContentView: View {
             // rubrique dans un ordre qui ne correspond à rien de visible :
             // Catalogue, Supports, Ventes, Modes de vente, Dons, Synthèse.
             liste.append(.oeuvres)
-            if afficherSupportsSidebar && sousBlocCategoriesOuvert {
+            if sousBlocCategoriesOuvert {
                 liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
             }
             liste.append(.ventesRealisees)
@@ -956,7 +965,7 @@ struct ContentView: View {
             liste.append(.reserveCollection)
             // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
             // rubrique dans un ordre qui ne correspond à rien de visible.
-            if afficherSupportsSidebar && sousBlocReserveCategoriesOuvert {
+            if afficherSupportsSidebarReserve && sousBlocReserveCategoriesOuvert {
                 liste.append(.reserveTableaux)
                 liste.append(.reserveDessins)
             }
@@ -1179,16 +1188,12 @@ struct ContentView: View {
         // Sous-groupe repliable des catégories d'œuvres, ex-« Catégories ».
         // `DisclosureGroup` et non `Section` : une `List` n'accepte pas de
         // Section dans une Section.
-        //
-        // Essai : masqué, voir `afficherSupportsSidebar`.
-        if afficherSupportsSidebar {
-            DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
-                lien(.tableauxVendus)
-                lien(.dessinsVendus)
-                lien(.tapisVendus)
-            } label: {
-                Text("Supports").foregroundStyle(.secondary)
-            }
+        DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
+            lien(.tableauxVendus)
+            lien(.dessinsVendus)
+            lien(.tapisVendus)
+        } label: {
+            Text("Supports").foregroundStyle(.secondary)
         }
         lien(.ventesRealisees)
         // Sous-groupe des modes de vente, construit d'après les données.
@@ -1251,8 +1256,8 @@ struct ContentView: View {
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
         //
-        // Essai : masqué, voir `afficherSupportsSidebar`.
-        if afficherSupportsSidebar {
+        // Essai : masqué, voir `afficherSupportsSidebarReserve`.
+        if afficherSupportsSidebarReserve {
             DisclosureGroup(isExpanded: $sousBlocReserveCategoriesOuvert) {
                 lien(.reserveTableaux)
                 lien(.reserveDessins)

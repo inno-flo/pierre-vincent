@@ -724,53 +724,33 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   AppKit dessine la sélection en bleu quand le tableau a le focus clavier, en
   gris sinon — comportement système. La surbrillance neutralisée par
   `DesactiveSurbrillanceSidebar` ne concerne QUE la barre latérale.
-- **Capsule commune à plusieurs boutons de toolbar macOS — TROIS essais
-  reposant sur le système, TOUS échoués**, pour grouper le menu de tri et le
-  bouton de sens (`VueFeuille.swift`). Les trois vérifiés à l'écran (capture
-  fournie par l'utilisateur, la mienne restant bloquée dans cet
-  environnement) :
+- **Capsule commune à plusieurs boutons de toolbar macOS — CINQ essais,
+  TOUS ABANDONNÉS, code revenu à l'état d'origine.** Objectif : grouper le
+  menu de tri et le bouton de sens (`VueFeuille.swift`) dans une capsule
+  commune, comme le sont Galerie et Liste juste à côté. Chaque essai vérifié
+  à l'écran (captures fournies par l'utilisateur, la mienne restant bloquée
+  dans cet environnement) :
   1. `ToolbarItemGroup` — chaque bouton dans son propre cercle séparé.
-  2. Deux `ToolbarItem` NUS et adjacents, sans wrapper ni spacer — marchait
-     pour Galerie/Liste juste au-dessus, pas ici. Hypothèse : Galerie/Liste
-     ne sont sous AUCUN `if`, la paire tri+sens est nichée sous
-     `if modeAffichage == "icone"`. **Réfutée après coup** : le bouton
-     Inspecteur, sous ce MÊME `if`, se rend pourtant très bien comme un
-     groupe isolé — être sous un `if` dynamique n'empêche donc pas un item
-     de former SON PROPRE groupe, seulement de se joindre à un autre item.
-  3. `ControlGroup` — composant pourtant documenté pour ça. Toujours deux
-     cercles séparés.
-  **Cause la plus probable, après ces trois échecs** : `menuTri` est un
-  `Menu`, pas un `Button` comme Galerie/Liste ou le bouton Inspecteur — un
-  `Menu` garde son propre fond natif quel que soit le conteneur qui
-  l'entoure. Aucune des trois API ne semble pouvoir fusionner visuellement
-  un `Menu` et un `Button` dans une même capsule sur ce système.
-  4. **Chaque contrôle perd son fond natif INDIVIDUEL**
-     (`.buttonStyle(.plain)` sur le bouton, `.menuStyle(.borderlessButton)`
-     + `.menuIndicator(.hidden)` sur `menuTri`) — première version, testée à
-     l'écran : capsule bien présente, mais plus étroite que Galerie/Liste,
-     icônes plus petites, et un fond gris posé PAR-DESSUS un fond blanc.
-     **Cause** : un `.background(Capsule().fill(...))` et des
-     `.padding()`/`.frame()` manuels avaient été ajoutés en plus, alors que
-     le système fournit DÉJÀ le bon fond de capsule et le bon gabarit une
-     fois le fond natif de chaque contrôle retiré — exactement comme pour
-     Galerie/Liste, qui n'ont ni fond ni padding manuels. Ces ajouts
-     dessinaient un second fond par-dessus le premier, et des tailles qui ne
-     correspondaient pas à celles, automatiques, de la capsule voisine.
-     **Retirés** : plus de `.background()`, de `.padding()` ni de
-     `.frame()` sur l'icône — seuls `.buttonStyle(.plain)` et
-     `.menuStyle(.borderlessButton)` + `.menuIndicator(.hidden)` restent, le
-     système fait le reste. **Toujours pas satisfaisant à l'écran** après ce
-     nettoyage : icônes encore réduites par rapport à Galerie/Liste, et
-     espacement trop serré entre elles.
-  5. **`.imageScale(.large)` sur les DEUX icônes**, plus un `HStack(spacing:
-     8)`. Une `Image` nue (celles de `menuTri` et du bouton de sens) rend
-     plus petite qu'une icône portée par un `Label` (celles de Galerie,
-     Liste et Inspecteur) — `.imageScale(.large)` porte le SF Symbol à la
-     même taille SANS fixer de valeur en points. **`menuTri` reste sur
-     `Image` nue plutôt que `Label`** : un `Label` y avait déjà, par le
-     passé, fait disparaître l'icône dynamique du critère actif au profit
-     du seul mot « Trier » — voir le commentaire sur place. Non encore
-     reconfirmé à l'écran.
+  2. Deux `ToolbarItem` nus et adjacents, sans wrapper ni spacer — marche
+     pour Galerie/Liste, pas ici. Piste explorée (Galerie/Liste hors de tout
+     `if`, la paire tri+sens nichée sous `if modeAffichage`) **réfutée** :
+     le bouton Inspecteur, sous ce même `if`, se rend pourtant très bien
+     comme groupe isolé.
+  3. `ControlGroup`, le composant pourtant documenté pour ça — toujours deux
+     cercles séparés. Hypothèse retenue : `menuTri` est un `Menu`, pas un
+     `Button`, et garde son fond natif quel que soit le conteneur.
+  4. Capsule dessinée à la main (`.buttonStyle(.plain)` +
+     `.menuStyle(.borderlessButton)` sur chaque contrôle, fond retiré puis
+     laissé au système) — capsule présente mais plus étroite que
+     Galerie/Liste, icônes réduites.
+  5. `.imageScale(.large)` sur les icônes (une `Image` nue rend plus petite
+     qu'une icône de `Label`) + espacement à 8 pt — **toujours pas
+     satisfaisant**.
+  **Décision : abandonné.** Tout le code de cette campagne a été reverté au
+  commit `d044ca1` (`ToolbarItemGroup`, deux boutons visuellement séparés) —
+  c'est la présentation retenue, malgré son nom qui suggère un groupage
+  qu'elle ne produit pas sur ce système. Ne pas retenter ces cinq pistes
+  sans un nouvel élément.
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
@@ -1328,6 +1308,16 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     (`TriEtTotaux.swift`). Le bandeau ou la rangée de pastilles reste seul
     moyen de filtrer par type. Code conservé plutôt que supprimé : repasser
     le drapeau à `true` restaure le bouton partout d'un coup.
+  - **RÉTABLI depuis, mais SEULEMENT sur macOS, pour Catalogue et Ventes**
+    (`Categorie.menuFiltreTypeToolbar`, `ContentView.swift` + `VueFeuille.swift`) :
+    posé dans la toolbar juste APRÈS la capsule Galerie/Liste. Volontairement
+    **découplé** du drapeau `afficherMenuFiltreTypeToolbar` ci-dessus, qui
+    gouverne aussi les trois menus iOS équivalents — les réactiver aurait
+    doublé les bandeaux de pastilles déjà en place sur iOS pour le même
+    filtre. Chaque entrée garde sa propre icône (`symboleTypeFiltrable`),
+    et l'icône du bouton suit toujours le critère actif (`iconeMenu`,
+    inchangé). Les autres rubriques (Dons, modes de vente, Réserve, Favoris)
+    ne sont pas concernées : elles gardent leur bandeau de pastilles.
 - **macOS — bandeau de pastilles filtrant par vendeur** (`VueFeuille.swift`) :
   en haut du panneau des rubriques concernées. Une
   pastille par **vendeur réellement présent** — aucune liste en dur, un lieu
@@ -1962,13 +1952,19 @@ JavaScript, inexploitables par extraction) :
     précédents : `titre` traduit, `modeVente` sur l'œuvre et
     `modesDeVenteReference` restent « Vente privée ». Y toucher romprait la
     reconnaissance des œuvres déjà classées dans ce mode.
-- **Sous-groupe « Supports » MASQUÉ, essai** (`afficherSupportsSidebar` dans
-  `TriEtTotaux.swift`) : dans les DEUX sections de la sidebar — « Ventes et
-  dons » et « Réserve » — sur les deux plateformes. Code conservé, `true`
-  restaure les deux d'un coup. `categoriesSidebar` (navigation clavier
-  macOS) ne propose plus ses rubriques (Tableaux/Dessins/Tapis vendus,
-  Tableaux/Dessins de la Réserve) tant que le drapeau est à `false` — sans
-  ce garde-fou, ↑↓ aurait pu s'arrêter sur une rubrique invisible à l'écran.
+- **Sous-groupe « Supports » de « Ventes et dons » RÉTABLI** (Tableaux,
+  Dessins, Tapis) — l'essai qui le masquait est terminé pour cette section,
+  `categoriesSidebar` en tient compte à nouveau sans condition.
+  - **Celui de la RÉSERVE reste MASQUÉ, essai en cours**
+    (`afficherSupportsSidebarReserve` dans `TriEtTotaux.swift`) : les deux
+    occurrences partageaient à l'origine un seul drapeau
+    (`afficherSupportsSidebar`) ; rétablir Ventes et dons sans toucher à la
+    Réserve a demandé de le renommer et de le restreindre à cette seule
+    section. Code conservé, `true` restaure celui de la Réserve.
+    `categoriesSidebar` (navigation clavier macOS) ne propose plus ses
+    rubriques (Tableaux/Dessins de la Réserve) tant que le drapeau est à
+    `false` — sans ce garde-fou, ↑↓ aurait pu s'arrêter sur une rubrique
+    invisible à l'écran.
 
 - **iOS — pas de récapitulatif dans Ventes ni dans Dons** : leur seule ligne
   (« Nombre de ventes », « Nombre de dons ») annonçait un nombre que le

@@ -53,6 +53,9 @@ struct VueFeuille: View {
     /// Essai — pastilles de type dans la toolbar plutôt que dans le bandeau
     /// translucide, voir `Categorie.pastillesTypeDansToolbar`.
     let pastillesTypeDansToolbar: Bool
+    /// Voir `Categorie.menuFiltreTypeToolbar` : menu de filtre par type posé
+    /// après la capsule Galerie/Liste — Catalogue et Ventes.
+    let menuFiltreTypeToolbar: Bool
     /// Voir `Categorie.estSectionVentesEtDons` et `afficherPastillesVentesEtDons`.
     let estSectionVentesEtDons: Bool
     /// Nombre d'entrées sélectionnées, remonté vers la sidebar.
@@ -71,6 +74,7 @@ struct VueFeuille: View {
          nomEnGalerie: Bool = true,
          visionneuseIntegree: Bool = false,
          pastillesTypeDansToolbar: Bool = false,
+         menuFiltreTypeToolbar: Bool = false,
          estSectionVentesEtDons: Bool = false,
          nbSelection: Binding<Int>) {
         self.feuille = feuille
@@ -89,6 +93,7 @@ struct VueFeuille: View {
         self.nomEnGalerie = nomEnGalerie
         self.visionneuseIntegree = visionneuseIntegree
         self.pastillesTypeDansToolbar = pastillesTypeDansToolbar
+        self.menuFiltreTypeToolbar = menuFiltreTypeToolbar
         self.estSectionVentesEtDons = estSectionVentesEtDons
         self._nbSelection = nbSelection
     }
@@ -851,12 +856,6 @@ struct VueFeuille: View {
             }
         }
         ToolbarSpacer(.fixed)
-        // Alternative aux pastilles du bandeau : même filtre, même état.
-        // En TÊTE de la capsule, avant les boutons de présentation.
-        // Retiré pour l'instant, comme sur iOS : voir `afficherMenuFiltreTypeToolbar`.
-        if afficherMenuFiltreTypeToolbar && filtreParType {
-            ToolbarItem { menuFiltreType }
-        }
         // Galerie en tête : c'est la présentation par défaut à la première
         // ouverture d'une vue (`modeAffichage` vaut "icone").
         ToolbarItem {
@@ -871,6 +870,16 @@ struct VueFeuille: View {
             } label: { Label("Liste", systemImage: "list.bullet") }
             .disabled(modeAffichage == "liste" || barreOutilsInactive)
         }
+        // Menu de filtre par type, JUSTE APRÈS la capsule Galerie/Liste —
+        // Catalogue et Ventes seulement, voir `Categorie.menuFiltreTypeToolbar`.
+        // Alternative aux pastilles du bandeau : même filtre, même état.
+        // Indépendant du drapeau `afficherMenuFiltreTypeToolbar`, qui gouverne
+        // en plus les trois menus équivalents sur iOS — ceux-là restent
+        // masqués, l'essai des pastilles y étant déjà en place.
+        if menuFiltreTypeToolbar && filtreParType {
+            ToolbarSpacer(.fixed)
+            ToolbarItem { menuFiltreType }
+        }
 
         // === Tri + sens + inspecteur (galerie seulement) ===
         if modeAffichage == "icone" {
@@ -880,55 +889,22 @@ struct VueFeuille: View {
             // fasse un tri sensé. Retiré comme sur iOS, la galerie et la
             // liste restant seules présentations.
             if !favoriSeul {
-                // Capsule DESSINÉE À LA MAIN, et non confiée au système —
-                // TROIS essais qui s'en remettaient à lui ont tous échoué,
-                // vérifiés à l'écran : `ToolbarItemGroup` (chaque bouton
-                // dans son propre cercle), deux `ToolbarItem` adjacents sans
-                // wrapper (marchait pour Galerie/Liste, pas ici), puis
-                // `ControlGroup` (toujours séparé). Cause probable : `menuTri`
-                // est un `Menu`, pas un `Button` comme Galerie/Liste — un
-                // `Menu` garde son propre fond natif quel que soit le
-                // conteneur qui l'entoure, à moins de le lui retirer
-                // explicitement (`.menuStyle(.borderlessButton)`).
-                //
-                // Ici, chaque contrôle perd son fond natif individuel
-                // (`.buttonStyle(.plain)`, `.menuStyle(.borderlessButton)`) ;
-                // le système fournit ALORS de lui-même le fond de capsule
-                // commun, exactement comme il le fait pour Galerie/Liste —
-                // ne RIEN ajouter par-dessus (ni `.background()`, ni
-                // `.padding()`, ni `.frame()` sur l'icône) : un essai
-                // précédent posait en plus un fond gris à la main, qui
-                // s'affichait PAR-DESSUS le fond natif au lieu de le
-                // remplacer, et des tailles/marges qui ne correspondaient
-                // pas à celles, automatiques, de Galerie/Liste — d'où une
-                // capsule plus étroite, des icônes plus petites, et un
-                // double fond gris sur blanc.
-                //
-                // Menu de critère : sans objet dans la Réserve, dont les
-                // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
-                // le tri par dimensions y gardant du sens.
-                ToolbarItem {
-                    // Espacement à 8 pt, pour se rapprocher de celui, natif,
-                    // entre Galerie et Liste dans leur propre capsule.
-                    HStack(spacing: 8) {
-                        if feuille != .reserve {
-                            menuTri
-                                .menuStyle(.borderlessButton)
-                                .menuIndicator(.hidden)
-                        }
-                        Button {
-                            triCroissant.toggle()
-                        } label: {
-                            // `.imageScale(.large)` : même correctif de
-                            // taille que `menuTri`, voir sa définition.
-                            Image(systemName: "line.3.horizontal.decrease")
-                                .imageScale(.large)
-                                .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
-                        }
-                        .buttonStyle(.plain)
-                        .help(triCroissant ? "Tri croissant" : "Tri décroissant")
+                ToolbarItemGroup {
+                    // Menu de critère : sans objet dans la Réserve, dont les
+                    // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
+                    // le tri par dimensions y gardant du sens.
+                    if feuille != .reserve {
+                        menuTri
+                            .disabled(barreOutilsInactive)
+                    }
+                    Button {
+                        triCroissant.toggle()
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                            .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
                     }
                     .disabled(barreOutilsInactive)
+                    .help(triCroissant ? "Tri croissant" : "Tri décroissant")
                 }
             }
             ToolbarSpacer(.fixed)
@@ -1021,12 +997,7 @@ struct VueFeuille: View {
             // Image seule, comme sur iOS : avec un `Label`, la toolbar macOS
             // n'affiche que le titre (« Trier ») et l'icône du critère actif
             // — tout l'intérêt du réglage — passait à la trappe.
-            // `.imageScale(.large)` : sans lui, une `Image` nue rend plus
-            // petite qu'une icône de `Label` (Galerie/Liste/Inspecteur) —
-            // c'est la façon standard de porter un SF Symbol à la taille
-            // normale d'un bouton de toolbar, sans fixer de taille en points.
             Image(systemName: iconeMenuTri)
-                .imageScale(.large)
         }
         .help("Trier")
         .accessibilityLabel("Trier")
