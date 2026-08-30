@@ -1978,16 +1978,24 @@ JavaScript, inexploitables par extraction) :
     précédents : `titre` traduit, `modeVente` sur l'œuvre et
     `modesDeVenteReference` restent « Vente privée ». Y toucher romprait la
     reconnaissance des œuvres déjà classées dans ce mode.
-- **Sous-groupe « Supports » de « Ventes et dons » : rétabli puis APLATI,
-  macOS SEULEMENT.** D'abord rétabli comme sous-groupe repliable après
-  l'essai qui le masquait, puis supprimé à la demande sur macOS : Tableaux,
-  Dessins et Tapis sont désormais au MÊME NIVEAU que Catalogue, sans en-tête
-  « Supports » ni repli. `contenuVentesEtDons` (`ContentView.swift`), vue
-  PARTAGÉE, branche sur `#if os(macOS)` pour ce seul bloc — trois `lien(...)`
-  directs côté macOS, le `DisclosureGroup` d'origine inchangé côté iOS, qui
-  garde son sous-groupe repliable. `categoriesSidebar` (navigation clavier
-  macOS) suit : `.tableauxVendus/.dessinsVendus/.tapisVendus` y sont ajoutés
-  sans condition, il n'y a plus de repli à tester pour eux.
+- **Sous-groupe « Supports » de « Ventes et dons » : rétabli, APLATI sur
+  macOS, puis SUPPRIMÉ sur iOS — n'existe plus sur AUCUNE des deux
+  plateformes.** D'abord rétabli comme sous-groupe repliable après l'essai
+  qui le masquait, puis aplati sur macOS (Tableaux/Dessins/Tapis au MÊME
+  NIVEAU que Catalogue, sans en-tête « Supports » ni repli), et enfin retiré
+  purement et simplement d'iOS : la vue Catalogue y offre déjà le même
+  filtre par type (bandeau de pastilles), la sous-rubrique de sidebar faisait
+  double emploi. `contenuVentesEtDons` (`ContentView.swift`) n'a donc plus
+  qu'une seule forme, sans branche `#if os` — `lien(.oeuvres)` puis
+  `lien(.oeuvresDonnees)` directement, sur les deux plateformes.
+  `sousBlocCategoriesOuvert` (l'état de repli qu'utilisait le
+  `DisclosureGroup` iOS) est supprimé, n'ayant plus aucun appelant.
+  `categoriesSidebar` (navigation clavier macOS) suit : `.tableauxVendus/
+  .dessinsVendus/.tapisVendus` y sont ajoutés sans condition, il n'y a plus
+  de repli à tester pour eux.
+  - **Ces trois rubriques restent des `Categorie` valides**, seulement
+    retirées de la NAVIGATION de sidebar — sur iPhone, il n'existe plus de
+    chemin pour y accéder directement en dehors du filtre de Catalogue.
   - **Celui de la RÉSERVE reste MASQUÉ, essai en cours, DEUX plateformes**
     (`afficherSupportsSidebarReserve` dans `TriEtTotaux.swift`) : les deux
     occurrences partageaient à l'origine un seul drapeau

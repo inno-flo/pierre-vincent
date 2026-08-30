@@ -508,7 +508,6 @@ struct ContentView: View {
     #endif
     @State private var blocVentesOuvert = true
     @State private var blocStockOuvert = true
-    @State private var sousBlocCategoriesOuvert = false
     @State private var sousBlocModesVenteOuvert = false
     @State private var sousBlocReserveCategoriesOuvert = false
     @State private var sousBlocReserveThemesOuvert = false
@@ -1197,30 +1196,17 @@ struct ContentView: View {
 
     @ViewBuilder
     private var contenuVentesEtDons: some View {
-        // Ordre d'affichage : Catalogue, (Supports), Dons, Ventes, Modes de
-        // vente, Synthèse. Le sous-groupe des modes de vente s'intercale donc
+        // Ordre d'affichage : Catalogue, Dons, Ventes, Modes de vente,
+        // Synthèse. Le sous-groupe des modes de vente s'intercale donc
         // entre les rubriques de premier niveau au lieu d'être regroupé à
         // la fin.
+        //
+        // Plus de sous-rubrique « Supports » (Tableaux/Dessins/Tapis) — sur
+        // AUCUNE des deux plateformes désormais : macOS l'avait déjà perdue
+        // en passant à un affichage à plat, iOS la retire à son tour, le
+        // filtre par type de la vue Catalogue (bandeau de pastilles) faisant
+        // exactement le même travail.
         lien(.oeuvres)
-        #if os(macOS)
-        // Demande explicite : sur macOS, plus de sous-rubrique « Supports »
-        // ici — Tableaux/Dessins/Tapis sont au MÊME NIVEAU que Catalogue.
-        // iOS garde le sous-groupe repliable ci-dessous, inchangé.
-        lien(.tableauxVendus)
-        lien(.dessinsVendus)
-        lien(.tapisVendus)
-        #else
-        // Sous-groupe repliable des catégories d'œuvres, ex-« Catégories ».
-        // `DisclosureGroup` et non `Section` : une `List` n'accepte pas de
-        // Section dans une Section.
-        DisclosureGroup(isExpanded: $sousBlocCategoriesOuvert) {
-            lien(.tableauxVendus)
-            lien(.dessinsVendus)
-            lien(.tapisVendus)
-        } label: {
-            Text("Supports").foregroundStyle(.secondary)
-        }
-        #endif
         lien(.oeuvresDonnees)
         lien(.ventesRealisees)
         // Sous-groupe des modes de vente, construit d'après les données.
