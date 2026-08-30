@@ -880,32 +880,46 @@ struct VueFeuille: View {
             // fasse un tri sensé. Retiré comme sur iOS, la galerie et la
             // liste restant seules présentations.
             if !favoriSeul {
-                // `ControlGroup`, et non `ToolbarItemGroup` ni deux
-                // `ToolbarItem` adjacents — les deux essayés avant celui-ci,
-                // sans capsule commune à l'écran (vérifié par capture).
-                // `ControlGroup` est le composant SwiftUI PENSÉ pour ça :
-                // un ensemble de contrôles apparentés rendus comme un seul
-                // bloc visuel, quelle que soit l'imbrication de `if`
-                // autour de lui — contrairement à l'adjacence de
-                // `ToolbarItem`, qui ne suffisait pas dès que ce bloc était
-                // lui-même sous un `if` dynamique (`modeAffichage`).
+                // Capsule DESSINÉE À LA MAIN, et non confiée au système —
+                // TROIS essais qui s'en remettaient à lui ont tous échoué,
+                // vérifiés à l'écran : `ToolbarItemGroup` (chaque bouton
+                // dans son propre cercle), deux `ToolbarItem` adjacents sans
+                // wrapper (marchait pour Galerie/Liste, pas ici), puis
+                // `ControlGroup` (toujours séparé). Cause probable : `menuTri`
+                // est un `Menu`, pas un `Button` comme Galerie/Liste — un
+                // `Menu` garde son propre fond natif quel que soit le
+                // conteneur qui l'entoure, à moins de le lui retirer
+                // explicitement (`.menuStyle(.borderlessButton)`).
+                //
+                // Ici, chaque contrôle perd son fond natif individuel
+                // (`.buttonStyle(.plain)`, `.menuStyle(.borderlessButton)`),
+                // et un seul fond en capsule est posé sur l'ensemble — même
+                // technique que les pastilles de filtre (`pastilleType`,
+                // `pastilleVendeur`) ailleurs dans ce fichier.
                 //
                 // Menu de critère : sans objet dans la Réserve, dont les
                 // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
                 // le tri par dimensions y gardant du sens.
                 ToolbarItem {
-                    ControlGroup {
+                    HStack(spacing: 2) {
                         if feuille != .reserve {
                             menuTri
+                                .menuStyle(.borderlessButton)
+                                .menuIndicator(.hidden)
                         }
                         Button {
                             triCroissant.toggle()
                         } label: {
                             Image(systemName: "line.3.horizontal.decrease")
                                 .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                                .frame(width: 20, height: 20)
                         }
+                        .buttonStyle(.plain)
                         .help(triCroissant ? "Tri croissant" : "Tri décroissant")
                     }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
                     .disabled(barreOutilsInactive)
                 }
             }
