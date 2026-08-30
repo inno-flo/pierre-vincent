@@ -25,6 +25,15 @@ struct BandeauTypes: View {
     @Binding var typeRetenu: String?
     /// Nombre d'œuvres réellement affichées, filtre appliqué.
     let nombreAffiche: Int
+    /// Marge horizontale du compteur, qui décide où tombe son bord DROIT
+    /// (le seul qui compte, le gauche n'étant qu'un espace avant un `Spacer`).
+    /// Par défaut 12, la valeur d'origine. Le Catalogue de « Ventes et dons »
+    /// (seule rubrique à avoir AUSSI un récapitulatif chiffré juste en
+    /// dessous) passe 20, pour aligner ce bord sur celui des nombres de
+    /// `ligneRecap` — sans toucher les deux autres vues qui utilisent ce
+    /// composant (Réserve, Dons), qui n'ont rien à aligner et gardent
+    /// l'ancien réglage.
+    var paddingCompteur: CGFloat = 12
 
     var body: some View {
         // Alignement explicite : même pattern que `bandeauFiltres` sur Mac,
@@ -82,7 +91,7 @@ struct BandeauTypes: View {
             // Même corps que les pastilles, donc que les libellés de sidebar.
             .font(.body)
             .foregroundStyle(accent)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, paddingCompteur)
             .padding(.vertical, 5)
     }
 }

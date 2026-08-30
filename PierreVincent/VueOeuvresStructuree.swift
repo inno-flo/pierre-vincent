@@ -205,7 +205,15 @@ struct VueOeuvresStructuree: View {
                         BandeauTypes(mots: typesFiltre,
                                      typeRetenu: $typeRetenu,
                                      nombreAffiche: ventes.count
-                                                  + (estModeVentes ? 0 : dons.count))
+                                                  + (estModeVentes ? 0 : dons.count),
+                                     // Catalogue seulement (`!estModeVentes`) :
+                                     // aligne le bord droit du compteur sur
+                                     // celui de `ligneRecap`, juste en dessous.
+                                     // Les sous-rubriques de mode de vente
+                                     // n'ont pas de récapitulatif visible ici
+                                     // (`recapInutile`) : elles gardent le
+                                     // réglage par défaut du composant.
+                                     paddingCompteur: estModeVentes ? 12 : 20)
                     }
 
                     // --- 2. Récapitulatif, SOUS les capsules ---

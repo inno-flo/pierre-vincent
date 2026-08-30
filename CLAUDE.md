@@ -1029,13 +1029,22 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
       si aucun don n'a de destinataire identifié.
       - **Sur DEUX colonnes fixes** (`colonnesDestinataires`,
         `GridItem(.flexible())` × 2 — pas `.adaptive` comme `colonnesTuiles`,
-        pour ne jamais retomber à une seule colonne), avec un **numéro de
-        position** devant chaque nom (1, 2, 3…), à la demande, pour gagner de
-        la hauteur sur une liste qui peut compter beaucoup de destinataires.
-        Le rang vient de l'index dans `destinatairesTries` (déjà trié par
-        nombre décroissant), pas d'un champ stocké. Le nom porte
-        `.lineLimit(1)` : une colonne deux fois plus étroite qu'avant tronque
-        plus vite un nom long.
+        pour ne jamais retomber à une seule colonne), pour gagner de la
+        hauteur sur une liste qui peut compter beaucoup de destinataires. Le
+        nom porte `.lineLimit(1)` : une colonne deux fois plus étroite
+        qu'avant tronque plus vite un nom long.
+        - **Numéro de position devant chaque nom (1, 2, 3…) : ajouté puis
+          RETIRÉ**, dans la même session. Le rang venait de l'index dans
+          `destinatairesTries` (déjà trié par nombre décroissant), pas d'un
+          champ stocké — rien à défaire côté données si on le rajoute un jour.
+        - **Nom ABRÉGÉ sur iOS seulement** : « Florian Innocente » s'affiche
+          « F. Innocente » — initiale du prénom (premier mot du champ
+          `destinataire`) suivie du reste tel quel. `nomAffiche(_:)` fait
+          l'aiguillage par `#if os(iOS)` DANS cette vue partagée ; macOS
+          affiche le nom complet, sans y toucher. Purement un rendu :
+          `destinataire` n'est jamais modifié en base. Un nom sans espace (un
+          seul mot, y compris « Inconnu ») n'a rien à abréger et reste
+          inchangé (`nomAbrege(_:)`, garde-fou sur `mots.count > 1`).
   - **Le récapitulatif iOS « Vendues / Données »**, en tête de la carte
     Ventes, a été RETIRÉ : la carte Ventes a désormais un contenu IDENTIQUE
     sur les deux plateformes. Il faisait doublon avec la nouvelle carte
@@ -2090,6 +2099,15 @@ JavaScript, inexploitables par extraction) :
     filtre d'abord, ce qu'il donne ensuite. Le récapitulatif porte depuis lors
     sa propre marge basse, que le bandeau lui donnait tant qu'il le suivait —
     encore un cas de marge tenue par le voisin.
+  - **Compteur du bandeau aligné avec les nombres du récapitulatif, dans
+    Catalogue seulement** : `BandeauTypes.paddingCompteur` (nouveau
+    paramètre, défaut 12 — la valeur d'origine) contrôle la marge horizontale
+    du compteur, donc où tombe son bord droit. Catalogue passe 20, pour que
+    ce bord tombe exactement sur celui des nombres de `ligneRecap` juste en
+    dessous (16 pt de marge de carte + 20 pt de padding de ligne = 36 pt
+    depuis le bord de l'écran, contre 16 + 12 = 28 pt sans ce réglage).
+    Réserve et Dons, seules autres vues à utiliser `BandeauTypes`, n'ont pas
+    de second nombre à aligner en dessous et gardent le défaut.
   - **« Ventes » et « Dons » en style NORMAL dans Catalogue seulement**
     (`ligneRecap(gras:)`) : `estModeVentes` vaut `false` pour Catalogue, donc
     `gras: false` s'y applique aux deux lignes (intitulé et compteur) — la

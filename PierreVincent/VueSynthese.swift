@@ -155,17 +155,18 @@ struct VueSynthese: View {
                         }
                         // Sous-section « Destinataires » : TOUTES les
                         // personnes ayant reçu au moins un don, triées par
-                        // nombre décroissant. Sur DEUX colonnes fixes, avec un
-                        // numéro de position devant chaque nom — pour gagner
-                        // en hauteur plutôt qu'empiler une ligne par personne.
+                        // nombre décroissant. Sur DEUX colonnes fixes, pour
+                        // gagner en hauteur plutôt qu'empiler une ligne par
+                        // personne. Le numéro de position devant chaque nom,
+                        // ajouté puis retiré à la demande, n'est plus là.
                         if !destinatairesTries.isEmpty {
                             Text("Destinataires")
                                 .font(policeValeur).fontWeight(.bold)
                                 .foregroundStyle(Color.textePrincipal)
                                 .padding(.top, 4)
                             LazyVGrid(columns: colonnesDestinataires, spacing: 10) {
-                                ForEach(Array(destinatairesTries.enumerated()), id: \.element.nom) { index, d in
-                                    tuileDestinataire(rang: index + 1, d.nom, d.nombre)
+                                ForEach(destinatairesTries, id: \.nom) { d in
+                                    tuileDestinataire(d.nom, d.nombre)
                                 }
                             }
                         }
@@ -396,13 +397,31 @@ struct VueSynthese: View {
     /// Tuile « destinataire » : libellé à gauche, NOMBRE d'œuvres orange à
     /// droite. Pendant de `tuileVendeur`, sans mise en forme monétaire — un
     /// compte d'œuvres, pas un montant.
-    private func tuileDestinataire(rang: Int, _ nom: String, _ nombre: Int) -> some View {
+    /// Nom d'un destinataire tel qu'affiché — abrégé sur iOS, tel quel sur
+    /// macOS. Vue PARTAGÉE entre les deux plateformes : seul cet aiguillage
+    /// distingue leur rendu, le champ `destinataire` en base n'est jamais
+    /// modifié.
+    private func nomAffiche(_ nom: String) -> String {
+        #if os(iOS)
+        return nomAbrege(nom)
+        #else
+        return nom
+        #endif
+    }
+
+    /// « Florian Innocente » → « F. Innocente » : l'initiale du prénom (le
+    /// premier mot), suivie du reste du nom tel quel. Un nom sans espace (un
+    /// seul mot, ou déjà « Inconnu ») n'a rien à abréger et reste inchangé.
+    private func nomAbrege(_ nom: String) -> String {
+        let mots = nom.split(separator: " ")
+        guard let premier = mots.first, mots.count > 1 else { return nom }
+        let reste = mots.dropFirst().joined(separator: " ")
+        return "\(premier.prefix(1)). \(reste)"
+    }
+
+    private func tuileDestinataire(_ nom: String, _ nombre: Int) -> some View {
         HStack {
-            // Numéro de position — gris, pour rester secondaire au nom.
-            Text("\(rang).")
-                .font(policeLibelle)
-                .foregroundStyle(.secondary)
-            Text(nom)
+            Text(nomAffiche(nom))
                 .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
                 .lineLimit(1)
