@@ -904,10 +904,23 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `choixType`, `typesOeuvre`) gardent leur ancien nom ; seul le texte
     montré à l'écran change (`champType()`/`champTexte` dans l'éditeur,
     `ligneInspecteur` dans l'inspecteur, `ligne` dans la fiche iPhone).
-    **Les colonnes du tableau macOS (mode Liste) et les exports gardent
-    « Type »/« Thème »** : la demande visait les vues de Détail, pas ces
-    deux-là — `TableColumn` dans `VueFeuille.swift` et `Colonnes.swift` n'ont
-    pas été touchés.
+    **Étendu depuis aux colonnes du tableau macOS** (mode Liste) : les six
+    `TableColumn("Type"…)`/`TableColumn("Thème"…)` des trois tableaux
+    (Ventes, Dons, Réserve) dans `VueFeuille.swift` affichent maintenant
+    « Support »/« Genre » elles aussi. Seul le PREMIER argument change (le
+    titre affiché) ; le second (`value: \Oeuvre.type`) reste le vrai
+    chemin de données, sans rapport avec ce texte.
+    - **`Colonnes.swift` (exports CSV/XLS/PDF/dossier) N'A PAS été touché,
+      délibérément.** Son `titre` de colonne est aussi ce que `Import.swift`
+      cherche à la relecture d'un CSV (`val("Type")`, comparaison EXACTE sur
+      l'en-tête de colonne). Renommer l'un sans l'autre casserait le
+      réimport d'un fichier exporté par cette version : une colonne
+      « Support » ne serait plus reconnue, `type` resterait vide. Même
+      risque que déjà rencontré et évité pour « Vente privée » et
+      « Artenchères » — libellé affiché et clé de correspondance doivent
+      être dissociés avant de renommer l'un des deux, pas changés ensemble
+      sans y penser. À faire seulement sur demande explicite, avec
+      `Import.swift` mis à jour dans le même geste.
 - **Le caractère « don » se lit sur l'ŒUVRE (`o.feuille`), jamais sur la
   rubrique affichée.** Dans les vues agrégées (Inventaire, Ventes), la feuille
   de la rubrique vaut `nil` : l'inspecteur affichait donc Prix/Vendeur/

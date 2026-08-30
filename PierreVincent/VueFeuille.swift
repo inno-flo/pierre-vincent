@@ -1372,7 +1372,7 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
             }
             .width(96)
-            TableColumn("Type", value: \Oeuvre.type) { o in
+            TableColumn("Support", value: \Oeuvre.type) { o in
                 Text(o.type)
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
@@ -1392,7 +1392,7 @@ struct VueFeuille: View {
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
-            TableColumn("Thème", value: \Oeuvre.theme) { o in
+            TableColumn("Genre", value: \Oeuvre.theme) { o in
                 Text(afficher(o.theme))
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
@@ -1434,7 +1434,7 @@ struct VueFeuille: View {
                     .blur(radius: prixMasques ? 5 : 0)
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
             }
-            TableColumn("Type", value: \Oeuvre.type) { o in
+            TableColumn("Support", value: \Oeuvre.type) { o in
                 Text(o.type)
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
@@ -1477,7 +1477,7 @@ struct VueFeuille: View {
                         .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                         .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
                 }
-                TableColumn("Thème", value: \Oeuvre.theme) { o in
+                TableColumn("Genre", value: \Oeuvre.theme) { o in
                     Text(afficher(o.theme))
                         .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                         .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: alignementCellules)
@@ -1514,7 +1514,7 @@ struct VueFeuille: View {
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(minHeight: hauteurContenu, alignment: .leading)
             }
-            TableColumn("Type", value: \Oeuvre.type) { o in
+            TableColumn("Support", value: \Oeuvre.type) { o in
                 Text(o.type)
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
@@ -1534,7 +1534,7 @@ struct VueFeuille: View {
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
             }
-            TableColumn("Thème", value: \Oeuvre.theme) { o in
+            TableColumn("Genre", value: \Oeuvre.theme) { o in
                 Text(afficher(o.theme))
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(maxWidth: .infinity, minHeight: hauteurContenu, alignment: .center)
