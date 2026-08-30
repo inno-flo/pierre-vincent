@@ -892,10 +892,17 @@ struct VueFeuille: View {
                 // explicitement (`.menuStyle(.borderlessButton)`).
                 //
                 // Ici, chaque contrôle perd son fond natif individuel
-                // (`.buttonStyle(.plain)`, `.menuStyle(.borderlessButton)`),
-                // et un seul fond en capsule est posé sur l'ensemble — même
-                // technique que les pastilles de filtre (`pastilleType`,
-                // `pastilleVendeur`) ailleurs dans ce fichier.
+                // (`.buttonStyle(.plain)`, `.menuStyle(.borderlessButton)`) ;
+                // le système fournit ALORS de lui-même le fond de capsule
+                // commun, exactement comme il le fait pour Galerie/Liste —
+                // ne RIEN ajouter par-dessus (ni `.background()`, ni
+                // `.padding()`, ni `.frame()` sur l'icône) : un essai
+                // précédent posait en plus un fond gris à la main, qui
+                // s'affichait PAR-DESSUS le fond natif au lieu de le
+                // remplacer, et des tailles/marges qui ne correspondaient
+                // pas à celles, automatiques, de Galerie/Liste — d'où une
+                // capsule plus étroite, des icônes plus petites, et un
+                // double fond gris sur blanc.
                 //
                 // Menu de critère : sans objet dans la Réserve, dont les
                 // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
@@ -912,14 +919,10 @@ struct VueFeuille: View {
                         } label: {
                             Image(systemName: "line.3.horizontal.decrease")
                                 .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
-                                .frame(width: 20, height: 20)
                         }
                         .buttonStyle(.plain)
                         .help(triCroissant ? "Tri croissant" : "Tri décroissant")
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.primary.opacity(0.08)))
                     .disabled(barreOutilsInactive)
                 }
             }

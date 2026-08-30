@@ -744,15 +744,23 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   `Menu` garde son propre fond natif quel que soit le conteneur qui
   l'entoure. Aucune des trois API ne semble pouvoir fusionner visuellement
   un `Menu` et un `Button` dans une même capsule sur ce système.
-  4. **Capsule DESSINÉE À LA MAIN**, sans plus compter sur le système :
-     chaque contrôle perd son fond natif individuel
+  4. **Chaque contrôle perd son fond natif INDIVIDUEL**
      (`.buttonStyle(.plain)` sur le bouton, `.menuStyle(.borderlessButton)`
-     + `.menuIndicator(.hidden)` sur `menuTri`), et un seul fond
-     (`Capsule().fill(...)`) est posé sur l'`HStack` qui les contient — même
-     technique que les pastilles de filtre (`pastilleType`,
-     `pastilleVendeur`) ailleurs dans ce fichier, qui n'ont jamais eu ce
-     problème puisqu'elles dessinent déjà leur propre fond.
-     **Non encore vérifié à l'écran au moment d'écrire ceci.**
+     + `.menuIndicator(.hidden)` sur `menuTri`) — première version, testée à
+     l'écran : capsule bien présente, mais plus étroite que Galerie/Liste,
+     icônes plus petites, et un fond gris posé PAR-DESSUS un fond blanc.
+     **Cause** : un `.background(Capsule().fill(...))` et des
+     `.padding()`/`.frame()` manuels avaient été ajoutés en plus, alors que
+     le système fournit DÉJÀ le bon fond de capsule et le bon gabarit une
+     fois le fond natif de chaque contrôle retiré — exactement comme pour
+     Galerie/Liste, qui n'ont ni fond ni padding manuels. Ces ajouts
+     dessinaient un second fond par-dessus le premier, et des tailles qui ne
+     correspondaient pas à celles, automatiques, de la capsule voisine.
+     **Retirés** : plus de `.background()`, de `.padding()` ni de
+     `.frame()` sur l'icône — seuls `.buttonStyle(.plain)` et
+     `.menuStyle(.borderlessButton)` + `.menuIndicator(.hidden)` restent, le
+     système fait le reste. Non encore reconfirmé à l'écran après ce
+     nettoyage.
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
