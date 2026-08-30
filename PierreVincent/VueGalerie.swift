@@ -7,6 +7,10 @@ import AppKit
 /// Vue « galerie » (par icône) : chaque entrée est une vignette de l'image
 /// (200×200 max), avec en dessous le prix et les dimensions.
 struct VueGalerie: View {
+    /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
+    /// pour que cette vue se redessine quand le fond de page testé change,
+    /// bien qu'elle ne s'en serve pas autrement. À retirer avec l'essai.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
     /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
     /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
     @Environment(\.accentRubrique) private var accent

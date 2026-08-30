@@ -8,6 +8,10 @@ import SwiftData
 /// Saisie fluide : les champs sont des variables LOCALES (@State) ; on ne
 /// recopie dans l'objet de la base qu'à l'enregistrement.
 struct EditeurEntree: View {
+    /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
+    /// pour que cette vue se redessine quand le fond de page testé change,
+    /// bien qu'elle ne s'en serve pas autrement. À retirer avec l'essai.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
     /// Accent de la rubrique — orange dans « Ventes et dons », bleu ardoise
     /// dans la Réserve. Posé sur la colonne de contenu, il descend jusqu'ici.
     @Environment(\.accentRubrique) private var accent

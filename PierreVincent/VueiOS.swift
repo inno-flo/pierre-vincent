@@ -53,6 +53,10 @@ struct VueiOS: View {
     /// Confirmation avant « Supprimer tous les favoris… » : retire TOUS les
     /// favoris de l'app d'un coup, quel que soit le filtre de type actif.
     @State private var confirmerSuppressionFavoris = false
+    /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
+    /// pour que cette vue se redessine quand le fond de page testé change,
+    /// bien qu'elle ne s'en serve pas autrement. À retirer avec l'essai.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
     // Mode d'affichage, conservé entre les sessions (comme sur Mac).
     @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     // Critère de tri de la galerie (partagé avec le Mac via le même réglage).

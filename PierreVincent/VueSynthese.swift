@@ -10,6 +10,11 @@ import SwiftData
 struct VueSynthese: View {
     let toutes: [Oeuvre]
 
+    /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
+    /// pour que cette vue se redessine quand le fond de page testé change,
+    /// bien qu'elle ne s'en serve pas autrement. À retirer avec l'essai.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
+
     // MARK: Polices
 
     // Cette vue est PARTAGÉE entre iOS et macOS, et les styles sémantiques n'y

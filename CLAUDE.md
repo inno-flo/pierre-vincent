@@ -1247,6 +1247,33 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   futur bouton de test a été **retiré** (audit de code, 30 août 2026) : du
   texte-code inerte, pas un essai à bascule — Git garde l'historique si un
   nouveau bouton de test est un jour utile ici.
+  - **Occupée depuis par un nouveau bouton de test, sur les DEUX
+    plateformes** (30 août 2026) : cinq pastilles pour comparer des fonds de
+    PAGE candidats — `TestFondPage` (`Couleurs.swift`), `pastillesTestFondPage`
+    / `pastilleTestFond` (`ContentView.swift`). Un clic change
+    `@AppStorage(TestFondPage.cle)` ; `Color.cremeFond` lit cette valeur pour
+    sa teinte CLAIRE (le sombre n'est jamais concerné, comme pour `cremeFond`
+    lui-même). Cinq choix : gris (242,242,247, le gris de page iOS déjà
+    mesuré), crème (250,245,235, la valeur actuelle de l'app, défaut),
+    sauge, ardoise (distincte du bleu ardoise d'accent de la Réserve) et
+    ivoire — RGB centralisés dans `TestFondPage.options`, source unique lue
+    à la fois par les boutons et par `cremeFond`.
+    - **Rafraîchissement SANS `.id()` sur `ContentView`** — règle absolue de
+      ce fichier, voir plus haut (« NB : plus de `.id(themeApp)` »). Chacune
+      des HUIT vues qui affichent `Color.cremeFond` (`ContentView`,
+      `EditeurEntree`, `VueFeuille`, `VueDonsStructuree`, `VueGalerie`,
+      `VueiOS`, `VueSynthese`, `VueOeuvresStructuree`) déclare son propre
+      `@AppStorage(TestFondPage.cle) private var testFondPage`, MÊME QUAND
+      elle ne s'en sert pas ailleurs dans son code : c'est ce qui la fait
+      observer la clé et redessiner son fond à jour dès qu'un bouton change
+      la valeur, sans reconstruire toute la hiérarchie ni perdre le focus
+      clavier — exactement la méthode que la note sur `.id(themeApp)`
+      recommandait sans l'avoir encore mise en pratique.
+    - **ESSAI TEMPORAIRE, à retirer une fois le choix tranché** : les cinq
+      boutons et leurs deux fonctions dans `ContentView.swift`, l'enum
+      `TestFondPage` dans `Couleurs.swift`, la ligne qui lit `rvbClair` dans
+      `cremeFond`, et les HUIT `@AppStorage(TestFondPage.cle)` ajoutés
+      seulement pour observer le changement.
 - **macOS — sidebar, pastilles de comptage** (`ContentView.swift`) : chaque
   rubrique affiche une pastille arrondie avec le nombre d'œuvres
   correspondant. Deux états, alignés sur le libellé qu'elles accompagnent :

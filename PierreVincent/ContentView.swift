@@ -438,6 +438,9 @@ struct ContentView: View {
     @State private var nbSelection: Int = 0
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    /// ESSAI TEMPORAIRE — voir `TestFondPage` (`Couleurs.swift`) : pilote les
+    /// cinq boutons de test de fond de page en bas de la sidebar.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
     // Repères des reprises de données ponctuelles sur le champ Statut.
     // `statutVenduRempli` : première passe, ventes uniquement (déjà exécutée).
     // `statutParDefautRempli` : seconde passe, qui ajoute « Donné » aux dons.
@@ -630,17 +633,21 @@ struct ContentView: View {
                 #endif
 
                 // --- Zone du bas de la sidebar ---
-                // Occupée par la progression d'import, et par elle seule :
-                // hors import, le bas de la barre latérale reste vide, comme
-                // avant. A successivement porté les pastilles de choix de
-                // thème, le bouton « G » de mise en gras des en-têtes, puis la
-                // pastille de comparaison des deux marrons de sélection.
+                // Occupée par la progression d'import (macOS), et, en ce
+                // moment, par l'essai de fond de page décrit ci-dessous — sur
+                // les DEUX plateformes. Hors ces deux cas, elle reste vide,
+                // comme avant. A déjà porté par le passé les pastilles de
+                // choix de thème, le bouton « G » de mise en gras des
+                // en-têtes, puis la pastille de comparaison des deux marrons
+                // de sélection.
                 #if os(macOS)
                 if ProgressionImport.partagee.enCours {
                     Divider()
                     barreProgressionImport
                 }
                 #endif
+                Divider()
+                pastillesTestFondPage
             }
             #if os(iOS)
             // Fond de la colonne, hors de la liste : le MÊME que celui d'une
@@ -1065,6 +1072,44 @@ struct ContentView: View {
         .padding(.vertical, 8)
     }
     #endif
+
+    /// **ESSAI TEMPORAIRE** — cinq pastilles pour comparer des fonds de page
+    /// candidats (voir `TestFondPage`, `Couleurs.swift`). Un clic change
+    /// `testFondPage`, ce qui redessine (via `@AppStorage`) toutes les vues
+    /// qui affichent `Color.cremeFond` et déclarent la même clé. Sur les
+    /// DEUX plateformes, dans la même zone que la progression d'import.
+    /// À retirer une fois le choix tranché : cette propriété, son appel
+    /// ci-dessus, et `pastilleTestFond`.
+    private var pastillesTestFondPage: some View {
+        HStack(spacing: 10) {
+            ForEach(TestFondPage.options, id: \.id) { option in
+                pastilleTestFond(option)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    /// Une pastille de test : un disque de la teinte candidate, cerclé en
+    /// orange quand c'est le choix actif. `.help` (macOS) affiche le libellé
+    /// au survol ; sur iOS, un appui prolongé montre le même texte.
+    private func pastilleTestFond(_ option: (id: String, libelle: String, rvb: (CGFloat, CGFloat, CGFloat))) -> some View {
+        let retenu = testFondPage == option.id
+        return Button {
+            testFondPage = option.id
+        } label: {
+            Circle()
+                .fill(Color(red: option.rvb.0 / 255, green: option.rvb.1 / 255, blue: option.rvb.2 / 255))
+                .frame(width: 22, height: 22)
+                .overlay(
+                    Circle().strokeBorder(retenu ? Color.orangeInternational : Color.gray.opacity(0.4),
+                                          lineWidth: retenu ? 3 : 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(option.libelle)
+    }
 
     // MARK: Lien de catégorie (barre latérale)
 

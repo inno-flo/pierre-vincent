@@ -45,6 +45,10 @@ struct VueOeuvresStructuree: View {
 
     @Query private var toutes: [Oeuvre]
 
+    /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
+    /// pour que cette vue se redessine quand le fond de page testé change,
+    /// bien qu'elle ne s'en serve pas autrement. À retirer avec l'essai.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
     @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     @AppStorage("triGalerie") private var triGalerie: String = "prix"
     // Sens du tri : true = croissant (du plus petit au plus grand).

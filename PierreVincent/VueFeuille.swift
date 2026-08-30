@@ -132,6 +132,10 @@ struct VueFeuille: View {
     // Position courante dans la visionneuse intégrée (nil = fermée).
     @State private var indexVisionneuse: Int?
     // Affichage du panneau Inspecteur (mode galerie uniquement).
+    /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
+    /// pour que cette vue se redessine quand le fond de page testé change,
+    /// bien qu'elle ne s'en serve pas autrement. À retirer avec l'essai.
+    @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
     // En @AppStorage pour être piloté aussi depuis le menu système « Présentation ».
     @AppStorage("inspecteurVisible") private var inspecteurVisible = false
     // Mode d'affichage : « liste » (tableau) ou « icone » (galerie).

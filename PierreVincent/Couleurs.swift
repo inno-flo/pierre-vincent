@@ -18,6 +18,42 @@ enum ThemeApp {
     }
 }
 
+/// **ESSAI TEMPORAIRE** — cinq boutons de test en bas des sidebars (macOS et
+/// iOS, `ContentView.swift`) pour comparer des fonds de PAGE candidats.
+/// Piloté par `@AppStorage`, donc observé par les vues qui le déclarent —
+/// voir la note sur `.id(themeApp)` plus bas dans ce fichier : ne PAS forcer
+/// le rafraîchissement par un `.id()` sur `ContentView`, chaque vue qui
+/// affiche `Color.cremeFond` déclare son propre `@AppStorage(TestFondPage
+/// .cle)` (même si elle ne s'en sert pas autrement) pour se redessiner
+/// quand le choix change.
+/// **Ne touche QUE le mode CLAIR** — le sombre reste sur le fond système,
+/// comme pour `cremeFond` lui-même.
+/// **À retirer une fois le choix tranché** : les cinq boutons, cet enum, et
+/// la branche qu'il ajoute dans `cremeFond`.
+enum TestFondPage {
+    static let cle = "testFondPage"
+    /// "gris", "creme" (défaut, valeur actuelle de l'app), "sauge",
+    /// "ardoise" ou "ivoire".
+    static var actuel: String {
+        UserDefaults.standard.string(forKey: cle) ?? "creme"
+    }
+    /// Les cinq valeurs proposées par les boutons de test, dans l'ordre
+    /// d'affichage — SOURCE UNIQUE, lue à la fois par les boutons
+    /// (`ContentView.swift`) et par `rvbClair` : un seul endroit où changer
+    /// une teinte ou en ajouter une.
+    static let options: [(id: String, libelle: String, rvb: (CGFloat, CGFloat, CGFloat))] = [
+        ("gris",    "Gris",    (242, 242, 247)),   // gris de page iOS mesuré
+        ("creme",   "Crème",   (250, 245, 235)),   // valeur actuelle de l'app
+        ("sauge",   "Sauge",   (225, 230, 214)),
+        ("ardoise", "Ardoise", (228, 231, 235)),   // distinct du bleu ardoise d'accent
+        ("ivoire",  "Ivoire",  (255, 255, 240)),
+    ]
+    /// Teinte claire (0-255) pour la valeur de test choisie.
+    static var rvbClair: (CGFloat, CGFloat, CGFloat) {
+        options.first { $0.id == actuel }?.rvb ?? options[1].rvb
+    }
+}
+
 /// Triplet RVB (0-255).
 private typealias RVB = (CGFloat, CGFloat, CGFloat)
 
@@ -136,24 +172,28 @@ extension Color {
     /// sur cette piste sans nouvel élément, la cause structurelle (aucune API
     /// publique pour teinter la toolbar native) n'a pas changé.
     static var cremeFond: Color {
+        // ESSAI TEMPORAIRE (voir `TestFondPage`) : la teinte claire vient du
+        // bouton retenu en bas de sidebar, "creme" (la valeur actuelle)
+        // faute de choix. Le sombre n'est JAMAIS concerné.
+        let (r, g, b) = TestFondPage.rvbClair
         #if os(macOS)
         return Color(nsColor: NSColor(name: nil) { app in
             let sombre = app.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             if sombre { return .windowBackgroundColor }
-            return NSColor(red: 250/255, green: 245/255, blue: 235/255, alpha: 1)
+            return NSColor(red: r/255, green: g/255, blue: b/255, alpha: 1)
         })
         #else
-        // Fond CRÈME fixe (250, 245, 235), la teinte du thème d'origine de
-        // l'app — à la place du gris système, à la demande, sur cette seule
-        // plateforme. Le piège du fond fixe sur macOS (couture avec la
-        // toolbar native, voir plus haut) NE S'APPLIQUE PAS ici : iOS n'a
-        // aucune barre système dont le fond doive suivre dynamiquement
+        // Fond CRÈME fixe (250, 245, 235) par défaut, la teinte du thème
+        // d'origine de l'app — à la place du gris système, à la demande, sur
+        // cette seule plateforme. Le piège du fond fixe sur macOS (couture
+        // avec la toolbar native, voir plus haut) NE S'APPLIQUE PAS ici : iOS
+        // n'a aucune barre système dont le fond doive suivre dynamiquement
         // `systemGroupedBackground`. Mode sombre INCHANGÉ : reste le fond
-        // système, seul le clair devient crème.
+        // système, seul le clair change.
         return Color(uiColor: UIColor { t in
             t.userInterfaceStyle == .dark
                 ? .systemGroupedBackground
-                : UIColor(red: 250/255, green: 245/255, blue: 235/255, alpha: 1)
+                : UIColor(red: r/255, green: g/255, blue: b/255, alpha: 1)
         })
         #endif
     }
