@@ -412,14 +412,16 @@ diffèrent en tout.
     et les présentations plein écran.
   - Valeur par défaut : l'orange. Une vue qui ne déclare rien reste donc dans
     la teinte de « Ventes et dons ».
-- **`cremeFond` (macOS) : reste sur `.windowBackgroundColor` — ESSAYÉ PUIS
-  REVERTÉ de le fixer.** Sur macOS 26, cette couleur système résout en BLANC
-  PUR (255,255,255) — identique à `fondLegende`/`controlBackgroundColor` — au
+- **`cremeFond` (macOS) : PREMIER essai fixe (242,242,247) ESSAYÉ PUIS
+  REVERTÉ, SECOND essai fixe (250,245,235, la même crème qu'iOS) EN COURS
+  depuis le 30 août 2026, à la demande explicite malgré le risque
+  documenté.** Sur macOS 26, `.windowBackgroundColor` résout en BLANC PUR
+  (255,255,255) — identique à `fondLegende`/`controlBackgroundColor` — au
   lieu du gris de fenêtre traditionnel de macOS. Vérifié en rendant réellement
   la couleur dans une `NSWindow` (pas seulement `resolvedColor` hors contexte,
   qui peut tromper sur une couleur dynamique).
-  - **Essayé** : une valeur FIXE (242,242,247, calée sur le gris de page
-    iOS mesuré pour `systemGroupedBackground`), pour une page à la même
+  - **Premier essai** : une valeur FIXE (242,242,247, calée sur le gris de
+    page iOS mesuré pour `systemGroupedBackground`), pour une page à la même
     teinte sur les deux plateformes.
   - **RÉGRESSION CONSTATÉE À L'USAGE, revertée** : la barre de titre et la
     toolbar natives de macOS suivent, elles, `.windowBackgroundColor` — une
@@ -431,13 +433,21 @@ diffèrent en tout.
     (blanche, nativement) et le panneau de contenu (gris fixe) — un défaut
     qui **n'existait pas avant ce changement**. `cremeFond` est donc revenu
     sur `.windowBackgroundColor`, tel quel.
-  - **Ne plus fixer de valeur ici tant que la toolbar système reste hors de
-    portée de l'API publique SwiftUI** (voir la campagne « NON RÉSOLU » sur
-    l'isolement du bouton Inspecteur, plus bas) : aucun moyen de forcer la
-    toolbar native à suivre une teinte personnalisée, donc `cremeFond` doit
-    rester sur la MÊME source dynamique qu'elle. L'homogénéité de teinte
-    avec iOS, elle, reste hors d'atteinte sur macOS avec les outils publics
-    actuels — à rouvrir seulement si une nouvelle piste apparaît.
+  - **La conclusion qui suivait ici (« ne plus fixer de valeur ») reste
+    valable en théorie** : aucun moyen de forcer la toolbar native à suivre
+    une teinte personnalisée n'est apparu depuis. **Second essai lancé
+    quand même, sciemment, à la demande explicite de l'utilisateur** — même
+    mécanisme dynamique (`NSColor(name:)`, clair/sombre), mais une couleur
+    fixe en clair (250,245,235, celle d'iOS) au lieu de suivre
+    `.windowBackgroundColor` dans les deux modes. Le mode sombre, lui, reste
+    sur `.windowBackgroundColor` — non concerné par la demande, comme sur
+    iOS où seul le clair change. **Si la même couture titre/contenu
+    réapparaît à l'usage, revenir au premier réflexe : reverter sur
+    `.windowBackgroundColor` pur, comme la première fois.** Ne pas
+    s'obstiner sur d'autres variantes de cette piste sans nouvel élément —
+    la cause structurelle (toolbar hors de portée de l'API publique) n'a pas
+    changé, voir la campagne « NON RÉSOLU » sur l'isolement du bouton
+    Inspecteur, plus bas.
   - **`fondTuile` reste sur `underPageBackgroundColor` (246,246,246), PAS
     calée sur `cremeFond`.** Un essai bref les avait alignées quand
     `cremeFond` avait sa valeur fixe (242,242,247) : `cremeFond` étant
@@ -468,7 +478,10 @@ diffèrent en tout.
     défile derrière lui.
   - **Persistant malgré tout ça** : la couture reste visible à l'usage. La
     piste `cremeFond`/`.bar` n'était donc pas la bonne, ou pas la seule —
-    non résolue à ce stade.
+    non résolue à ce stade. **À surveiller en particulier avec le SECOND
+    essai `cremeFond` fixe lancé le 30 août 2026** (ci-dessus) : si une
+    couture réapparaît maintenant, elle peut venir de LÀ, en plus ou à la
+    place de la cause jamais identifiée ici.
   - **Contournement essayé, RESTREINT au Catalogue de « Ventes et dons »
     seulement** (`Categorie.pastillesTypeDansToolbar`, `ContentView.swift` +
     `VueFeuille.swift`) : plutôt que de continuer à chercher pourquoi le

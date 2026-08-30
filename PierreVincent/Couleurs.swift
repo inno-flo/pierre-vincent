@@ -115,30 +115,33 @@ extension Color {
     /// les deux désignaient exactement la même couleur, et deux noms pour une
     /// même teinte finissent par diverger.
     ///
-    /// **macOS : `.windowBackgroundColor`, et RIEN D'AUTRE.**
+    /// **macOS : crème fixe en clair (250,245,235), comme iOS ; système en
+    /// sombre.**
     ///
-    /// **ESSAYÉ PUIS REVERTÉ** : une valeur fixe (242,242,247, calée sur le
-    /// gris de page iOS) a été posée ici un temps, pour une homogénéité
-    /// visuelle entre les deux plateformes. **Régression constatée à
-    /// l'usage** : la barre de titre et la toolbar natives de macOS suivent,
-    /// elles, `.windowBackgroundColor` — une couleur SYSTÈME dynamique, dont
-    /// la vraie valeur nous est indifférente tant que le contenu la reprend
-    /// À L'IDENTIQUE. En la remplaçant par une constante indépendante, le
+    /// **PREMIER ESSAI (242,242,247, calé sur le gris de page iOS) : ESSAYÉ
+    /// PUIS REVERTÉ.** La barre de titre et la toolbar natives de macOS
+    /// suivent `.windowBackgroundColor` — une couleur SYSTÈME dynamique, dont
+    /// la vraie valeur importe peu tant que le contenu la reprend À
+    /// L'IDENTIQUE. En la remplaçant par une constante indépendante, le
     /// contenu a cessé de suivre ce que fait la toolbar : sur macOS 26, où
     /// `.windowBackgroundColor` résout en BLANC PUR, ça a produit une VRAIE
     /// couture entre la barre de titre (blanche, nativement) et le panneau
-    /// de contenu (gris fixe) — un défaut qui N'EXISTAIT PAS avant ce
-    /// changement, la couleur dynamique garantissant la synchronisation par
-    /// construction, quelle que soit sa valeur réelle.
+    /// de contenu (gris fixe) — un défaut qui n'existait pas avant ce
+    /// changement.
     ///
-    /// **Ne jamais fixer une valeur ici tant que la toolbar système reste
-    /// hors de portée de l'API publique SwiftUI** (voir la campagne « NON
-    /// RÉSOLU » sur l'isolement du bouton Inspecteur) : il n'existe aucun
-    /// moyen de forcer la toolbar native à suivre une teinte personnalisée,
-    /// donc `cremeFond` doit rester sur la MÊME source dynamique qu'elle.
+    /// **SECOND ESSAI, EN COURS (30 août 2026)** : à la demande explicite,
+    /// malgré le risque documenté ci-dessus — même teinte crème fixe qu'iOS,
+    /// et non plus un gris. Si la même couture réapparaît à l'usage, revenir
+    /// à `.windowBackgroundColor` comme la première fois ; ne pas s'obstiner
+    /// sur cette piste sans nouvel élément, la cause structurelle (aucune API
+    /// publique pour teinter la toolbar native) n'a pas changé.
     static var cremeFond: Color {
         #if os(macOS)
-        return Color(nsColor: .windowBackgroundColor)
+        return Color(nsColor: NSColor(name: nil) { app in
+            let sombre = app.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            if sombre { return .windowBackgroundColor }
+            return NSColor(red: 250/255, green: 245/255, blue: 235/255, alpha: 1)
+        })
         #else
         // Fond CRÈME fixe (250, 245, 235), la teinte du thème d'origine de
         // l'app — à la place du gris système, à la demande, sur cette seule
