@@ -880,31 +880,33 @@ struct VueFeuille: View {
             // fasse un tri sensé. Retiré comme sur iOS, la galerie et la
             // liste restant seules présentations.
             if !favoriSeul {
-                // Deux `ToolbarItem` NUS, adjacents et SANS `ToolbarSpacer`
-                // entre eux — comme Galerie/Liste juste au-dessus, seul
-                // motif qui produise réellement une capsule commune sur ce
-                // système. `ToolbarItemGroup`, essayé d'abord, rendait
-                // chaque bouton dans son propre cercle séparé — l'inverse de
-                // l'effet recherché.
+                // `ControlGroup`, et non `ToolbarItemGroup` ni deux
+                // `ToolbarItem` adjacents — les deux essayés avant celui-ci,
+                // sans capsule commune à l'écran (vérifié par capture).
+                // `ControlGroup` est le composant SwiftUI PENSÉ pour ça :
+                // un ensemble de contrôles apparentés rendus comme un seul
+                // bloc visuel, quelle que soit l'imbrication de `if`
+                // autour de lui — contrairement à l'adjacence de
+                // `ToolbarItem`, qui ne suffisait pas dès que ce bloc était
+                // lui-même sous un `if` dynamique (`modeAffichage`).
                 //
                 // Menu de critère : sans objet dans la Réserve, dont les
                 // œuvres n'ont ni prix ni acheteur. Le bouton de sens reste,
                 // le tri par dimensions y gardant du sens.
-                if feuille != .reserve {
-                    ToolbarItem {
-                        menuTri
-                            .disabled(barreOutilsInactive)
-                    }
-                }
                 ToolbarItem {
-                    Button {
-                        triCroissant.toggle()
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
-                            .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                    ControlGroup {
+                        if feuille != .reserve {
+                            menuTri
+                        }
+                        Button {
+                            triCroissant.toggle()
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
+                                .scaleEffect(x: 1, y: triCroissant ? -1 : 1)
+                        }
+                        .help(triCroissant ? "Tri croissant" : "Tri décroissant")
                     }
                     .disabled(barreOutilsInactive)
-                    .help(triCroissant ? "Tri croissant" : "Tri décroissant")
                 }
             }
             ToolbarSpacer(.fixed)

@@ -724,19 +724,26 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   AppKit dessine la sélection en bleu quand le tableau a le focus clavier, en
   gris sinon — comportement système. La surbrillance neutralisée par
   `DesactiveSurbrillanceSidebar` ne concerne QUE la barre latérale.
-- **Capsule commune à plusieurs boutons de toolbar macOS : PAS
-  `ToolbarItemGroup`.** Essayé pour grouper le menu de tri et le bouton de
-  sens dans une même capsule (`VueFeuille.swift`) : rendait chaque bouton
-  dans son propre cercle séparé, l'inverse de l'effet recherché — vérifié à
-  l'écran (capture fournie par l'utilisateur, la mienne restant bloquée dans
-  cet environnement).
-  **Ce qui marche** : deux `ToolbarItem` NUS, adjacents, SANS wrapper ni
-  `ToolbarSpacer` entre eux — exactement le motif déjà en place pour
-  Galerie/Liste juste au-dessus, qui produit bien une capsule commune sur ce
-  système. La capsule vient donc de l'ADJACENCE de `ToolbarItem` bruts, pas
-  d'une API de groupage explicite. `ToolbarSpacer(.fixed)` reste la façon de
-  SÉPARER deux groupes (avant/après la paire tri+sens, pour l'isoler de
-  Galerie/Liste d'un côté et de l'Inspecteur de l'autre).
+- **Capsule commune à plusieurs boutons de toolbar macOS — DEUX essais
+  échoués avant de trouver la bonne API**, pour grouper le menu de tri et le
+  bouton de sens (`VueFeuille.swift`). Les deux échecs vérifiés à l'écran
+  (capture fournie par l'utilisateur, la mienne restant bloquée dans cet
+  environnement) :
+  1. `ToolbarItemGroup` — rendait chaque bouton dans son propre cercle
+     séparé, l'inverse de l'effet recherché.
+  2. Deux `ToolbarItem` NUS et adjacents, sans wrapper ni spacer entre eux —
+     ça fonctionnait pour Galerie/Liste juste au-dessus, mais PAS ici :
+     toujours deux cercles séparés. Différence trouvée après coup : Galerie/
+     Liste ne sont sous AUCUN `if`, alors que la paire tri+sens est nichée
+     sous `if modeAffichage == "icone"`, une condition qui peut basculer en
+     cours d'exécution. L'adjacence de `ToolbarItem` bruts n'est donc pas un
+     mécanisme fiable de groupage — elle a marché une fois par coïncidence
+     de contexte, pas par principe.
+  3. **`ControlGroup`, la bonne API.** Composant SwiftUI conçu précisément
+     pour rendre plusieurs contrôles apparentés comme un seul bloc visuel,
+     quelle que soit l'imbrication de `if` autour de lui. Un seul
+     `ToolbarItem` contient désormais un `ControlGroup` avec le menu et le
+     bouton dedans. **Non encore vérifié à l'écran au moment d'écrire ceci.**
 - **`ToolbarItem(placement: .primaryAction)` avec `.inspector(isPresented:)`
   ouvert** : les items avec ce placement s'étalent sur toute la largeur de
   fenêtre, inspecteur inclus. Pour confiner les boutons exclusivement
