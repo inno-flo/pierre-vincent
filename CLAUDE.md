@@ -1022,11 +1022,20 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
       de la limite à cinq, qui ne correspondait plus à ce qu'elle renvoie)
       groupe `oeuvresDonnees` par champ `destinataire`, écarte les valeurs
       vides et « Inconnu » (un destinataire non identifié ne désigne personne
-      à classer), trie par nombre décroissant. **Même présentation que la carte
-      « Enchères et expositions »** (nom à gauche, valeur orange à droite) :
-      `tuileDestinataire` est le pendant de `tuileVendeur`, sans mise en
-      forme monétaire — un COMPTE d'œuvres, pas un montant. Absente si aucun
-      don n'a de destinataire identifié.
+      à classer), trie par nombre décroissant. Présentation proche de la
+      carte « Enchères et expositions » (nom à gauche, valeur orange à
+      droite) : `tuileDestinataire` est le pendant de `tuileVendeur`, sans
+      mise en forme monétaire — un COMPTE d'œuvres, pas un montant. Absente
+      si aucun don n'a de destinataire identifié.
+      - **Sur DEUX colonnes fixes** (`colonnesDestinataires`,
+        `GridItem(.flexible())` × 2 — pas `.adaptive` comme `colonnesTuiles`,
+        pour ne jamais retomber à une seule colonne), avec un **numéro de
+        position** devant chaque nom (1, 2, 3…), à la demande, pour gagner de
+        la hauteur sur une liste qui peut compter beaucoup de destinataires.
+        Le rang vient de l'index dans `destinatairesTries` (déjà trié par
+        nombre décroissant), pas d'un champ stocké. Le nom porte
+        `.lineLimit(1)` : une colonne deux fois plus étroite qu'avant tronque
+        plus vite un nom long.
   - **Le récapitulatif iOS « Vendues / Données »**, en tête de la carte
     Ventes, a été RETIRÉ : la carte Ventes a désormais un contenu IDENTIQUE
     sur les deux plateformes. Il faisait doublon avec la nouvelle carte

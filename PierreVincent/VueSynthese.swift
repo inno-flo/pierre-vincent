@@ -128,6 +128,12 @@ struct VueSynthese: View {
     // adaptative pour rester correcte sur les fenêtres larges du Mac.
     private let colonnesTuiles = [GridItem(.adaptive(minimum: 150, maximum: 320), spacing: 10)]
 
+    // Grille des destinataires de dons : DEUX colonnes fixes (pas
+    // adaptatives) — la liste peut compter beaucoup de noms, deux colonnes
+    // gagnent la moitié de la hauteur par rapport à une seule.
+    private let colonnesDestinataires = [GridItem(.flexible(), spacing: 10),
+                                          GridItem(.flexible(), spacing: 10)]
+
     // MARK: Corps
 
     var body: some View {
@@ -149,18 +155,17 @@ struct VueSynthese: View {
                         }
                         // Sous-section « Destinataires » : TOUTES les
                         // personnes ayant reçu au moins un don, triées par
-                        // nombre décroissant. Même présentation que la liste
-                        // de la carte « Enchères et expositions »
-                        // (`tuileVendeur`), mais un COMPTE d'œuvres et non un
-                        // montant — `tuileDestinataire` en est le pendant.
+                        // nombre décroissant. Sur DEUX colonnes fixes, avec un
+                        // numéro de position devant chaque nom — pour gagner
+                        // en hauteur plutôt qu'empiler une ligne par personne.
                         if !destinatairesTries.isEmpty {
                             Text("Destinataires")
                                 .font(policeValeur).fontWeight(.bold)
                                 .foregroundStyle(Color.textePrincipal)
                                 .padding(.top, 4)
-                            VStack(spacing: 10) {
-                                ForEach(destinatairesTries, id: \.nom) { d in
-                                    tuileDestinataire(d.nom, d.nombre)
+                            LazyVGrid(columns: colonnesDestinataires, spacing: 10) {
+                                ForEach(Array(destinatairesTries.enumerated()), id: \.element.nom) { index, d in
+                                    tuileDestinataire(rang: index + 1, d.nom, d.nombre)
                                 }
                             }
                         }
@@ -391,11 +396,16 @@ struct VueSynthese: View {
     /// Tuile « destinataire » : libellé à gauche, NOMBRE d'œuvres orange à
     /// droite. Pendant de `tuileVendeur`, sans mise en forme monétaire — un
     /// compte d'œuvres, pas un montant.
-    private func tuileDestinataire(_ nom: String, _ nombre: Int) -> some View {
+    private func tuileDestinataire(rang: Int, _ nom: String, _ nombre: Int) -> some View {
         HStack {
+            // Numéro de position — gris, pour rester secondaire au nom.
+            Text("\(rang).")
+                .font(policeLibelle)
+                .foregroundStyle(.secondary)
             Text(nom)
                 .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
+                .lineLimit(1)
             Spacer()
             Text("\(nombre)")
                 .font(policePrix)
