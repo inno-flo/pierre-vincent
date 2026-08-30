@@ -1248,16 +1248,17 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   texte-code inerte, pas un essai à bascule — Git garde l'historique si un
   nouveau bouton de test est un jour utile ici.
   - **Occupée depuis par un nouveau bouton de test, sur les DEUX
-    plateformes** (30 août 2026) : cinq pastilles pour comparer des fonds de
+    plateformes** (30 août 2026) : des pastilles pour comparer des fonds de
     PAGE candidats — `TestFondPage` (`Couleurs.swift`), `pastillesTestFondPage`
     / `pastilleTestFond` (`ContentView.swift`). Un clic change
     `@AppStorage(TestFondPage.cle)` ; `Color.cremeFond` lit cette valeur pour
     sa teinte CLAIRE (le sombre n'est jamais concerné, comme pour `cremeFond`
-    lui-même). Cinq choix : gris (242,242,247, le gris de page iOS déjà
-    mesuré), crème (250,245,235, la valeur actuelle de l'app, défaut),
-    sauge, ardoise (distincte du bleu ardoise d'accent de la Réserve) et
-    ivoire — RGB centralisés dans `TestFondPage.options`, source unique lue
-    à la fois par les boutons et par `cremeFond`.
+    lui-même). **Trois choix** (cinq au départ, « Sauge » et « Ivoire»
+    retirées le jour même) : gris (242,242,247, le gris de page iOS déjà
+    mesuré), crème (250,245,235, la valeur actuelle de l'app, défaut) et
+    ardoise (distincte du bleu ardoise d'accent de la Réserve) — RGB
+    centralisés dans `TestFondPage.options`, source unique lue à la fois par
+    les boutons et par `cremeFond`.
     - **Rafraîchissement SANS `.id()` sur `ContentView`** — règle absolue de
       ce fichier, voir plus haut (« NB : plus de `.id(themeApp)` »). Chacune
       des HUIT vues qui affichent `Color.cremeFond` (`ContentView`,
