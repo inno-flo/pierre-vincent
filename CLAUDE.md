@@ -2195,27 +2195,27 @@ JavaScript, inexploitables par extraction) :
     seul (`.opacity`) a été remplacé par un zoom léger depuis le centre
     combiné au fondu (`.scale(scale: 0.7).combined(with: .opacity)`), plus
     fluide qu'un simple fondu sec.
-  - **`DesactiveDelaiDefilement` (UIViewRepresentable)** : sans elle, le
-    bouton ne réagissait qu'à un second tap tant que le `ScrollView`
-    défilait encore — UIKit absorbe le premier tap pour arrêter le
-    défilement avant de le transmettre au bouton en overlay. Ce composant
-    désactive `delaysContentTouches` sur le `UIScrollView` le plus proche,
-    remonté DE PROCHE EN PROCHE depuis une vue invisible posée en
-    `.background` du `ScrollView` — pas de recherche par classe depuis la
-    racine de la fenêtre, méthode qui a déjà cassé d'autres vues par le
-    passé (voir plus haut, l'incident `DefilementTableau`/`NSOutlineView`).
-  - **ESSAI — bouton JUMEAU translucide, tout à gauche, pour comparer les
-    deux styles** : `boutonRetourHaut(proxy:opaque:)` prend un booléen de
-    style. `opaque: false` donne un fond translucide — **le MÊME rendu que
-    les boutons standards de retour en arrière déjà dans l'app** (cercle
-    sombre `black.opacity(0.55)` cerclé de l'accent de la rubrique, voir
-    `VisionneuseOeuvres.boutonFermer` / `VisionneuseImagePleinEcran`), pas
-    un `.ultraThinMaterial` inventé pour l'occasion — au lieu du disque
-    plein accent. **Flèche BLANCHE dans les deux styles**, `opaque` ne
-    change que le fond. Posé au même niveau vertical (`y: hauteur * 2/3`)
-    mais collé au bord GAUCHE (`x: 20 + 22`, symétrique du bouton de
-    droite). Même action, même geste — un pur essai visuel, à retirer une
-    fois le style tranché entre les deux.
+  - **Style retenu après comparaison** : cercle sombre `black.opacity(0.55)`
+    cerclé de l'accent de la rubrique, flèche BLANCHE — le MÊME rendu que
+    les boutons de retour en arrière déjà dans l'app (voir
+    `VisionneuseOeuvres.boutonFermer` / `VisionneuseImagePleinEcran`). Un
+    second style, disque plein accent posé côte à côte à titre de
+    comparaison, a été essayé puis retiré — un seul bouton reste, à droite.
+  - **`DesactiveDelaiDefilement` (UIViewRepresentable) : ESSAYÉE, INEFFICACE,
+    SUPPRIMÉE.** L'idée — désactiver `delaysContentTouches` sur le
+    `UIScrollView` le plus proche, remonté depuis une sonde posée en
+    `.background` du `ScrollView` — n'a pas résolu le symptôme : le bouton
+    continuait à ne réagir qu'après l'arrêt complet du défilement.
+    Suspicion : `.background()` place la sonde en dehors de la branche de
+    vues qui contient réellement le `UIScrollView`, donc la remontée par
+    `superview` ne le rencontrait jamais.
+  - **Correctif retenu : `.highPriorityGesture(TapGesture())` au lieu d'un
+    `Button`.** Le bouton n'est plus un `SwiftUI.Button` mais une simple
+    image avec `.contentShape(Circle())` et un `TapGesture` posé en
+    `.highPriorityGesture` — ce modificateur donne à CE geste la priorité
+    sur les reconnaisseurs du `ScrollView` ancêtre, reconnu dès le premier
+    appui, défilement en cours ou non. Solution SwiftUI pure, sans passer
+    par UIKit, contrairement à la piste précédente.
   - Teinté par `\.accentRubrique` (orange dans « Ventes et dons »), comme le
     reste des contrôles de cette section.
 

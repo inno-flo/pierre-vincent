@@ -275,12 +275,6 @@ struct VueOeuvresStructuree: View {
                     boutonHautVisible = doitAfficher
                 }
             }
-            // Sans ce réglage, UIKit absorbe le premier tap sur un bouton
-            // survolant un `ScrollView` encore en train de défiler pour
-            // arrêter le défilement, et ne le transmet qu'ensuite — d'où le
-            // symptôme « il faut attendre l'arrêt du défilement ». Voir
-            // `DesactiveDelaiDefilement`.
-            .background(DesactiveDelaiDefilement())
             .overlay {
                 if boutonHautVisible {
                     // Position calculée plutôt qu'un simple `.bottomTrailing`
@@ -288,16 +282,8 @@ struct VueOeuvresStructuree: View {
                     // limite haute du tiers bas de l'écran, pas à une marge
                     // fixe depuis le bord.
                     GeometryReader { geo in
-                        boutonRetourHaut(proxy: proxy, opaque: true)
+                        boutonRetourHaut(proxy: proxy)
                             .position(x: geo.size.width - 20 - 22,
-                                      y: geo.size.height * 2 / 3)
-                        // ESSAI — bouton JUMEAU tout à gauche, au même
-                        // niveau, rendu translucide (`.ultraThinMaterial`,
-                        // comme les boutons standards d'iOS) : pour comparer
-                        // les deux styles côte à côte. Même action, même
-                        // geste. À retirer une fois le style tranché.
-                        boutonRetourHaut(proxy: proxy, opaque: false)
-                            .position(x: 20 + 22,
                                       y: geo.size.height * 2 / 3)
                     }
                 }
@@ -426,33 +412,38 @@ struct VueOeuvresStructuree: View {
     private var recapInutile: Bool { estModeVentes && !typesFiltre.isEmpty }
 
     /// Pastille ronde flottante — ramène en haut de la vue (Galerie et Liste
-    /// partagent le même `ScrollView`). `opaque` choisit entre le style
-    /// retenu (fond plein accent, flèche blanche) et l'essai de comparaison
-    /// (fond translucide, MÊME rendu que les boutons standards de retour en
-    /// arrière — cercle sombre cerclé de l'accent — voir `VisionneuseOeuvres
-    /// .boutonFermer`/`VisionneuseImagePleinEcran`) — voir l'appelant.
-    private func boutonRetourHaut(proxy: ScrollViewProxy, opaque: Bool) -> some View {
-        Button {
-            withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
-        } label: {
-            Image(systemName: "arrow.up")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background {
-                    if opaque {
-                        Circle().fill(accent)
-                    } else {
-                        Circle()
-                            .fill(.black.opacity(0.55))
-                            .overlay(Circle().strokeBorder(accent, lineWidth: 1))
-                    }
+    /// partagent le même `ScrollView`). MÊME rendu que les boutons standards
+    /// de retour en arrière déjà dans l'app — cercle sombre cerclé de
+    /// l'accent, flèche blanche (voir `VisionneuseOeuvres.boutonFermer` /
+    /// `VisionneuseImagePleinEcran`). Retenu après comparaison avec un fond
+    /// plein accent, abandonné.
+    ///
+    /// **PAS un `Button`** : posé sur un `ScrollView` encore en train de
+    /// défiler, un `Button` n'y réagissait qu'à un second tap — UIKit
+    /// laissait le premier au geste de défilement (arrêt de l'inertie), et
+    /// ne le transmettait qu'ensuite. `.highPriorityGesture` donne à ce tap
+    /// la priorité sur les reconnaisseurs de gestes du `ScrollView`, geste
+    /// pris en compte dès le premier appui, défilement ou non.
+    private func boutonRetourHaut(proxy: ScrollViewProxy) -> some View {
+        Image(systemName: "arrow.up")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(width: 44, height: 44)
+            .background {
+                Circle()
+                    .fill(.black.opacity(0.55))
+                    .overlay(Circle().strokeBorder(accent, lineWidth: 1))
+            }
+            .shadow(radius: 3)
+            .contentShape(Circle())
+            .highPriorityGesture(
+                TapGesture().onEnded {
+                    withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
                 }
-                .shadow(radius: 3)
-        }
-        // Effet d'apparition plus fluide : un léger zoom depuis le centre,
-        // combiné au fondu, plutôt qu'un simple fondu sec.
-        .transition(.scale(scale: 0.7).combined(with: .opacity))
+            )
+            // Effet d'apparition plus fluide : un léger zoom depuis le
+            // centre, combiné au fondu, plutôt qu'un simple fondu sec.
+            .transition(.scale(scale: 0.7).combined(with: .opacity))
     }
 
     @ViewBuilder
@@ -719,39 +710,4 @@ struct VueOeuvresStructuree: View {
     }
 }
 
-/// Désactive `delaysContentTouches` sur le `UIScrollView` le plus proche.
-///
-/// Sans ce réglage, un bouton posé en `.overlay` sur un `ScrollView` encore
-/// en train de défiler ne réagit qu'à un second tap : le premier est
-/// absorbé par UIKit pour arrêter le défilement, et n'est transmis au
-/// bouton qu'ensuite — d'où le symptôme « il faut attendre l'arrêt du
-/// défilement » sur le bouton « Retour en haut ».
-///
-/// Vue invisible posée en `.background` du `ScrollView` visé, donc juste à
-/// côté de lui : on remonte DE PROCHE EN PROCHE depuis elle jusqu'au premier
-/// `UIScrollView` rencontré, plutôt que de chercher par classe depuis la
-/// racine de la fenêtre — la seconde méthode a déjà cassé d'autres vues par
-/// le passé (voir CLAUDE.md, l'incident `DefilementTableau`/`NSOutlineView`).
-struct DesactiveDelaiDefilement: UIViewRepresentable {
-    func makeUIView(context: Context) -> UIView {
-        let sonde = UIView(frame: .zero)
-        sonde.isHidden = true
-        sonde.isUserInteractionEnabled = false
-        // Le `superview` n'existe qu'une fois la vue insérée dans la
-        // hiérarchie : on le lit au tour de boucle suivant.
-        DispatchQueue.main.async {
-            var vue = sonde.superview
-            while let courante = vue {
-                if let defilement = courante as? UIScrollView {
-                    defilement.delaysContentTouches = false
-                    break
-                }
-                vue = courante.superview
-            }
-        }
-        return sonde
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {}
-}
 #endif
