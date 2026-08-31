@@ -77,6 +77,15 @@ struct VueOeuvresStructuree: View {
     // Identifiants d'ancrage pour le défilement vers une section.
     private let ancreVentes = "ancre-ventes"
     private let ancreDons   = "ancre-dons"
+    // Tout en haut de la vue — cible du bouton « Retour en haut ».
+    private let ancreHaut = "ancre-haut"
+
+    /// Bouton flottant « Retour en haut », Catalogue seulement (`!estModeVentes`).
+    /// Apparaît après un défilement de deux fois la hauteur visible.
+    @State private var boutonHautVisible = false
+    /// Accent de la rubrique — orange dans « Ventes et dons ». Teinte le
+    /// bouton « Retour en haut ».
+    @Environment(\.accentRubrique) private var accent
 
     /// Vrai si la vue opère en mode « filtre modeVente » (rubrique Ventes).
     /// Titre de la page, fourni par l'appelant.
@@ -200,6 +209,8 @@ struct VueOeuvresStructuree: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Tout en haut : cible du bouton « Retour en haut ».
+                    Color.clear.frame(height: 0).id(ancreHaut)
 
                     // --- 1. Filtre par type, DIRECTEMENT sous le titre ---
                     // Rendu DANS la zone de défilement, comme le
@@ -253,6 +264,18 @@ struct VueOeuvresStructuree: View {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         proxy.scrollTo(cible, anchor: .center)
                     }
+                }
+            }
+            // Bouton « Retour en haut », Catalogue seulement : apparaît après
+            // un défilement de deux fois la hauteur visible.
+            .onScrollGeometryChange(for: Bool.self) { geometrie in
+                !estModeVentes && geometrie.contentOffset.y > geometrie.containerSize.height * 2
+            } action: { _, doitAfficher in
+                boutonHautVisible = doitAfficher
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if boutonHautVisible {
+                    boutonRetourHaut(proxy: proxy)
                 }
             }
         }
@@ -377,6 +400,24 @@ struct VueOeuvresStructuree: View {
     /// (`typesFiltre` y est vide) : elles gardent leur ligne, faute de quoi
     /// le nombre d'œuvres ne s'afficherait plus nulle part.
     private var recapInutile: Bool { estModeVentes && !typesFiltre.isEmpty }
+
+    /// Pastille ronde flottante, fond transparent, icône `arrow.up` — ramène
+    /// en haut de la vue (Galerie et Liste partagent le même `ScrollView`).
+    private func boutonRetourHaut(proxy: ScrollViewProxy) -> some View {
+        Button {
+            withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
+        } label: {
+            Image(systemName: "arrow.up")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(accent)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(.clear))
+                .overlay(Circle().strokeBorder(accent.opacity(0.5), lineWidth: 1))
+        }
+        .padding(.trailing, 20)
+        .padding(.bottom, 20)
+        .transition(.opacity)
+    }
 
     @ViewBuilder
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {

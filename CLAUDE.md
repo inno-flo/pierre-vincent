@@ -2151,6 +2151,22 @@ JavaScript, inexploitables par extraction) :
   `ScrollView`, elle reçoit un paramètre `entete` **optionnel** rendu dans la
   zone de défilement — nul côté Mac, où rien ne change.
 
+- **iOS — Catalogue, bouton flottant « Retour en haut »**
+  (`VueOeuvresStructuree.swift`) : une pastille ronde à fond TRANSPARENT
+  (juste un contour, pas de remplissage), icône `arrow.up`, en bas à droite,
+  survole le contenu (`.overlay` sur le `ScrollView`, PAS dans la hiérarchie
+  défilante). Apparaît après un défilement de deux fois la hauteur visible
+  (`.onScrollGeometryChange`, iOS 18+), via `boutonHautVisible`. Ramène tout
+  en haut par `proxy.scrollTo(ancreHaut, anchor: .top)`, une ancre invisible
+  posée en tête du `VStack` défilant.
+  - **Restreint au Catalogue** (`!estModeVentes`) : Galerie et Liste
+    partagent le même `ScrollView` dans cette vue, donc la même condition
+    couvre les deux présentations d'un coup. Les sous-rubriques de mode de
+    vente (`estModeVentes` vrai), qui réutilisent cette même vue, n'ont pas
+    ce bouton.
+  - Teinté par `\.accentRubrique` (orange dans « Ventes et dons »), comme le
+    reste des contrôles de cette section.
+
 - **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit
   donc PAS à pouvoir la passer à l'appel, il faut aussi étendre l'`init`.
