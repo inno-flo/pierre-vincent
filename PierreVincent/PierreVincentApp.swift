@@ -125,12 +125,6 @@ struct PierreVincentApp: App {
                     .disabled(!importAnnulable)
                 }
                 Divider()
-                // Entretien du dossier de photos. Séparée des imports : elle ne
-                // fait entrer aucune donnée, elle réécrit celles déjà là.
-                Button("Recompresser les photos…") {
-                    declencherFichier("recompresser")
-                }
-                Divider()
                 // Tous les exports regroupés dans un sous-menu « Exporter ».
                 Menu("Exporter") {
                     // Les deux exports les plus utilisés en tête.
@@ -141,6 +135,12 @@ struct PierreVincentApp: App {
                     Button("Excel (.xls)…") { declencherFichier("xls") }
                     Button("Excel avec images (.xlsx)…") { declencherFichier("xlsx") }
                     Button("Dossier avec images…") { declencherFichier("dossier") }
+                }
+                Divider()
+                // Entretien du dossier de photos. Séparée des imports : elle ne
+                // fait entrer aucune donnée, elle réécrit celles déjà là.
+                Button("Recompresser les photos…") {
+                    declencherFichier("recompresser")
                 }
                 Divider()
                 Button("Ouvrir le dossier des données") {
