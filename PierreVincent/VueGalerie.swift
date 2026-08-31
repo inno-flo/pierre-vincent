@@ -302,8 +302,21 @@ struct VueGalerie: View {
         // glissait vers le bas au lieu de s'estomper sur place — l'aperçu
         // par défaut d'une vue de cette taille semble suivre un chemin
         // d'animation différent de celui d'une petite vignette.
-        .draggable(o.id.uuidString) {
-            VignetteCachee(nom: o.photoNom, cote: 60)
+        //
+        // `coteSource: 320, preserverRatio: true` — LES MÊMES valeurs que
+        // la vignette de carte ci-dessus, pour retrouver la MÊME entrée du
+        // cache. Un premier essai avec une taille inventée (60) tombait sur
+        // une clé jamais préparée par personne : le cache renvoyait `nil`,
+        // d'où l'icône « image manquante » à la place d'une vraie vignette.
+        //
+        // Sur une sélection multiple, `identifiantsGlisse(pour:)` embarque
+        // TOUTE la sélection si la carte glissée en fait partie — même
+        // règle que le menu contextuel ci-dessus — pas la seule vignette
+        // sous le doigt. L'aperçu, lui, reste celui de CETTE carte : montrer
+        // un aperçu par œuvre glissée n'apporterait rien de plus.
+        .draggable(identifiantsGlisse(pour: o)) {
+            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
+                .frame(width: 60, height: 60)
         }
         #else
         // Sur iPhone : tap et appui prolongé sont pris par une vue UIKit
@@ -315,6 +328,18 @@ struct VueGalerie: View {
                                      onAfficher: onAppuiLong))
         #endif
     }
+
+    #if os(macOS)
+    /// Charge utile du glisser-déposer vers Favoris (`ContentView.swift`) :
+    /// TOUTE la sélection courante si la carte glissée en fait partie —
+    /// même règle que le menu contextuel ci-dessus — sinon cette seule
+    /// œuvre. Les UUID sont joints par une virgule ; la cible
+    /// (`ajouterAuxFavoris`) les sépare avant de résoudre chaque œuvre.
+    private func identifiantsGlisse(pour o: Oeuvre) -> String {
+        let cibles = selection.contains(o.id) ? selection : [o.id]
+        return cibles.map { $0.uuidString }.joined(separator: ",")
+    }
+    #endif
 
     /// Texte de la ligne en gras : le nom de l'acheteur pour les ventes,
     /// le destinataire pour les dons.

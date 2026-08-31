@@ -1961,19 +1961,45 @@ JavaScript, inexploitables par extraction) :
       ne s'affiche que `modeAffichage == "icone"`.
     - **Glisser-déposer vers Favoris, macOS** : une œuvre glissée depuis une
       vignette de `Table` (colonne Photo, les trois tableaux) ou de
-      `VueGalerie` (`.draggable(o.id.uuidString)`, `#if os(macOS)` — l'UUID
-      en texte suffit, pas besoin d'un type `Transferable` dédié) peut être
-      déposée directement sur la rubrique Favoris de la sidebar
-      (`.dropDestination(for: String.self)` sur `lien(.favoris)`,
-      `ContentView.swift`). `ajouterAuxFavoris(_:)` retrouve chaque œuvre
-      par UUID dans `toutes` et la marque favorite — ignore silencieusement
-      un texte sans correspondance plutôt que d'échouer tout le dépôt.
-      Surbrillance légère (`Color.taupeChaud.opacity(0.15)`) pendant que le
-      glissé survole la ligne, via `isTargeted` et `favorisCibleDepot`.
-      Aperçu de glissé PERSONNALISÉ et PETIT (`VignetteCachee`, 60 pt) sur
-      les deux sources : l'aperçu par défaut, à la taille de la carte ou de
-      la cellule entière, faisait glisser l'animation de fin de dépôt vers
-      le bas au lieu de s'estomper sur place.
+      `VueGalerie` (`#if os(macOS)` — l'UUID en texte suffit, pas besoin
+      d'un type `Transferable` dédié) peut être déposée directement sur la
+      rubrique Favoris de la sidebar (`.dropDestination(for: String.self)`
+      sur `lien(.favoris)`, `ContentView.swift`). `ajouterAuxFavoris(_:)`
+      retrouve chaque œuvre par UUID dans `toutes` et la marque favorite —
+      ignore silencieusement un morceau sans correspondance plutôt que
+      d'échouer tout le dépôt. Surbrillance légère
+      (`Color.taupeChaud.opacity(0.15)`) pendant que le glissé survole la
+      ligne, via `isTargeted` et `favorisCibleDepot`.
+      - **Sélection multiple prise en compte** : glisser une ligne/carte qui
+        fait partie de la sélection courante embarque TOUTE la sélection,
+        pas la seule œuvre sous le doigt — `identifiantsGlisse(pour:)`
+        (`VueFeuille.swift`, `VueGalerie.swift`), même règle que le menu
+        contextuel juste à côté. Les UUID sont joints par une virgule dans
+        UNE SEULE chaîne (`.draggable` transporte un item, pas un tableau) ;
+        `ajouterAuxFavoris(_:)` découpe chaque chaîne reçue sur la virgule
+        avant de résoudre les UUID — un texte sans virgule (une œuvre seule)
+        traverse ce découpage sans effet. **Premier essai — un simple
+        `o.id.uuidString`, sans passer par `identifiantsGlisse` — ne
+        glissait que l'œuvre sous le doigt** : corrigé.
+      - **Aperçu de glissé PERSONNALISÉ et PETIT**, sur les deux sources —
+        `VignetteCachee`/`VignetteCacheeFlexible`, PAS l'aperçu par défaut
+        (toute la carte ou toute la cellule), qui faisait glisser
+        l'animation de fin de dépôt vers le bas au lieu de s'estomper sur
+        place. Représente toujours la SEULE œuvre sous le doigt, même sur
+        une sélection multiple — montrer un aperçu par œuvre glissée
+        n'apporterait rien.
+        - **Doit reprendre EXACTEMENT la taille (et le `preserverRatio`)
+          déjà utilisés pour la vignette RÉELLEMENT affichée à cet
+          endroit** — `max(28, hauteurContenu - 10)` pour la Table,
+          `coteSource: 320, preserverRatio: true` pour `VueGalerie` — et
+          non une taille inventée. `CacheVignettes` est indexé par
+          `(nom, cote, preserverRatio)` : une taille qui ne correspond à
+          aucune vignette réellement préparée ailleurs ne retrouve rien
+          dans le cache, et l'aperçu affiche l'icône « image manquante » à
+          la place d'une vraie vignette — la vraie IMAGE existe (l'œuvre est
+          affichée à l'écran), c'est la CLÉ de cache qui ne correspond à
+          rien. **Premier essai avec `cote: 60` : PIÉGÉ par ce symptôme**,
+          corrigé en réutilisant la clé réelle.
       **La limite « ne fonctionne que s'il existe déjà un favori » a depuis
       disparu** : `auMoinsUnFavori`, qui masquait la rubrique tant qu'elle
       était vide, a été retirée (voir plus haut) — la rubrique Favoris est

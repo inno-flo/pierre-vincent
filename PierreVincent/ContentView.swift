@@ -925,19 +925,26 @@ struct ContentView: View {
     }
 
     #if os(macOS)
-    /// Marque favorites les œuvres dont l'UUID (texte) figure dans `textes` —
-    /// cible de `.dropDestination` pour la rubrique Favoris de la sidebar.
-    /// Les `.draggable(o.id.uuidString)` posés sur les vignettes (Table,
-    /// Galerie) sont l'autre bout de ce geste. Ignore silencieusement un
-    /// texte qui ne correspond à aucune œuvre, plutôt que d'échouer le
-    /// dépôt entier.
+    /// Marque favorites les œuvres dont l'UUID figure dans `textes` — cible
+    /// de `.dropDestination` pour la rubrique Favoris de la sidebar. Les
+    /// `.draggable(identifiantsGlisse(pour:))` posés sur les vignettes
+    /// (Table, Galerie) sont l'autre bout de ce geste.
+    ///
+    /// **Sur une sélection multiple**, la source joint tous les UUID
+    /// glissés en une seule chaîne séparée par des virgules (une sélection
+    /// multiple ne glissait sinon que l'œuvre sous le doigt, les autres
+    /// restant ignorées) : on la redécoupe ici avant de résoudre chaque
+    /// œuvre. Ignore silencieusement un morceau qui ne correspond à
+    /// aucune œuvre, plutôt que d'échouer le dépôt entier.
     private func ajouterAuxFavoris(_ textes: [String]) -> Bool {
         var succes = false
         for texte in textes {
-            guard let id = UUID(uuidString: texte),
-                  let o = toutes.first(where: { $0.id == id }) else { continue }
-            o.favori = true
-            succes = true
+            for morceau in texte.split(separator: ",") {
+                guard let id = UUID(uuidString: String(morceau)),
+                      let o = toutes.first(where: { $0.id == id }) else { continue }
+                o.favori = true
+                succes = true
+            }
         }
         if succes { try? context.save() }
         return succes

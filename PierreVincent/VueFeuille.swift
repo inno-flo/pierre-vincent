@@ -1330,10 +1330,15 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
                     // Glisser-déposer vers Favoris dans la sidebar : voir
                     // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
-                    // Aperçu personnalisé, PETIT : voir la note dans
-                    // `VueGalerie.swift`, même correctif.
-                    .draggable(o.id.uuidString) {
-                        VignetteCachee(nom: o.photoNom, cote: 60)
+                    // Sur une sélection multiple, embarque TOUTE la
+                    // sélection — voir `identifiantsGlisse(pour:)`.
+                    .draggable(identifiantsGlisse(pour: o)) {
+                        // `cote` IDENTIQUE à celui de `vignette(o)`
+                        // au-dessus, pour retrouver la MÊME entrée du
+                        // cache : une taille inventée tombait sur une clé
+                        // jamais préparée, d'où l'icône « image manquante »
+                        // à la place d'une vraie vignette.
+                        VignetteCachee(nom: o.photoNom, cote: max(28, hauteurContenu - 10))
                     }
             }
             .width(96)
@@ -1391,10 +1396,15 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
                     // Glisser-déposer vers Favoris dans la sidebar : voir
                     // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
-                    // Aperçu personnalisé, PETIT : voir la note dans
-                    // `VueGalerie.swift`, même correctif.
-                    .draggable(o.id.uuidString) {
-                        VignetteCachee(nom: o.photoNom, cote: 60)
+                    // Sur une sélection multiple, embarque TOUTE la
+                    // sélection — voir `identifiantsGlisse(pour:)`.
+                    .draggable(identifiantsGlisse(pour: o)) {
+                        // `cote` IDENTIQUE à celui de `vignette(o)`
+                        // au-dessus, pour retrouver la MÊME entrée du
+                        // cache : une taille inventée tombait sur une clé
+                        // jamais préparée, d'où l'icône « image manquante »
+                        // à la place d'une vraie vignette.
+                        VignetteCachee(nom: o.photoNom, cote: max(28, hauteurContenu - 10))
                     }
             }
             .width(96)
@@ -1481,10 +1491,15 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
                     // Glisser-déposer vers Favoris dans la sidebar : voir
                     // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
-                    // Aperçu personnalisé, PETIT : voir la note dans
-                    // `VueGalerie.swift`, même correctif.
-                    .draggable(o.id.uuidString) {
-                        VignetteCachee(nom: o.photoNom, cote: 60)
+                    // Sur une sélection multiple, embarque TOUTE la
+                    // sélection — voir `identifiantsGlisse(pour:)`.
+                    .draggable(identifiantsGlisse(pour: o)) {
+                        // `cote` IDENTIQUE à celui de `vignette(o)`
+                        // au-dessus, pour retrouver la MÊME entrée du
+                        // cache : une taille inventée tombait sur une clé
+                        // jamais préparée, d'où l'icône « image manquante »
+                        // à la place d'une vraie vignette.
+                        VignetteCachee(nom: o.photoNom, cote: max(28, hauteurContenu - 10))
                     }
             }
             .width(96)
@@ -1554,6 +1569,16 @@ struct VueFeuille: View {
         Button(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris") {
             basculerFavoriSelection()
         }
+    }
+
+    /// Charge utile du glisser-déposer vers Favoris (`ContentView.swift`) :
+    /// TOUTE la sélection courante si la ligne glissée en fait partie —
+    /// même règle que le menu contextuel juste en dessous — sinon cette
+    /// seule œuvre. Les UUID sont joints par une virgule ; la cible
+    /// (`ajouterAuxFavoris`) les sépare avant de résoudre chaque œuvre.
+    private func identifiantsGlisse(pour o: Oeuvre) -> String {
+        let cibles = selection.contains(o.id) ? selection : [o.id]
+        return cibles.map { $0.uuidString }.joined(separator: ",")
     }
 
     /// Vrai si la sélection n'est pas vide et l'est ENTIÈREMENT déjà favorite.
