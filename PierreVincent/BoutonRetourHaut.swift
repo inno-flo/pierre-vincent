@@ -69,9 +69,13 @@ private struct RetourEnHautModifier: ViewModifier {
             }
             .overlay {
                 if visible {
+                    // Centré horizontalement — accessible de la même façon
+                    // pour droitiers et gauchers, plutôt que collé à un
+                    // bord. Seule la position X change ; la hauteur
+                    // (limite haute du tiers bas) reste identique.
                     GeometryReader { geo in
                         BoutonRetourHaut(action: action)
-                            .position(x: geo.size.width - 20 - 22,
+                            .position(x: geo.size.width / 2,
                                       y: geo.size.height * 2 / 3)
                     }
                 }

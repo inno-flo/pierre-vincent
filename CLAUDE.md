@@ -2202,7 +2202,11 @@ JavaScript, inexploitables par extraction) :
     doit tomber exactement à la limite haute du TIERS BAS de l'écran, pas à
     une marge fixe. Un `GeometryReader` posé dans l'`.overlay` lit la
     hauteur du `ScrollView`, et `.position(x:, y: hauteur * 2/3)` place le
-    bouton à cette hauteur précise, près du bord droit sur `x`.
+    bouton à cette hauteur précise.
+  - **Centré horizontalement** (`x: largeur / 2`), et non collé à un bord —
+    d'abord posé à droite, puis recentré à la demande pour rester accessible
+    de la même façon aux droitiers et aux gauchers. Seul `x` a changé, `y`
+    (la hauteur) est resté identique.
   - **Apparition animée** : le changement de `boutonHautVisible` est posé
     dans un `withAnimation(.easeOut(duration: 0.25))`, sans quoi le
     `.transition` posé sur le bouton ne jouait pas (une transition n'anime
