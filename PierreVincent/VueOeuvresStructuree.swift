@@ -80,12 +80,9 @@ struct VueOeuvresStructuree: View {
     // Tout en haut de la vue — cible du bouton « Retour en haut ».
     private let ancreHaut = "ancre-haut"
 
-    /// Bouton flottant « Retour en haut », Catalogue seulement (`!estModeVentes`).
-    /// Apparaît après un défilement de deux fois la hauteur visible.
+    /// Visibilité du bouton flottant « Retour en haut » — voir
+    /// `BoutonRetourHaut.swift`.
     @State private var boutonHautVisible = false
-    /// Accent de la rubrique — orange dans « Ventes et dons ». Teinte le
-    /// bouton « Retour en haut ».
-    @Environment(\.accentRubrique) private var accent
 
     /// Vrai si la vue opère en mode « filtre modeVente » (rubrique Ventes).
     /// Titre de la page, fourni par l'appelant.
@@ -266,27 +263,11 @@ struct VueOeuvresStructuree: View {
                     }
                 }
             }
-            // Bouton « Retour en haut », Catalogue seulement : apparaît après
-            // un défilement de deux fois la hauteur visible.
-            .onScrollGeometryChange(for: Bool.self) { geometrie in
-                !estModeVentes && geometrie.contentOffset.y > geometrie.containerSize.height * 2
-            } action: { _, doitAfficher in
-                withAnimation(.easeOut(duration: 0.25)) {
-                    boutonHautVisible = doitAfficher
-                }
-            }
-            .overlay {
-                if boutonHautVisible {
-                    // Position calculée plutôt qu'un simple `.bottomTrailing`
-                    // + padding : le bouton doit tomber PRÉCISÉMENT à la
-                    // limite haute du tiers bas de l'écran, pas à une marge
-                    // fixe depuis le bord.
-                    GeometryReader { geo in
-                        boutonRetourHaut(proxy: proxy)
-                            .position(x: geo.size.width - 20 - 22,
-                                      y: geo.size.height * 2 / 3)
-                    }
-                }
+            // Bouton « Retour en haut » — voir `BoutonRetourHaut.swift`.
+            // Plus restreint au Catalogue : Ventes et modes de vente ont
+            // aussi une présentation Galerie/Liste défilante.
+            .retourEnHaut(visible: $boutonHautVisible) {
+                withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
         }
         .background(Color.cremeFond)
@@ -410,41 +391,6 @@ struct VueOeuvresStructuree: View {
     /// (`typesFiltre` y est vide) : elles gardent leur ligne, faute de quoi
     /// le nombre d'œuvres ne s'afficherait plus nulle part.
     private var recapInutile: Bool { estModeVentes && !typesFiltre.isEmpty }
-
-    /// Pastille ronde flottante — ramène en haut de la vue (Galerie et Liste
-    /// partagent le même `ScrollView`). MÊME rendu que les boutons standards
-    /// de retour en arrière déjà dans l'app — cercle sombre cerclé de
-    /// l'accent, flèche blanche (voir `VisionneuseOeuvres.boutonFermer` /
-    /// `VisionneuseImagePleinEcran`). Retenu après comparaison avec un fond
-    /// plein accent, abandonné.
-    ///
-    /// **PAS un `Button`** : posé sur un `ScrollView` encore en train de
-    /// défiler, un `Button` n'y réagissait qu'à un second tap — UIKit
-    /// laissait le premier au geste de défilement (arrêt de l'inertie), et
-    /// ne le transmettait qu'ensuite. `.highPriorityGesture` donne à ce tap
-    /// la priorité sur les reconnaisseurs de gestes du `ScrollView`, geste
-    /// pris en compte dès le premier appui, défilement ou non.
-    private func boutonRetourHaut(proxy: ScrollViewProxy) -> some View {
-        Image(systemName: "arrow.up")
-            .font(.body.weight(.semibold))
-            .foregroundStyle(.white)
-            .frame(width: 44, height: 44)
-            .background {
-                Circle()
-                    .fill(.black.opacity(0.55))
-                    .overlay(Circle().strokeBorder(accent, lineWidth: 1))
-            }
-            .shadow(radius: 3)
-            .contentShape(Circle())
-            .highPriorityGesture(
-                TapGesture().onEnded {
-                    withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
-                }
-            )
-            // Effet d'apparition plus fluide : un léger zoom depuis le
-            // centre, combiné au fondu, plutôt qu'un simple fondu sec.
-            .transition(.scale(scale: 0.7).combined(with: .opacity))
-    }
 
     @ViewBuilder
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {

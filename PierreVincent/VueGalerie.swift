@@ -44,6 +44,11 @@ struct VueGalerie: View {
     @State private var derniere: UUID?
 
     #if os(iOS)
+    // Visibilité du bouton flottant « Retour en haut » — voir
+    // BoutonRetourHaut.swift. macOS n'en a pas.
+    @State private var boutonHautVisible = false
+    // Tout en haut de la grille — cible du bouton « Retour en haut ».
+    private let ancreHaut = "ancre-haut"
     #endif
 
     #if os(macOS)
@@ -67,6 +72,10 @@ struct VueGalerie: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                #if os(iOS)
+                // Tout en haut : cible du bouton « Retour en haut ».
+                Color.clear.frame(height: 0).id(ancreHaut)
+                #endif
                 entete
                 LazyVGrid(columns: colonnes, spacing: 16) {
                     ForEach(oeuvres) { o in
@@ -86,6 +95,12 @@ struct VueGalerie: View {
                     proxy.scrollTo(id, anchor: .center)
                 }
             }
+            #if os(iOS)
+            // Bouton « Retour en haut » — voir BoutonRetourHaut.swift.
+            .retourEnHaut(visible: $boutonHautVisible) {
+                withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
+            }
+            #endif
             #if os(macOS)
             // Focus clavier sur le ScrollView pour recevoir les touches fléchées.
             // focusEffectDisabled() supprime l'anneau bleu de focus.

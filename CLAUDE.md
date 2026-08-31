@@ -2085,9 +2085,13 @@ JavaScript, inexploitables par extraction) :
     désormais **passés en paramètre**.
   - Aiguillage par `Categorie.estVenteRealisee` : un test `== .ventesRealisees`
     ne couvrirait pas le cas à valeur associée.
-  - Les libellés « Expositions » et « Ventes aux enchères » sont un **rendu
-    au pluriel** dans `titre` ; la valeur stockée sur l'œuvre reste au
-    singulier, et c'est elle que voient l'éditeur, l'inspecteur et le filtre.
+  - **« Exposition » et « Vente aux enchères » : au SINGULIER**, sur les
+    deux plateformes — pluriel (« Expositions », « Ventes aux enchères »)
+    abandonné à la demande. `Categorie.titre` reprend désormais tel quel la
+    valeur stockée sur l'œuvre, qui est la seule source lue par la sidebar
+    ET par le titre de la vue (`titre: cat.titre`, passé à `VueFeuille` sur
+    Mac et `VueOeuvresStructuree`/`VueiOS` sur iPhone) : un seul changement
+    couvre les deux.
   - **« Vente privée » s'affiche « Directe »**, même principe que les deux
     précédents : `titre` traduit, `modeVente` sur l'œuvre et
     `modesDeVenteReference` restent « Vente privée ». Y toucher romprait la
@@ -2164,60 +2168,64 @@ JavaScript, inexploitables par extraction) :
   `ScrollView`, elle reçoit un paramètre `entete` **optionnel** rendu dans la
   zone de défilement — nul côté Mac, où rien ne change.
 
-- **iOS — Catalogue, bouton flottant « Retour en haut »**
-  (`VueOeuvresStructuree.swift`) : une pastille ronde à fond OPAQUE (accent
-  de la rubrique) et flèche BLANCHE (`arrow.up`), survole le contenu
-  (`.overlay` sur le `ScrollView`, PAS dans la hiérarchie défilante).
-  Apparaît après un défilement de deux fois la hauteur visible
-  (`.onScrollGeometryChange`, iOS 18+), via `boutonHautVisible`. Ramène tout
-  en haut par `proxy.scrollTo(ancreHaut, anchor: .top)`, une ancre invisible
-  posée en tête du `VStack` défilant.
-  - **Fond TRANSPARENT essayé d'abord, ABANDONNÉ** : premier essai à
-    contour seul, jugé trop peu visible et repositionné trop bas. Passé à un
-    disque plein (couleur `accentRubrique`) avec une ombre portée, pour
-    rester lisible par-dessus des vignettes de toutes teintes.
+- **iOS — bouton flottant « Retour en haut », dans TOUTES les vues
+  Galerie/Liste** (`BoutonRetourHaut.swift`) : une pastille ronde — cercle
+  sombre `black.opacity(0.55)` cerclé de l'ACCENT DE LA RUBRIQUE, flèche
+  BLANCHE, même rendu que les boutons de retour en arrière déjà dans l'app
+  (`VisionneuseOeuvres.boutonFermer` / `VisionneuseImagePleinEcran`) —
+  survole le contenu (`.overlay` sur le `ScrollView`, PAS dans la hiérarchie
+  défilante). Apparaît après un défilement de deux fois la hauteur visible
+  (`.onScrollGeometryChange`, iOS 18+). Ramène tout en haut par
+  `proxy.scrollTo(ancreHaut, anchor: .top)`, une ancre invisible posée en
+  tête du contenu défilant.
+  - **Écrit une seule fois**, comme `BandeauTypes` : `BoutonRetourHaut`
+    (la pastille) + `RetourEnHautModifier`/`.retourEnHaut(visible:action:)`
+    (le suivi de défilement + le positionnement). D'abord écrit en dur dans
+    `VueOeuvresStructuree`, PUIS FACTORISÉ à la demande pour couvrir toutes
+    les vues Galerie/Liste d'un coup : `VueGalerie` (Galerie, partagée avec
+    macOS — l'appel est gardé `#if os(iOS)`, macOS n'a pas ce bouton),
+    `VueOeuvresStructuree` (Catalogue, Ventes, modes de vente — n'est plus
+    restreint au seul Catalogue), `VueDonsStructuree` (Dons) et `VueiOS`
+    (mode Liste des rubriques de Réserve et Favoris ; leur Galerie passe
+    par `VueGalerie`, qui a déjà le bouton). Chaque vue garde son propre
+    `@State boutonHautVisible` et sa propre ancre `ancreHaut` — un par
+    `ScrollView`, aucun état partagé entre Galerie et Liste.
+  - Accent lu directement par `BoutonRetourHaut` via son propre
+    `@Environment(\.accentRubrique)` : s'adapte tout seul à la rubrique
+    (orange dans « Ventes et dons », bleu ardoise en Réserve, taupe pour
+    Favoris) sans rien à câbler dans les vues appelantes.
+  - **Fond TRANSPARENT (contour seul) essayé d'abord, ABANDONNÉ** : jugé
+    trop peu visible. Un disque plein accent a ensuite été comparé côte à
+    côte avec le cercle sombre actuel ; le disque plein a été retiré, le
+    cercle sombre retenu seul.
   - **Position calculée, pas un simple padding depuis un coin** : le bouton
     doit tomber exactement à la limite haute du TIERS BAS de l'écran, pas à
     une marge fixe. Un `GeometryReader` posé dans l'`.overlay` lit la
     hauteur du `ScrollView`, et `.position(x:, y: hauteur * 2/3)` place le
-    bouton à cette hauteur précise, ancré près du bord droit sur `x`. Les
-    anciens `.padding(.trailing/.bottom)` sur le bouton lui-même ont été
-    retirés : ils entraient en conflit avec ce calcul de position.
-  - **Restreint au Catalogue** (`!estModeVentes`) : Galerie et Liste
-    partagent le même `ScrollView` dans cette vue, donc la même condition
-    couvre les deux présentations d'un coup. Les sous-rubriques de mode de
-    vente (`estModeVentes` vrai), qui réutilisent cette même vue, n'ont pas
-    ce bouton.
-  - **Apparition animée** : `boutonHautVisible` est désormais posé dans un
-    `withAnimation(.easeOut(duration: 0.25))`, sans quoi le `.transition`
-    posé sur le bouton ne jouait pas (une transition n'anime que si le
-    changement de présence a lieu dans une transaction animée). Le fondu
-    seul (`.opacity`) a été remplacé par un zoom léger depuis le centre
-    combiné au fondu (`.scale(scale: 0.7).combined(with: .opacity)`), plus
-    fluide qu'un simple fondu sec.
-  - **Style retenu après comparaison** : cercle sombre `black.opacity(0.55)`
-    cerclé de l'accent de la rubrique, flèche BLANCHE — le MÊME rendu que
-    les boutons de retour en arrière déjà dans l'app (voir
-    `VisionneuseOeuvres.boutonFermer` / `VisionneuseImagePleinEcran`). Un
-    second style, disque plein accent posé côte à côte à titre de
-    comparaison, a été essayé puis retiré — un seul bouton reste, à droite.
-  - **`DesactiveDelaiDefilement` (UIViewRepresentable) : ESSAYÉE, INEFFICACE,
-    SUPPRIMÉE.** L'idée — désactiver `delaysContentTouches` sur le
-    `UIScrollView` le plus proche, remonté depuis une sonde posée en
-    `.background` du `ScrollView` — n'a pas résolu le symptôme : le bouton
-    continuait à ne réagir qu'après l'arrêt complet du défilement.
-    Suspicion : `.background()` place la sonde en dehors de la branche de
-    vues qui contient réellement le `UIScrollView`, donc la remontée par
-    `superview` ne le rencontrait jamais.
-  - **Correctif retenu : `.highPriorityGesture(TapGesture())` au lieu d'un
-    `Button`.** Le bouton n'est plus un `SwiftUI.Button` mais une simple
-    image avec `.contentShape(Circle())` et un `TapGesture` posé en
-    `.highPriorityGesture` — ce modificateur donne à CE geste la priorité
-    sur les reconnaisseurs du `ScrollView` ancêtre, reconnu dès le premier
-    appui, défilement en cours ou non. Solution SwiftUI pure, sans passer
-    par UIKit, contrairement à la piste précédente.
-  - Teinté par `\.accentRubrique` (orange dans « Ventes et dons »), comme le
-    reste des contrôles de cette section.
+    bouton à cette hauteur précise, près du bord droit sur `x`.
+  - **Apparition animée** : le changement de `boutonHautVisible` est posé
+    dans un `withAnimation(.easeOut(duration: 0.25))`, sans quoi le
+    `.transition` posé sur le bouton ne jouait pas (une transition n'anime
+    que si le changement de présence a lieu dans une transaction animée).
+    Un zoom léger depuis le centre combiné au fondu
+    (`.scale(scale: 0.7).combined(with: .opacity)`) remplace un simple
+    fondu sec, plus fluide.
+  - **Interception du tap pendant un défilement en cours — deux essais.**
+    1. `DesactiveDelaiDefilement` (`UIViewRepresentable`) : désactiver
+       `delaysContentTouches` sur le `UIScrollView` le plus proche, remonté
+       depuis une sonde posée en `.background` du `ScrollView`. ESSAYÉE,
+       INEFFICACE, SUPPRIMÉE — le bouton continuait à ne réagir qu'après
+       l'arrêt complet du défilement. Suspicion : `.background()` place la
+       sonde en dehors de la branche de vues qui contient réellement le
+       `UIScrollView`, donc la remontée par `superview` ne le rencontrait
+       jamais.
+    2. **Retenu** : le bouton n'est plus un `SwiftUI.Button` mais une simple
+       image avec `.contentShape(Circle())` et un `TapGesture` posé en
+       `.highPriorityGesture` — ce modificateur donne à CE geste la
+       priorité sur les reconnaisseurs du `ScrollView` ancêtre, reconnu dès
+       le premier appui, défilement en cours ou non. Solution SwiftUI pure,
+       sans passer par UIKit, contrairement à la piste 1 — et celle qui
+       fonctionne, confirmé à l'usage.
 
 - **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit

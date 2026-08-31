@@ -49,6 +49,11 @@ struct VueDonsStructuree: View {
     // Œuvre vers laquelle faire défiler la vue de fond, pour qu'elle suive la
     // navigation faite dans la fiche de détail (même mécanisme que VueiOS).
     @State private var oeuvreADefiler: UUID?
+    // Visibilité du bouton flottant « Retour en haut » — voir
+    // BoutonRetourHaut.swift.
+    @State private var boutonHautVisible = false
+    // Tout en haut de la vue — cible du bouton « Retour en haut ».
+    private let ancreHaut = "ancre-haut"
 
 
     /// Tous les dons, triés.
@@ -86,6 +91,8 @@ struct VueDonsStructuree: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Tout en haut : cible du bouton « Retour en haut ».
+                    Color.clear.frame(height: 0).id(ancreHaut)
 
                     // --- 1. Filtre par type ---
                     // PAS de récapitulatif : sa seule ligne (« Nombre de
@@ -122,6 +129,10 @@ struct VueDonsStructuree: View {
                         proxy.scrollTo(cible, anchor: .center)
                     }
                 }
+            }
+            // Bouton « Retour en haut » — voir BoutonRetourHaut.swift.
+            .retourEnHaut(visible: $boutonHautVisible) {
+                withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
         }
         .background(Color.cremeFond)

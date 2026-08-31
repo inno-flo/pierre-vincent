@@ -67,6 +67,11 @@ struct VueiOS: View {
     @State private var detail: Oeuvre?
     // Œuvre vers laquelle défiler à la fermeture de la fiche Détails.
     @State private var oeuvreADefiler: UUID?
+    // Visibilité du bouton flottant « Retour en haut » (mode Liste) — voir
+    // BoutonRetourHaut.swift. La Galerie a le sien, propre à VueGalerie.
+    @State private var boutonHautVisible = false
+    // Tout en haut de la liste — cible du bouton « Retour en haut ».
+    private let ancreHaut = "ancre-haut"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
     // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
@@ -474,6 +479,8 @@ struct VueiOS: View {
     private var liste: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                // Tout en haut : cible du bouton « Retour en haut ».
+                Color.clear.frame(height: 0).id(ancreHaut)
                 if let entete {
                     entete
                 } else {
@@ -575,6 +582,10 @@ struct VueiOS: View {
                         proxy.scrollTo(cible, anchor: .center)
                     }
                 }
+            }
+            // Bouton « Retour en haut » — voir BoutonRetourHaut.swift.
+            .retourEnHaut(visible: $boutonHautVisible) {
+                withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
         }
     }

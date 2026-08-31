@@ -63,20 +63,20 @@ enum Categorie: Hashable, Identifiable {
             default:             return t
             }
         case .synthese:         return "Synthèse"
-        // Forme d'affichage du mode : la rubrique regroupe PLUSIEURS ventes,
-        // d'où le pluriel, alors que la valeur stockée sur une œuvre reste au
-        // singulier (« Exposition »). « Vente privée » suit le même principe
-        // — libellé affiché DISSOCIÉ de la valeur stockée — mais pour un
-        // renommage complet plutôt qu'un pluriel : « Directe ». Le champ
-        // `modeVente` des œuvres, `modesDeVenteReference` et tout ce qui
-        // compare sur cette valeur restent inchangés, sans quoi les œuvres
-        // existantes cesseraient d'être reconnues comme relevant de ce mode.
-        // Un mode inédit garde son libellé tel quel, faute de correspondance
-        // connue.
+        // Forme d'affichage du mode : « Exposition » et « Vente aux
+        // enchères » reprennent tel quel le singulier de la valeur stockée
+        // sur une œuvre (pluriel abandonné à la demande). « Vente privée »
+        // suit un principe différent — libellé affiché DISSOCIÉ de la
+        // valeur stockée, pour un renommage complet et non une simple
+        // casse : « Directe ». Le champ `modeVente` des œuvres,
+        // `modesDeVenteReference` et tout ce qui compare sur cette valeur
+        // restent inchangés, sans quoi les œuvres existantes cesseraient
+        // d'être reconnues comme relevant de ce mode. Un mode inédit garde
+        // son libellé tel quel, faute de correspondance connue.
         case .modeVente(let m):
             switch m.lowercased() {
-            case "exposition":         return "Expositions"
-            case "vente aux enchères": return "Ventes aux enchères"
+            case "exposition":         return "Exposition"
+            case "vente aux enchères": return "Vente aux enchères"
             case "vente privée":       return "Directe"
             default:                   return m
             }
@@ -288,8 +288,8 @@ enum Categorie: Hashable, Identifiable {
         if case .modeVente(let m) = self {
             // **Exposition n'a pas de pastille Tapis** : aucun tapis n'y a
             // été exposé, elle ne filtrerait que vers une liste vide. Le test
-            // porte sur la valeur STOCKÉE, au singulier — « Expositions » au
-            // pluriel n'est qu'un rendu de `titre`.
+            // porte sur la valeur STOCKÉE, au singulier — comme le rendu de
+            // `titre` désormais.
             if m.caseInsensitiveCompare("Exposition") == .orderedSame {
                 return ["tableau", "dessin"]
             }
