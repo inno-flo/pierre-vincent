@@ -10,7 +10,7 @@ import SwiftUI
 /// propre `ScrollView` — même patron que `BandeauTypes`, pour éviter quatre
 /// copies vouées à diverger.
 ///
-/// Pastille ronde : cercle sombre (`black.opacity(0.55)`) cerclé de
+/// Pastille ronde : cercle sombre (`black.opacity(0.275)`) cerclé de
 /// l'ACCENT DE LA RUBRIQUE (orange dans « Ventes et dons », bleu ardoise
 /// dans la Réserve, taupe pour Favoris), flèche blanche — même rendu que
 /// les boutons de retour en arrière déjà dans l'app
@@ -35,7 +35,7 @@ struct BoutonRetourHaut: View {
             .frame(width: 44, height: 44)
             .background {
                 Circle()
-                    .fill(.black.opacity(0.55))
+                    .fill(.black.opacity(0.275))
                     .overlay(Circle().strokeBorder(accent, lineWidth: 1))
             }
             .shadow(radius: 3)
