@@ -168,6 +168,11 @@ struct VueSynthese: View {
                             Text("Destinataires")
                                 .font(policeValeur).fontWeight(.bold)
                                 .foregroundStyle(Color.textePrincipal)
+                                // Même décalage que le titre de carte
+                                // (« Dons »), pour que les deux s'alignent
+                                // verticalement — sans lui, « Destinataires »
+                                // retombait 12 pt plus à gauche.
+                                .padding(.leading, 12)
                                 .padding(.top, 4)
                             LazyVGrid(columns: colonnesDestinataires, spacing: 10) {
                                 ForEach(destinatairesTries, id: \.nom) { d in

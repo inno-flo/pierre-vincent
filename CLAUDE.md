@@ -1033,6 +1033,11 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
         hauteur sur une liste qui peut compter beaucoup de destinataires. Le
         nom porte `.lineLimit(1)` : une colonne deux fois plus étroite
         qu'avant tronque plus vite un nom long.
+        - **Titre « Destinataires » aligné sur celui de la carte, « Dons »**
+          (`.padding(.leading, 12)`) : le titre de carte porte ce même
+          décalage pour s'aligner sur le padding interne des tuiles (voir
+          `carte(titre:)`) — sans lui, « Destinataires » retombait 12 pt
+          plus à gauche que « Dons ».
         - **Numéro de position devant chaque nom (1, 2, 3…) : ajouté puis
           RETIRÉ**, dans la même session. Le rang venait de l'index dans
           `destinatairesTries` (déjà trié par nombre décroissant), pas d'un
