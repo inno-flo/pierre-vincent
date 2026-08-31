@@ -1258,12 +1258,12 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     / `pastilleTestFond` (`ContentView.swift`). Un clic change
     `@AppStorage(TestFondPage.cle)` ; `Color.cremeFond` lit cette valeur pour
     sa teinte CLAIRE (le sombre n'est jamais concerné, comme pour `cremeFond`
-    lui-même). **Trois choix** (cinq au départ, « Sauge » et « Ivoire»
-    retirées le jour même), dans l'ordre d'affichage : gris (242,242,247, le
-    gris de page iOS déjà mesuré), ardoise (distincte du bleu ardoise
-    d'accent de la Réserve), puis crème (250,245,235, la valeur actuelle de
-    l'app, défaut) — RGB centralisés dans `TestFondPage.options`, source
-    unique lue à la fois par les boutons et par `cremeFond`. Le repli de
+    lui-même). **Deux choix** (cinq au départ ; « Sauge » et « Ivoire »
+    retirées le même jour, « Ardoise » retirée ensuite), dans l'ordre
+    d'affichage : gris (242,242,247, le gris de page iOS déjà mesuré), puis
+    crème (250,245,235, la valeur actuelle de l'app, défaut) — RGB
+    centralisés dans `TestFondPage.options`, source unique lue à la fois par
+    les boutons et par `cremeFond`. Le repli de
     `rvbClair` (valeur inconnue ou absente) se fait par IDENTIFIANT
     (« creme »), pas par position dans la liste — sans quoi réordonner les
     options aurait changé la valeur par défaut.
@@ -1963,16 +1963,15 @@ JavaScript, inexploitables par extraction) :
       (`favoriSeul`), plutôt que le couple `star`/`star.fill` valable
       ailleurs : tout ce qui s'affiche dans cette rubrique est déjà favori,
       l'action y est donc TOUJOURS un retrait.
-    - **Icônes AVANT le libellé, dans tous les menus contextuels macOS**
-      (`menuContextuel` de la `Table`, `.contextMenu` de `VueGalerie`) —
-      `star` pour « Ajouter aux favoris », `star.slash` pour « Retirer des
-      favoris » (`Label(_:systemImage:)`, et non plus un `Button` texte
-      seul). Pas `star.fill` ici : ce remplissage reste réservé aux
-      boutons/pastilles qui indiquent un ÉTAT (favori ou non), quand une
-      entrée de menu ne fait qu'annoncer une ACTION. Restreint à macOS — le
-      menu contextuel iOS (`InteractionApercu`,
-      `TransitionVisionneuse.swift`) et le menu Édition (menu bar, pas un
-      menu contextuel) n'étaient pas visés par la demande.
+    - **Icônes dans les menus contextuels macOS : ESSAYÉ ET ABANDONNÉ.**
+      `menuContextuel` (Table) et `.contextMenu` (VueGalerie) sont passés de
+      `Button(texte)` à `Button { } label: { Label(_:systemImage:) }`
+      (`star` / `star.slash`), puis REVERTÉS aux deux : sur la capture
+      fournie, le menu contextuel à UNE SEULE entrée (celui de VueGalerie)
+      s'affichait comme une pastille bleue compacte sans montrer l'icône du
+      `Label` — un rendu macOS propre aux menus à un seul élément, pas un
+      bug de ce code, mais jugé pas assez concluant pour continuer. Retour
+      au `Button(texte)` d'origine sur les deux sites.
     - **Glisser-déposer vers Favoris, macOS** : une œuvre glissée depuis une
       vignette de `Table` (colonne Photo, les trois tableaux) ou de
       `VueGalerie` (`#if os(macOS)` — l'UUID en texte suffit, pas besoin

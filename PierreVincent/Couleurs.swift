@@ -32,8 +32,9 @@ enum ThemeApp {
 /// la branche qu'il ajoute dans `cremeFond`.
 enum TestFondPage {
     static let cle = "testFondPage"
-    /// "gris", "creme" (défaut, valeur actuelle de l'app) ou "ardoise".
-    /// « Sauge » et « ivoire » ont existé puis été retirées des choix.
+    /// "gris" ou "creme" (défaut, valeur actuelle de l'app).
+    /// « Sauge », « ivoire » et « ardoise » ont existé puis été retirées
+    /// des choix.
     static var actuel: String {
         UserDefaults.standard.string(forKey: cle) ?? "creme"
     }
@@ -42,9 +43,8 @@ enum TestFondPage {
     /// (`ContentView.swift`) et par `rvbClair` : un seul endroit où changer
     /// une teinte ou en ajouter une.
     static let options: [(id: String, libelle: String, rvb: (CGFloat, CGFloat, CGFloat))] = [
-        ("gris",    "Gris",    (242, 242, 247)),   // gris de page iOS mesuré
-        ("ardoise", "Ardoise", (228, 231, 235)),   // distinct du bleu ardoise d'accent
-        ("creme",   "Crème",   (250, 245, 235)),   // valeur actuelle de l'app
+        ("gris",  "Gris",  (242, 242, 247)),   // gris de page iOS mesuré
+        ("creme", "Crème", (250, 245, 235)),   // valeur actuelle de l'app
     ]
     /// Teinte claire (0-255) pour la valeur de test choisie.
     static var rvbClair: (CGFloat, CGFloat, CGFloat) {

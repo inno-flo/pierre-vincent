@@ -1571,11 +1571,8 @@ struct VueFeuille: View {
         // le signal `@AppStorage` sert à faire remonter l'action jusqu'au
         // menu Édition (une scène différente), il n'a pas à transiter par
         // là pour un menu posé sur la vue elle-même.
-        Button {
+        Button(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris") {
             basculerFavoriSelection()
-        } label: {
-            Label(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris",
-                  systemImage: selectionToutFavorite ? "star.slash" : "star")
         }
     }
 

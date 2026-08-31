@@ -287,13 +287,10 @@ struct VueGalerie: View {
             let cibles = selection.contains(o.id) ? selection : [o.id]
             let visees = oeuvres.filter { cibles.contains($0.id) }
             let toutFavori = !visees.isEmpty && visees.allSatisfy { $0.favori }
-            Button {
+            Button(toutFavori ? "Retirer des favoris" : "Ajouter aux favoris") {
                 let nouvelEtat = !toutFavori
                 for v in visees { v.favori = nouvelEtat }
                 try? context.save()
-            } label: {
-                Label(toutFavori ? "Retirer des favoris" : "Ajouter aux favoris",
-                      systemImage: toutFavori ? "star.slash" : "star")
             }
         }
         // Glisser-déposer vers la rubrique Favoris de la sidebar : l'UUID
