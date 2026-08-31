@@ -596,6 +596,7 @@ struct DetailiOS: View {
 
     /// Accent de la rubrique — hérité de la vue qui présente cette fiche.
     @Environment(\.accentRubrique) private var accent
+    @Environment(\.modelContext) private var context
 
     let oeuvre: Oeuvre
     let estFeuilleDon: Bool
@@ -704,6 +705,19 @@ struct DetailiOS: View {
                                              ? Color.primary : Color.secondary.opacity(0.4))
                     }
                     .disabled(indexCourant >= listeNavigation.count - 1)
+                }
+                ToolbarSpacer(.fixed, placement: .topBarLeading)
+                // Bouton favori, à DROITE du chevron de navigation suivant —
+                // demande explicite, à la place de l'emplacement initial
+                // (à gauche de « Fermer »).
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        basculerFavori(oeuvreAffichee, contexte: context)
+                    } label: {
+                        Image(systemName: oeuvreAffichee.favori ? "star.fill" : "star")
+                            .foregroundStyle(Color.primary)
+                    }
+                    .accessibilityLabel(oeuvreAffichee.favori ? "Retirer des favoris" : "Ajouter aux favoris")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fermer") { dismiss() }

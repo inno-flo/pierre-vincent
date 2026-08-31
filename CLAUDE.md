@@ -1963,6 +1963,15 @@ JavaScript, inexploitables par extraction) :
       revient à tap simple + menu contextuel seul, les lignes de liste
       retrouvent leur `Button` d'origine, `InteractionListeFavori` supprimé).
       Ne pas retenter cette même piste sans en comprendre la cause exacte.
+    - **Bouton favori dans `DetailiOS`** (fiche de détail iOS — un seul
+      endroit, déjà réutilisé partout : Catalogue/Ventes/modes de vente,
+      Dons, Réserve/Favoris) : icône `star`/`star.fill`, dans la barre
+      d'outils, à DROITE du chevron de navigation suivant (`.topBarLeading`,
+      après un `ToolbarSpacer`) — pas à gauche de « Fermer », l'emplacement
+      d'abord envisagé. Bascule via `basculerFavori(_:contexte:)`, le même
+      point de passage que partout ailleurs ; l'icône reflète l'œuvre
+      RÉELLEMENT affichée (`oeuvreAffichee`, qui suit la navigation
+      Précédent/Suivant dans la fiche), pas celle passée à l'ouverture.
     - Ses pastilles de type passent à TROIS (comme Catalogue), et non plus
       les deux de la Réserve : un tapis peut être favori.
       **Sur iPhone, elles sont en outre réellement PRÉSENTES** — la seule
