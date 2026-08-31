@@ -71,12 +71,13 @@ private struct RetourEnHautModifier: ViewModifier {
                 if visible {
                     // Centré horizontalement — accessible de la même façon
                     // pour droitiers et gauchers, plutôt que collé à un
-                    // bord. Seule la position X change ; la hauteur
-                    // (limite haute du tiers bas) reste identique.
+                    // bord. Verticalement, à la MOITIÉ du tiers bas de
+                    // l'écran (hauteur * 5/6), pas à sa limite haute
+                    // (hauteur * 2/3, l'ancien réglage).
                     GeometryReader { geo in
                         BoutonRetourHaut(action: action)
                             .position(x: geo.size.width / 2,
-                                      y: geo.size.height * 2 / 3)
+                                      y: geo.size.height * 5 / 6)
                     }
                 }
             }

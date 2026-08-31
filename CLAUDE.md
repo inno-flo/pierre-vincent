@@ -2198,15 +2198,16 @@ JavaScript, inexploitables par extraction) :
     trop peu visible. Un disque plein accent a ensuite été comparé côte à
     côte avec le cercle sombre actuel ; le disque plein a été retiré, le
     cercle sombre retenu seul.
-  - **Position calculée, pas un simple padding depuis un coin** : le bouton
-    doit tomber exactement à la limite haute du TIERS BAS de l'écran, pas à
-    une marge fixe. Un `GeometryReader` posé dans l'`.overlay` lit la
-    hauteur du `ScrollView`, et `.position(x:, y: hauteur * 2/3)` place le
-    bouton à cette hauteur précise.
+  - **Position calculée, pas un simple padding depuis un coin** : un
+    `GeometryReader` posé dans l'`.overlay` lit la hauteur du `ScrollView`,
+    et `.position(x:, y:)` en dérive la position du bouton — pas une marge
+    fixe depuis un bord. Hauteur passée de `hauteur * 2/3` (limite haute du
+    tiers bas) à **`hauteur * 5/6`** (MILIEU du tiers bas), à la demande.
   - **Centré horizontalement** (`x: largeur / 2`), et non collé à un bord —
     d'abord posé à droite, puis recentré à la demande pour rester accessible
-    de la même façon aux droitiers et aux gauchers. Seul `x` a changé, `y`
-    (la hauteur) est resté identique.
+    de la même façon aux droitiers et aux gauchers.
+  - **Opacité du fond réduite de 50 %** : `black.opacity(0.55)` →
+    `black.opacity(0.275)`, à la demande.
   - **Apparition animée** : le changement de `boutonHautVisible` est posé
     dans un `withAnimation(.easeOut(duration: 0.25))`, sans quoi le
     `.transition` posé sur le bouton ne jouait pas (une transition n'anime
