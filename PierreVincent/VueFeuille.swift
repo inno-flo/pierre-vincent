@@ -869,7 +869,12 @@ struct VueFeuille: View {
                 Button {
                     basculerFavoriSelection()
                 } label: {
-                    Image(systemName: selectionToutFavorite ? "star.fill" : "star")
+                    // Dans la vue Favoris (`favoriSeul`), l'action est
+                    // TOUJOURS un retrait — tout ce qui s'y affiche est déjà
+                    // favori — d'où `star.slash` sans condition, à la place
+                    // du couple `star`/`star.fill` valable ailleurs.
+                    Image(systemName: favoriSeul ? "star.slash"
+                          : (selectionToutFavorite ? "star.fill" : "star"))
                 }
                 .disabled(selection.isEmpty || barreOutilsInactive)
                 .help(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris")
@@ -1566,8 +1571,11 @@ struct VueFeuille: View {
         // le signal `@AppStorage` sert à faire remonter l'action jusqu'au
         // menu Édition (une scène différente), il n'a pas à transiter par
         // là pour un menu posé sur la vue elle-même.
-        Button(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris") {
+        Button {
             basculerFavoriSelection()
+        } label: {
+            Label(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris",
+                  systemImage: selectionToutFavorite ? "star.slash" : "star")
         }
     }
 

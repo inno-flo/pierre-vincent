@@ -1954,11 +1954,25 @@ JavaScript, inexploitables par extraction) :
       version localement (une cible de clic droit peut différer de la
       sélection remontée au menu Édition).
       **Bouton dans la toolbar, en mode Galerie** (`VueFeuille.swift`),
-      JUSTE APRÈS le bouton de sens de tri : même icône `star`/`star.fill`,
-      même `basculerFavoriSelection()`/`selectionToutFavorite` que le menu
+      JUSTE APRÈS le bouton de sens de tri : même
+      `basculerFavoriSelection()`/`selectionToutFavorite` que le menu
       contextuel — pas un troisième calcul. Grisé si la sélection est vide.
       Absent en mode Liste, comme le reste du bloc tri/sens/inspecteur, qui
       ne s'affiche que `modeAffichage == "icone"`.
+      **Icône `star.slash` sans condition dans la vue Favoris**
+      (`favoriSeul`), plutôt que le couple `star`/`star.fill` valable
+      ailleurs : tout ce qui s'affiche dans cette rubrique est déjà favori,
+      l'action y est donc TOUJOURS un retrait.
+    - **Icônes AVANT le libellé, dans tous les menus contextuels macOS**
+      (`menuContextuel` de la `Table`, `.contextMenu` de `VueGalerie`) —
+      `star` pour « Ajouter aux favoris », `star.slash` pour « Retirer des
+      favoris » (`Label(_:systemImage:)`, et non plus un `Button` texte
+      seul). Pas `star.fill` ici : ce remplissage reste réservé aux
+      boutons/pastilles qui indiquent un ÉTAT (favori ou non), quand une
+      entrée de menu ne fait qu'annoncer une ACTION. Restreint à macOS — le
+      menu contextuel iOS (`InteractionApercu`,
+      `TransitionVisionneuse.swift`) et le menu Édition (menu bar, pas un
+      menu contextuel) n'étaient pas visés par la demande.
     - **Glisser-déposer vers Favoris, macOS** : une œuvre glissée depuis une
       vignette de `Table` (colonne Photo, les trois tableaux) ou de
       `VueGalerie` (`#if os(macOS)` — l'UUID en texte suffit, pas besoin
