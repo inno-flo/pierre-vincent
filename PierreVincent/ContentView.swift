@@ -105,7 +105,7 @@ enum Categorie: Hashable, Identifiable {
         // Les trois sous-rubriques de « Modes de vente » — et tout mode inédit
         // — partagent ce symbole : le cas est à valeur associée, il n'y a
         // qu'une branche pour tous.
-        case .modeVente:        return "cart"
+        case .modeVente:        return "bag"
         }
     }
 
@@ -1208,7 +1208,7 @@ struct ContentView: View {
                 lien(.modeVente(mode))
             }
         } label: {
-            Label("Modes de vente", systemImage: "cart").foregroundStyle(.secondary)
+            Text("Modes de vente").foregroundStyle(.secondary)
         }
         lien(.synthese)
     }

@@ -2063,11 +2063,16 @@ JavaScript, inexploitables par extraction) :
   - Rendu possible par `case modeVente(String)`, un cas **à valeur associée**.
     `Categorie` a donc dû perdre `CaseIterable`, incompatible — sans
     conséquence, `allCases` ne servait qu'à du code mort.
-  - **En-tête du sous-groupe avec icône** : `Label("Modes de vente",
-    systemImage: "cart")`, et non un simple `Text`, à la demande — seul cas
-    d'en-tête de sous-groupe à porter une icône (« Supports », « Genres »
-    restent du texte nu). Même icône que les rubriques individuelles qu'il
-    contient (`Categorie.symbole` pour `.modeVente`).
+  - **Icône sur l'en-tête du sous-groupe : ESSAYÉE PUIS RETIRÉE** —
+    `Label("Modes de vente", systemImage: "cart")` à la place d'un `Text`
+    nu, le temps d'un aller-retour. Revenu à `Text("Modes de vente")` :
+    les en-têtes de sous-groupe restent du texte nu partout (« Supports »,
+    « Genres »), pas d'exception ici.
+  - **Icône des rubriques individuelles : `cart` → `bag`**, à la demande
+    (`Categorie.symbole` pour `.modeVente`). Chaque mode de vente
+    (Expositions, Ventes aux enchères, Directe, tout mode inédit) porte
+    cette icône, le cas étant à valeur associée — une seule branche pour
+    tous.
   - **`.ventesRealisees.modesVente` renvoie `[]` volontairement** : Ventes
     recense TOUTES les œuvres vendues quel que soit le canal, et c'est son
     `statuts` (« Vendu ») qui la restreint. Y remettre une liste en dur
@@ -2183,6 +2188,30 @@ JavaScript, inexploitables par extraction) :
     couvre les deux présentations d'un coup. Les sous-rubriques de mode de
     vente (`estModeVentes` vrai), qui réutilisent cette même vue, n'ont pas
     ce bouton.
+  - **Apparition animée** : `boutonHautVisible` est désormais posé dans un
+    `withAnimation(.easeOut(duration: 0.25))`, sans quoi le `.transition`
+    posé sur le bouton ne jouait pas (une transition n'anime que si le
+    changement de présence a lieu dans une transaction animée). Le fondu
+    seul (`.opacity`) a été remplacé par un zoom léger depuis le centre
+    combiné au fondu (`.scale(scale: 0.7).combined(with: .opacity)`), plus
+    fluide qu'un simple fondu sec.
+  - **`DesactiveDelaiDefilement` (UIViewRepresentable)** : sans elle, le
+    bouton ne réagissait qu'à un second tap tant que le `ScrollView`
+    défilait encore — UIKit absorbe le premier tap pour arrêter le
+    défilement avant de le transmettre au bouton en overlay. Ce composant
+    désactive `delaysContentTouches` sur le `UIScrollView` le plus proche,
+    remonté DE PROCHE EN PROCHE depuis une vue invisible posée en
+    `.background` du `ScrollView` — pas de recherche par classe depuis la
+    racine de la fenêtre, méthode qui a déjà cassé d'autres vues par le
+    passé (voir plus haut, l'incident `DefilementTableau`/`NSOutlineView`).
+  - **ESSAI — bouton JUMEAU translucide, tout à gauche, pour comparer les
+    deux styles** : `boutonRetourHaut(proxy:opaque:)` prend un booléen de
+    style. `opaque: false` donne un fond `.ultraThinMaterial` (le rendu
+    standard des boutons flottants iOS) et une flèche dans l'accent de la
+    rubrique, au lieu du disque plein blanc sur accent. Posé au même niveau
+    vertical (`y: hauteur * 2/3`) mais collé au bord GAUCHE (`x: 20 + 22`,
+    symétrique du bouton de droite). Même action, même geste — un pur essai
+    visuel, à retirer une fois le style tranché entre les deux.
   - Teinté par `\.accentRubrique` (orange dans « Ventes et dons »), comme le
     reste des contrôles de cette section.
 
