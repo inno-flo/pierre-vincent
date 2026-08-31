@@ -2206,12 +2206,16 @@ JavaScript, inexploitables par extraction) :
     passé (voir plus haut, l'incident `DefilementTableau`/`NSOutlineView`).
   - **ESSAI — bouton JUMEAU translucide, tout à gauche, pour comparer les
     deux styles** : `boutonRetourHaut(proxy:opaque:)` prend un booléen de
-    style. `opaque: false` donne un fond `.ultraThinMaterial` (le rendu
-    standard des boutons flottants iOS) et une flèche dans l'accent de la
-    rubrique, au lieu du disque plein blanc sur accent. Posé au même niveau
-    vertical (`y: hauteur * 2/3`) mais collé au bord GAUCHE (`x: 20 + 22`,
-    symétrique du bouton de droite). Même action, même geste — un pur essai
-    visuel, à retirer une fois le style tranché entre les deux.
+    style. `opaque: false` donne un fond translucide — **le MÊME rendu que
+    les boutons standards de retour en arrière déjà dans l'app** (cercle
+    sombre `black.opacity(0.55)` cerclé de l'accent de la rubrique, voir
+    `VisionneuseOeuvres.boutonFermer` / `VisionneuseImagePleinEcran`), pas
+    un `.ultraThinMaterial` inventé pour l'occasion — au lieu du disque
+    plein accent. **Flèche BLANCHE dans les deux styles**, `opaque` ne
+    change que le fond. Posé au même niveau vertical (`y: hauteur * 2/3`)
+    mais collé au bord GAUCHE (`x: 20 + 22`, symétrique du bouton de
+    droite). Même action, même geste — un pur essai visuel, à retirer une
+    fois le style tranché entre les deux.
   - Teinté par `\.accentRubrique` (orange dans « Ventes et dons »), comme le
     reste des contrôles de cette section.
 

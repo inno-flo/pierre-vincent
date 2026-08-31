@@ -428,21 +428,24 @@ struct VueOeuvresStructuree: View {
     /// Pastille ronde flottante — ramène en haut de la vue (Galerie et Liste
     /// partagent le même `ScrollView`). `opaque` choisit entre le style
     /// retenu (fond plein accent, flèche blanche) et l'essai de comparaison
-    /// (fond translucide `.ultraThinMaterial`, comme les boutons standards
-    /// d'iOS) — voir l'appelant.
+    /// (fond translucide, MÊME rendu que les boutons standards de retour en
+    /// arrière — cercle sombre cerclé de l'accent — voir `VisionneuseOeuvres
+    /// .boutonFermer`/`VisionneuseImagePleinEcran`) — voir l'appelant.
     private func boutonRetourHaut(proxy: ScrollViewProxy, opaque: Bool) -> some View {
         Button {
             withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
         } label: {
             Image(systemName: "arrow.up")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(opaque ? .white : accent)
+                .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
                 .background {
                     if opaque {
                         Circle().fill(accent)
                     } else {
-                        Circle().fill(.ultraThinMaterial)
+                        Circle()
+                            .fill(.black.opacity(0.55))
+                            .overlay(Circle().strokeBorder(accent, lineWidth: 1))
                     }
                 }
                 .shadow(radius: 3)
