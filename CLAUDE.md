@@ -1254,11 +1254,14 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     `@AppStorage(TestFondPage.cle)` ; `Color.cremeFond` lit cette valeur pour
     sa teinte CLAIRE (le sombre n'est jamais concerné, comme pour `cremeFond`
     lui-même). **Trois choix** (cinq au départ, « Sauge » et « Ivoire»
-    retirées le jour même) : gris (242,242,247, le gris de page iOS déjà
-    mesuré), crème (250,245,235, la valeur actuelle de l'app, défaut) et
-    ardoise (distincte du bleu ardoise d'accent de la Réserve) — RGB
-    centralisés dans `TestFondPage.options`, source unique lue à la fois par
-    les boutons et par `cremeFond`.
+    retirées le jour même), dans l'ordre d'affichage : gris (242,242,247, le
+    gris de page iOS déjà mesuré), ardoise (distincte du bleu ardoise
+    d'accent de la Réserve), puis crème (250,245,235, la valeur actuelle de
+    l'app, défaut) — RGB centralisés dans `TestFondPage.options`, source
+    unique lue à la fois par les boutons et par `cremeFond`. Le repli de
+    `rvbClair` (valeur inconnue ou absente) se fait par IDENTIFIANT
+    (« creme »), pas par position dans la liste — sans quoi réordonner les
+    options aurait changé la valeur par défaut.
     - **Rafraîchissement SANS `.id()` sur `ContentView`** — règle absolue de
       ce fichier, voir plus haut (« NB : plus de `.id(themeApp)` »). Chacune
       des HUIT vues qui affichent `Color.cremeFond` (`ContentView`,
