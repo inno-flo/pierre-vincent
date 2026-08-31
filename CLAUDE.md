@@ -2060,6 +2060,11 @@ JavaScript, inexploitables par extraction) :
   - Rendu possible par `case modeVente(String)`, un cas **à valeur associée**.
     `Categorie` a donc dû perdre `CaseIterable`, incompatible — sans
     conséquence, `allCases` ne servait qu'à du code mort.
+  - **En-tête du sous-groupe avec icône** : `Label("Modes de vente",
+    systemImage: "cart")`, et non un simple `Text`, à la demande — seul cas
+    d'en-tête de sous-groupe à porter une icône (« Supports », « Genres »
+    restent du texte nu). Même icône que les rubriques individuelles qu'il
+    contient (`Categorie.symbole` pour `.modeVente`).
   - **`.ventesRealisees.modesVente` renvoie `[]` volontairement** : Ventes
     recense TOUTES les œuvres vendues quel que soit le canal, et c'est son
     `statuts` (« Vendu ») qui la restreint. Y remettre une liste en dur

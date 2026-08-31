@@ -1208,7 +1208,7 @@ struct ContentView: View {
                 lien(.modeVente(mode))
             }
         } label: {
-            Text("Modes de vente").foregroundStyle(.secondary)
+            Label("Modes de vente", systemImage: "cart").foregroundStyle(.secondary)
         }
         lien(.synthese)
     }
