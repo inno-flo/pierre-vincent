@@ -860,6 +860,21 @@ struct VueFeuille: View {
                 }
             }
             ToolbarSpacer(.fixed)
+            // Bouton favori, JUSTE APRÈS le bouton de sens de tri — bascule
+            // la SÉLECTION courante, même règle et même point de passage
+            // (`basculerFavoriSelection`) que le menu contextuel et la
+            // commande du menu Édition : « tout ajouter » si au moins une
+            // œuvre visée ne l'est pas encore, « tout retirer » sinon.
+            ToolbarItem {
+                Button {
+                    basculerFavoriSelection()
+                } label: {
+                    Image(systemName: selectionToutFavorite ? "star.fill" : "star")
+                }
+                .disabled(selection.isEmpty || barreOutilsInactive)
+                .help(selectionToutFavorite ? "Retirer des favoris" : "Ajouter aux favoris")
+            }
+            ToolbarSpacer(.fixed)
             ToolbarItem {
                 Button {
                     inspecteurVisible.toggle()

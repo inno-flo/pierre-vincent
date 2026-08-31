@@ -1945,6 +1945,12 @@ JavaScript, inexploitables par extraction) :
       pour la Table et le menu Édition ; `VueGalerie` calcule sa propre
       version localement (une cible de clic droit peut différer de la
       sélection remontée au menu Édition).
+      **Bouton dans la toolbar, en mode Galerie** (`VueFeuille.swift`),
+      JUSTE APRÈS le bouton de sens de tri : même icône `star`/`star.fill`,
+      même `basculerFavoriSelection()`/`selectionToutFavorite` que le menu
+      contextuel — pas un troisième calcul. Grisé si la sélection est vide.
+      Absent en mode Liste, comme le reste du bloc tri/sens/inspecteur, qui
+      ne s'affiche que `modeAffichage == "icone"`.
     - **Menu contextuel de la Table (liste, macOS)** — celui qui sert aussi
       Modifier/Dupliquer/Supprimer, voir plus bas — propose désormais
       « Supprimer… » (avec les points de suspension, une confirmation
