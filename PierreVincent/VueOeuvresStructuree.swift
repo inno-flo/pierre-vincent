@@ -273,9 +273,17 @@ struct VueOeuvresStructuree: View {
             } action: { _, doitAfficher in
                 boutonHautVisible = doitAfficher
             }
-            .overlay(alignment: .bottomTrailing) {
+            .overlay {
                 if boutonHautVisible {
-                    boutonRetourHaut(proxy: proxy)
+                    // Position calculée plutôt qu'un simple `.bottomTrailing`
+                    // + padding : le bouton doit tomber PRÉCISÉMENT à la
+                    // limite haute du tiers bas de l'écran, pas à une marge
+                    // fixe depuis le bord.
+                    GeometryReader { geo in
+                        boutonRetourHaut(proxy: proxy)
+                            .position(x: geo.size.width - 20 - 22,
+                                      y: geo.size.height * 2 / 3)
+                    }
                 }
             }
         }
@@ -401,21 +409,20 @@ struct VueOeuvresStructuree: View {
     /// le nombre d'œuvres ne s'afficherait plus nulle part.
     private var recapInutile: Bool { estModeVentes && !typesFiltre.isEmpty }
 
-    /// Pastille ronde flottante, fond transparent, icône `arrow.up` — ramène
-    /// en haut de la vue (Galerie et Liste partagent le même `ScrollView`).
+    /// Pastille ronde flottante, fond opaque (accent) et flèche blanche —
+    /// ramène en haut de la vue (Galerie et Liste partagent le même
+    /// `ScrollView`).
     private func boutonRetourHaut(proxy: ScrollViewProxy) -> some View {
         Button {
             withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
         } label: {
             Image(systemName: "arrow.up")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(accent)
+                .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
-                .background(Circle().fill(.clear))
-                .overlay(Circle().strokeBorder(accent.opacity(0.5), lineWidth: 1))
+                .background(Circle().fill(accent))
+                .shadow(radius: 3)
         }
-        .padding(.trailing, 20)
-        .padding(.bottom, 20)
         .transition(.opacity)
     }
 

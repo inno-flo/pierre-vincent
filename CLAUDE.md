@@ -2152,13 +2152,24 @@ JavaScript, inexploitables par extraction) :
   zone de défilement — nul côté Mac, où rien ne change.
 
 - **iOS — Catalogue, bouton flottant « Retour en haut »**
-  (`VueOeuvresStructuree.swift`) : une pastille ronde à fond TRANSPARENT
-  (juste un contour, pas de remplissage), icône `arrow.up`, en bas à droite,
-  survole le contenu (`.overlay` sur le `ScrollView`, PAS dans la hiérarchie
-  défilante). Apparaît après un défilement de deux fois la hauteur visible
+  (`VueOeuvresStructuree.swift`) : une pastille ronde à fond OPAQUE (accent
+  de la rubrique) et flèche BLANCHE (`arrow.up`), survole le contenu
+  (`.overlay` sur le `ScrollView`, PAS dans la hiérarchie défilante).
+  Apparaît après un défilement de deux fois la hauteur visible
   (`.onScrollGeometryChange`, iOS 18+), via `boutonHautVisible`. Ramène tout
   en haut par `proxy.scrollTo(ancreHaut, anchor: .top)`, une ancre invisible
   posée en tête du `VStack` défilant.
+  - **Fond TRANSPARENT essayé d'abord, ABANDONNÉ** : premier essai à
+    contour seul, jugé trop peu visible et repositionné trop bas. Passé à un
+    disque plein (couleur `accentRubrique`) avec une ombre portée, pour
+    rester lisible par-dessus des vignettes de toutes teintes.
+  - **Position calculée, pas un simple padding depuis un coin** : le bouton
+    doit tomber exactement à la limite haute du TIERS BAS de l'écran, pas à
+    une marge fixe. Un `GeometryReader` posé dans l'`.overlay` lit la
+    hauteur du `ScrollView`, et `.position(x:, y: hauteur * 2/3)` place le
+    bouton à cette hauteur précise, ancré près du bord droit sur `x`. Les
+    anciens `.padding(.trailing/.bottom)` sur le bouton lui-même ont été
+    retirés : ils entraient en conflit avec ce calcul de position.
   - **Restreint au Catalogue** (`!estModeVentes`) : Galerie et Liste
     partagent le même `ScrollView` dans cette vue, donc la même condition
     couvre les deux présentations d'un coup. Les sous-rubriques de mode de
