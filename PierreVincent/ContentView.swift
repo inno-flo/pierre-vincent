@@ -436,6 +436,10 @@ struct ContentView: View {
     // Nombre d'entrées sélectionnées dans la vue courante (remonté par VueFeuille),
     // pour l'afficher dans le bandeau bas de la sidebar.
     @State private var nbSelection: Int = 0
+    #if os(macOS)
+    // Surbrillance de la rubrique Favoris pendant un glisser-déposer.
+    @State private var favorisCibleDepot = false
+    #endif
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
     /// ESSAI TEMPORAIRE — voir `TestFondPage` (`Couleurs.swift`) : pilote les
@@ -536,6 +540,17 @@ struct ContentView: View {
                     if auMoinsUnFavori {
                         Section {
                             lien(.favoris)
+                                // Glisser-déposer une œuvre depuis une vue
+                                // Liste/Galerie directement sur cette
+                                // rubrique : voir `.draggable` posé sur les
+                                // vignettes (VueFeuille, VueGalerie).
+                                .dropDestination(for: String.self) { textes, _ in
+                                    ajouterAuxFavoris(textes)
+                                } isTargeted: { cible in
+                                    favorisCibleDepot = cible
+                                }
+                                .listRowBackground(
+                                    favorisCibleDepot ? Color.taupeChaud.opacity(0.15) : nil)
                         }
                     }
                     #endif
@@ -919,6 +934,24 @@ struct ContentView: View {
     }
 
     #if os(macOS)
+    /// Marque favorites les œuvres dont l'UUID (texte) figure dans `textes` —
+    /// cible de `.dropDestination` pour la rubrique Favoris de la sidebar.
+    /// Les `.draggable(o.id.uuidString)` posés sur les vignettes (Table,
+    /// Galerie) sont l'autre bout de ce geste. Ignore silencieusement un
+    /// texte qui ne correspond à aucune œuvre, plutôt que d'échouer le
+    /// dépôt entier.
+    private func ajouterAuxFavoris(_ textes: [String]) -> Bool {
+        var succes = false
+        for texte in textes {
+            guard let id = UUID(uuidString: texte),
+                  let o = toutes.first(where: { $0.id == id }) else { continue }
+            o.favori = true
+            succes = true
+        }
+        if succes { try? context.save() }
+        return succes
+    }
+
     // MARK: Navigation clavier de la sidebar (macOS)
 
     /// Ordre d'affichage des rubriques, pour la navigation ↑↓.

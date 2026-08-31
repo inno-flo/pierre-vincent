@@ -1328,6 +1328,9 @@ struct VueFeuille: View {
             TableColumn("Photo") { (o: Oeuvre) in
                 Color.clear.frame(width: 1, height: hauteurContenu)
                     .overlay(alignment: .leading) { vignette(o) }
+                    // Glisser-déposer vers Favoris dans la sidebar : voir
+                    // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
+                    .draggable(o.id.uuidString)
             }
             .width(96)
             TableColumn("Support", value: \Oeuvre.type) { o in
@@ -1382,6 +1385,9 @@ struct VueFeuille: View {
             TableColumn("Photo") { (o: Oeuvre) in
                 Color.clear.frame(width: 1, height: hauteurContenu)
                     .overlay(alignment: .leading) { vignette(o) }
+                    // Glisser-déposer vers Favoris dans la sidebar : voir
+                    // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
+                    .draggable(o.id.uuidString)
             }
             .width(96)
             TableColumn("Prix", value: \Oeuvre.prix) { o in
@@ -1465,6 +1471,9 @@ struct VueFeuille: View {
             TableColumn("Photo") { (o: Oeuvre) in
                 Color.clear.frame(width: 1, height: hauteurContenu)
                     .overlay(alignment: .leading) { vignette(o) }
+                    // Glisser-déposer vers Favoris dans la sidebar : voir
+                    // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
+                    .draggable(o.id.uuidString)
             }
             .width(96)
             TableColumn("Destinataire", value: \Oeuvre.destinataire) { o in

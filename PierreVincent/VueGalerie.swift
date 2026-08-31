@@ -293,6 +293,10 @@ struct VueGalerie: View {
                 try? context.save()
             }
         }
+        // Glisser-déposer vers la rubrique Favoris de la sidebar : l'UUID
+        // suffit, la cible retrouve l'œuvre via `toutes`. Voir
+        // `ContentView.swift`, `.dropDestination` posé sur `lien(.favoris)`.
+        .draggable(o.id.uuidString)
         #else
         // Sur iPhone : tap et appui prolongé sont pris par une vue UIKit
         // posée en overlay. Elle seule peut prévenir d'un tap sur l'aperçu du

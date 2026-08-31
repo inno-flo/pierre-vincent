@@ -1951,6 +1951,21 @@ JavaScript, inexploitables par extraction) :
       contextuel — pas un troisième calcul. Grisé si la sélection est vide.
       Absent en mode Liste, comme le reste du bloc tri/sens/inspecteur, qui
       ne s'affiche que `modeAffichage == "icone"`.
+    - **Glisser-déposer vers Favoris, macOS** : une œuvre glissée depuis une
+      vignette de `Table` (colonne Photo, les trois tableaux) ou de
+      `VueGalerie` (`.draggable(o.id.uuidString)`, `#if os(macOS)` — l'UUID
+      en texte suffit, pas besoin d'un type `Transferable` dédié) peut être
+      déposée directement sur la rubrique Favoris de la sidebar
+      (`.dropDestination(for: String.self)` sur `lien(.favoris)`,
+      `ContentView.swift`). `ajouterAuxFavoris(_:)` retrouve chaque œuvre
+      par UUID dans `toutes` et la marque favorite — ignore silencieusement
+      un texte sans correspondance plutôt que d'échouer tout le dépôt.
+      Surbrillance légère (`Color.taupeChaud.opacity(0.15)`) pendant que le
+      glissé survole la ligne, via `isTargeted` et `favorisCibleDepot`.
+      **Ne fonctionne QUE s'il existe déjà au moins un favori** : sans ça,
+      la rubrique Favoris n'apparaît pas du tout dans la sidebar
+      (`auMoinsUnFavori`) — limite connue, pas traitée ici. Pas de geste
+      équivalent sur iOS.
     - **Menu contextuel de la Table (liste, macOS)** — celui qui sert aussi
       Modifier/Dupliquer/Supprimer, voir plus bas — propose désormais
       « Supprimer… » (avec les points de suspension, une confirmation
