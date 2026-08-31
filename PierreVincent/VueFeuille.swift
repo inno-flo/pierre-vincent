@@ -1330,7 +1330,11 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
                     // Glisser-déposer vers Favoris dans la sidebar : voir
                     // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
-                    .draggable(o.id.uuidString)
+                    // Aperçu personnalisé, PETIT : voir la note dans
+                    // `VueGalerie.swift`, même correctif.
+                    .draggable(o.id.uuidString) {
+                        VignetteCachee(nom: o.photoNom, cote: 60)
+                    }
             }
             .width(96)
             TableColumn("Support", value: \Oeuvre.type) { o in
@@ -1387,7 +1391,11 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
                     // Glisser-déposer vers Favoris dans la sidebar : voir
                     // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
-                    .draggable(o.id.uuidString)
+                    // Aperçu personnalisé, PETIT : voir la note dans
+                    // `VueGalerie.swift`, même correctif.
+                    .draggable(o.id.uuidString) {
+                        VignetteCachee(nom: o.photoNom, cote: 60)
+                    }
             }
             .width(96)
             TableColumn("Prix", value: \Oeuvre.prix) { o in
@@ -1473,7 +1481,11 @@ struct VueFeuille: View {
                     .overlay(alignment: .leading) { vignette(o) }
                     // Glisser-déposer vers Favoris dans la sidebar : voir
                     // `ContentView.swift`, `.dropDestination` sur `lien(.favoris)`.
-                    .draggable(o.id.uuidString)
+                    // Aperçu personnalisé, PETIT : voir la note dans
+                    // `VueGalerie.swift`, même correctif.
+                    .draggable(o.id.uuidString) {
+                        VignetteCachee(nom: o.photoNom, cote: 60)
+                    }
             }
             .width(96)
             TableColumn("Destinataire", value: \Oeuvre.destinataire) { o in

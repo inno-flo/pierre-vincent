@@ -1915,12 +1915,15 @@ JavaScript, inexploitables par extraction) :
   - **Favoris est une rubrique ISOLÉE**, dans sa propre section sans en-tête
     ni repli, détachée des deux blocs : un favori pourra venir de l'un comme
     de l'autre. Elle ne dépend d'aucun repli.
-    - **N'apparaît que s'il existe au moins un favori** (`auMoinsUnFavori`,
-      partagée entre les deux plateformes) : sur les DEUX `Section` de la
-      sidebar (macOS et iOS) ET dans `categoriesSidebar`, sans quoi ↑↓
-      mènerait à une rubrique invisible à l'écran. Propriété volontairement
-      posée EN DEHORS du bloc `#if os(macOS)` de `categoriesSidebar`, pour
-      rester utilisable par le rendu iOS aussi.
+    - **TOUJOURS visible désormais, même sans aucun favori** — la condition
+      `auMoinsUnFavori` (qui masquait la rubrique tant qu'elle était vide,
+      sur les DEUX `Section` de la sidebar ET dans `categoriesSidebar`) a
+      été retirée avec la propriété elle-même, à la demande : elle
+      empêchait de créer le tout premier favori par glisser-déposer, la
+      rubrique n'existant pas encore à l'écran pour servir de cible. La vue
+      vide qu'elle ouvre reste gérée par l'état DISCRET déjà en place
+      (`VueiOS.swift`, voir plus bas), donc rien d'autre à changer côté
+      contenu.
     - **Le champ `Oeuvre.favori` existe désormais** (Bool, défaut `false`,
       exporté en optionnel dans `.pvbase` comme tout champ ajouté après coup).
       La rubrique est donc passée d'une coquille vide à une VUE AGRÉGÉE
@@ -1967,10 +1970,15 @@ JavaScript, inexploitables par extraction) :
       un texte sans correspondance plutôt que d'échouer tout le dépôt.
       Surbrillance légère (`Color.taupeChaud.opacity(0.15)`) pendant que le
       glissé survole la ligne, via `isTargeted` et `favorisCibleDepot`.
-      **Ne fonctionne QUE s'il existe déjà au moins un favori** : sans ça,
-      la rubrique Favoris n'apparaît pas du tout dans la sidebar
-      (`auMoinsUnFavori`) — limite connue, pas traitée ici. Pas de geste
-      équivalent sur iOS.
+      Aperçu de glissé PERSONNALISÉ et PETIT (`VignetteCachee`, 60 pt) sur
+      les deux sources : l'aperçu par défaut, à la taille de la carte ou de
+      la cellule entière, faisait glisser l'animation de fin de dépôt vers
+      le bas au lieu de s'estomper sur place.
+      **La limite « ne fonctionne que s'il existe déjà un favori » a depuis
+      disparu** : `auMoinsUnFavori`, qui masquait la rubrique tant qu'elle
+      était vide, a été retirée (voir plus haut) — la rubrique Favoris est
+      désormais TOUJOURS présente dans la sidebar, donc toujours une cible
+      valide. Pas de geste équivalent sur iOS.
     - **Menu contextuel de la Table (liste, macOS)** — celui qui sert aussi
       Modifier/Dupliquer/Supprimer, voir plus bas — propose désormais
       « Supprimer… » (avec les points de suspension, une confirmation

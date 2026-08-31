@@ -535,23 +535,26 @@ struct ContentView: View {
                     // Rubrique ISOLÉE : une section sans en-tête et sans
                     // repli, détachée des deux blocs. Elle ne relève ni des
                     // ventes ni de la réserve — un favori peut venir de l'une
-                    // comme de l'autre. Absente s'il n'existe encore aucun
-                    // favori.
-                    if auMoinsUnFavori {
-                        Section {
-                            lien(.favoris)
-                                // Glisser-déposer une œuvre depuis une vue
-                                // Liste/Galerie directement sur cette
-                                // rubrique : voir `.draggable` posé sur les
-                                // vignettes (VueFeuille, VueGalerie).
-                                .dropDestination(for: String.self) { textes, _ in
-                                    ajouterAuxFavoris(textes)
-                                } isTargeted: { cible in
-                                    favorisCibleDepot = cible
-                                }
-                                .listRowBackground(
-                                    favorisCibleDepot ? Color.taupeChaud.opacity(0.15) : nil)
-                        }
+                    // comme de l'autre.
+                    //
+                    // TOUJOURS visible désormais, même sans aucun favori —
+                    // condition retirée pour que la rubrique reste une cible
+                    // de glisser-déposer valide en permanence (sans elle,
+                    // impossible de créer le tout premier favori par ce
+                    // geste, la rubrique n'existant pas encore à l'écran).
+                    Section {
+                        lien(.favoris)
+                            // Glisser-déposer une œuvre depuis une vue
+                            // Liste/Galerie directement sur cette
+                            // rubrique : voir `.draggable` posé sur les
+                            // vignettes (VueFeuille, VueGalerie).
+                            .dropDestination(for: String.self) { textes, _ in
+                                ajouterAuxFavoris(textes)
+                            } isTargeted: { cible in
+                                favorisCibleDepot = cible
+                            }
+                            .listRowBackground(
+                                favorisCibleDepot ? Color.taupeChaud.opacity(0.15) : nil)
                     }
                     #endif
                     #if os(iOS)
@@ -586,12 +589,10 @@ struct ContentView: View {
                     // Rubrique ISOLÉE, détachée des deux blocs : elle ne
                     // relève ni des ventes ni de la réserve, un favori pouvant
                     // venir de l'une comme de l'autre. Pas de repliement non
-                    // plus — elle n'a qu'une ligne. Absente s'il n'existe
-                    // encore aucun favori.
-                    if auMoinsUnFavori {
-                        Section {
-                            lien(.favoris)
-                        }
+                    // plus — elle n'a qu'une ligne. TOUJOURS visible, même
+                    // sans aucun favori — voir la note côté macOS.
+                    Section {
+                        lien(.favoris)
                     }
                     #endif
                 }
@@ -923,16 +924,6 @@ struct ContentView: View {
         // sélection de la liste en bleu et perturbait la navigation ↑↓.
     }
 
-    /// Vrai dès qu'au moins une œuvre est marquée favorite, tous statuts et
-    /// toutes feuilles confondus. Gouverne l'affichage de la rubrique
-    /// « Favoris » dans la sidebar : une rubrique vide n'apprend rien et
-    /// n'a rien à montrer, sur les deux plateformes. Partagé (pas de
-    /// `#if os`) : utilisé aussi bien par `categoriesSidebar` (macOS) que
-    /// par les deux `Section` de la sidebar (macOS ET iOS).
-    private var auMoinsUnFavori: Bool {
-        toutes.contains { $0.favori }
-    }
-
     #if os(macOS)
     /// Marque favorites les œuvres dont l'UUID (texte) figure dans `textes` —
     /// cible de `.dropDestination` pour la rubrique Favoris de la sidebar.
@@ -997,11 +988,9 @@ struct ContentView: View {
                 liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
         }
-        // Hors des deux blocs, et donc jamais dépendante d'un repli — mais
-        // absente s'il n'existe encore aucun favori, voir `auMoinsUnFavori`.
-        if auMoinsUnFavori {
-            liste.append(.favoris)
-        }
+        // Hors des deux blocs, et donc jamais dépendante d'un repli.
+        // TOUJOURS présente désormais, même sans aucun favori.
+        liste.append(.favoris)
         return liste
     }
 

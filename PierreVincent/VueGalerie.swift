@@ -296,7 +296,15 @@ struct VueGalerie: View {
         // Glisser-déposer vers la rubrique Favoris de la sidebar : l'UUID
         // suffit, la cible retrouve l'œuvre via `toutes`. Voir
         // `ContentView.swift`, `.dropDestination` posé sur `lien(.favoris)`.
-        .draggable(o.id.uuidString)
+        //
+        // Aperçu personnalisé, PETIT : sans lui, l'aperçu par défaut prend
+        // toute la carte (image + légende), et l'animation de fin de dépôt
+        // glissait vers le bas au lieu de s'estomper sur place — l'aperçu
+        // par défaut d'une vue de cette taille semble suivre un chemin
+        // d'animation différent de celui d'une petite vignette.
+        .draggable(o.id.uuidString) {
+            VignetteCachee(nom: o.photoNom, cote: 60)
+        }
         #else
         // Sur iPhone : tap et appui prolongé sont pris par une vue UIKit
         // posée en overlay. Elle seule peut prévenir d'un tap sur l'aperçu du
