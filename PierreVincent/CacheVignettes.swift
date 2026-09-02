@@ -170,8 +170,19 @@ final class CacheVignettes {
     ///
     /// `nonisolated` : elle est touchée depuis le fil principal comme depuis
     /// elle-même, et n'a pas à passer par l'acteur principal.
+    ///
+    /// **`.utility`, pas `.userInitiated`.** Xcode signalait une inversion de
+    /// priorité à la ligne de `CGImageSourceCreateThumbnailAtIndex` : un fil
+    /// `.userInitiated` y attendait un fil interne d'ImageIO tournant à une
+    /// qualité de service inférieure (« Default »). La fabrication de
+    /// vignettes se fait déjà entièrement en arrière-plan (voir
+    /// `vignette(nom:cote:)`, `async`) et ne bloque jamais directement un
+    /// geste de l'utilisateur : rien ne justifiait la qualité de service
+    /// `.userInitiated`, qui ne faisait que promettre au système une urgence
+    /// qu'ImageIO ne pouvait pas honorer côté décodage. `.utility` retire
+    /// cette promesse en trop, donc l'inversion qu'elle provoquait.
     nonisolated private static let filePreparation = DispatchQueue(
-        label: "PierreVincent.vignettes", qos: .userInitiated)
+        label: "PierreVincent.vignettes", qos: .utility)
 
     /// Renvoie une vignette déjà en cache si présente (sans en déclencher).
     func vignettePrete(nom: String, cote: CGFloat,

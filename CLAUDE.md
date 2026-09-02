@@ -851,9 +851,18 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - **Vignettes : une file SÉRIELLE, pas une tâche par image**
   (`CacheVignettes.swift`). Un `Task.detached` par vignette saturait le pool
   coopératif de Swift Concurrency et Xcode signalait un **« Hang Risk »**
-  (inversion de priorité). Une `DispatchQueue` sérielle en `.userInitiated`
-  sérialise le décodage : les vignettes arrivent l'une après l'autre au lieu
-  de se disputer les fils.
+  (inversion de priorité). Une `DispatchQueue` sérielle sérialise le
+  décodage : les vignettes arrivent l'une après l'autre au lieu de se
+  disputer les fils.
+  - **Qualité de service passée de `.userInitiated` à `.utility`** : Xcode
+    signalait une NOUVELLE inversion de priorité, cette fois à l'intérieur
+    de `CGImageSourceCreateThumbnailAtIndex` — un fil `.userInitiated`
+    attendait un fil interne d'ImageIO tournant à une qualité de service
+    inférieure (« Default »). La fabrication se fait déjà entièrement en
+    arrière-plan (`vignette(nom:cote:)` est `async`, jamais sur le chemin
+    direct d'un geste) : rien ne justifiait `.userInitiated`, qui ne faisait
+    que promettre au système une urgence qu'ImageIO ne peut pas honorer côté
+    décodage. `.utility` retire cette promesse en trop, donc l'inversion.
 - **Préchargement de l'image pleine taille** (`PhotoStore.prechargerImage` +
   `cacheImages`, un `NSCache` à 6 entrées) : lancé dès le contact du doigt, il
   dispose du délai d'appui pour décoder. `UIImage.preparingForDisplay()` force
