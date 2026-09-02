@@ -158,7 +158,7 @@ struct EditeurEntree: View {
                             if !estReserve {
                                 celluleEditeur {
                                     champTexte("Vendeur", $vendeur, champ: .vendeur)
-                                    champTexte("Destinataire", $destinataire, champ: .destinataire)
+                                    champTexte("Donataire", $destinataire, champ: .destinataire)
                                     champTexte("Mode de vente", $modeVente, champ: .modeVente)
                                 }
                             }

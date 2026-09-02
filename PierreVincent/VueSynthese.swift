@@ -92,20 +92,28 @@ struct VueSynthese: View {
         oeuvresDonnees.filter { $0.type.localizedCaseInsensitiveContains("dessin") }
     }
 
-    /// TOUS les destinataires ayant reçu au moins un don : nom + nombre
-    /// d'œuvres, triés du plus grand nombre au plus petit. « Inconnu » et les
-    /// valeurs vides sont écartés, un destinataire non identifié ne désigne
-    /// personne à classer.
-    private var destinatairesTries: [(nom: String, nombre: Int)] {
+    /// TOUS les destinataires ayant reçu au moins un don, **regroupés par
+    /// nombre d'œuvres** : une entrée par nombre distinct, portant toutes les
+    /// personnes concernées. Groupes triés du plus grand nombre au plus petit,
+    /// et noms par ordre alphabétique à l'intérieur d'un groupe.
+    ///
+    /// « Inconnu » et les valeurs vides sont écartés, un destinataire non
+    /// identifié ne désigne personne à classer.
+    private var destinatairesParNombre: [(nombre: Int, noms: [String])] {
         var comptes: [String: Int] = [:]
         for o in oeuvresDonnees {
             let nom = o.destinataire.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !nom.isEmpty, nom != valeurInconnue else { continue }
             comptes[nom, default: 0] += 1
         }
-        return comptes
-            .sorted { $0.value > $1.value }
-            .map { (nom: $0.key, nombre: $0.value) }
+        // Le regroupement porte sur le COMPTE, qui devient la clé : deux
+        // personnes à égalité partagent désormais une seule tuile.
+        return Dictionary(grouping: comptes, by: { $0.value })
+            .map { (nombre: $0.key,
+                    noms: $0.value.map(\.key).sorted {
+                        $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+                    }) }
+            .sorted { $0.nombre > $1.nombre }
     }
 
     // MARK: Statistiques
@@ -133,11 +141,13 @@ struct VueSynthese: View {
     // adaptative pour rester correcte sur les fenêtres larges du Mac.
     private let colonnesTuiles = [GridItem(.adaptive(minimum: 150, maximum: 320), spacing: 10)]
 
-    // Grille des destinataires de dons : DEUX colonnes fixes (pas
-    // adaptatives) — la liste peut compter beaucoup de noms, deux colonnes
-    // gagnent la moitié de la hauteur par rapport à une seule.
-    private let colonnesDestinataires = [GridItem(.flexible(), spacing: 10),
-                                          GridItem(.flexible(), spacing: 10)]
+    // Grille des destinataires de dons : UNE seule colonne, sur les DEUX
+    // plateformes — d'où un simple `let`, sans aiguillage `#if os`.
+    //
+    // Les deux colonnes valaient quand une tuile portait UN nom ; depuis le
+    // regroupement par nombre elle en porte plusieurs, et une demi-largeur
+    // les repliait sur tant de lignes que la hauteur gagnée était reperdue.
+    private let colonnesDestinataires = [GridItem(.flexible())]
 
     // MARK: Corps
 
@@ -159,24 +169,26 @@ struct VueSynthese: View {
                                         valeur: "\(dessinsDonnes.count)", detail: nil)
                         }
                         // Sous-section « Destinataires » : TOUTES les
-                        // personnes ayant reçu au moins un don, triées par
-                        // nombre décroissant. Sur DEUX colonnes fixes, pour
-                        // gagner en hauteur plutôt qu'empiler une ligne par
-                        // personne. Le numéro de position devant chaque nom,
-                        // ajouté puis retiré à la demande, n'est plus là.
-                        if !destinatairesTries.isEmpty {
-                            Text("Destinataires")
+                        // personnes ayant reçu au moins un don, groupées par
+                        // nombre d'œuvres et triées par nombre décroissant.
+                        // Sur UNE colonne (voir `colonnesDestinataires`). Le
+                        // numéro de position devant chaque nom, ajouté puis
+                        // retiré à la demande, n'est plus là.
+                        if !destinatairesParNombre.isEmpty {
+                            Text("Donataires")
                                 .font(policeValeur).fontWeight(.bold)
                                 .foregroundStyle(Color.textePrincipal)
                                 // Même décalage que le titre de carte
                                 // (« Dons »), pour que les deux s'alignent
-                                // verticalement — sans lui, « Destinataires »
+                                // verticalement — sans lui, « Donataires »
                                 // retombait 12 pt plus à gauche.
                                 .padding(.leading, 12)
                                 .padding(.top, 4)
                             LazyVGrid(columns: colonnesDestinataires, spacing: 10) {
-                                ForEach(destinatairesTries, id: \.nom) { d in
-                                    tuileDestinataire(d.nom, d.nombre)
+                                // Une tuile par NOMBRE distinct : l'identité
+                                // du groupe est ce nombre, pas un nom.
+                                ForEach(destinatairesParNombre, id: \.nombre) { groupe in
+                                    tuileDestinataires(groupe.noms, groupe.nombre)
                                 }
                             }
                         }
@@ -404,43 +416,31 @@ struct VueSynthese: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondTuile))
     }
 
-    /// Tuile « destinataire » : libellé à gauche, NOMBRE d'œuvres orange à
-    /// droite. Pendant de `tuileVendeur`, sans mise en forme monétaire — un
-    /// compte d'œuvres, pas un montant.
-    /// Nom d'un destinataire tel qu'affiché — abrégé sur iOS, tel quel sur
-    /// macOS. Vue PARTAGÉE entre les deux plateformes : seul cet aiguillage
-    /// distingue leur rendu, le champ `destinataire` en base n'est jamais
-    /// modifié.
-    private func nomAffiche(_ nom: String) -> String {
-        #if os(iOS)
-        return nomAbrege(nom)
-        #else
-        return nom
-        #endif
-    }
-
-    /// « Florian Innocente » → « F. Innocente » : l'initiale du prénom (le
-    /// premier mot), suivie du reste du nom tel quel. Un nom sans espace (un
-    /// seul mot, ou déjà « Inconnu ») n'a rien à abréger et reste inchangé.
-    private func nomAbrege(_ nom: String) -> String {
-        let mots = nom.split(separator: " ")
-        guard let premier = mots.first, mots.count > 1 else { return nom }
-        let reste = mots.dropFirst().joined(separator: " ")
-        return "\(premier.prefix(1)). \(reste)"
-    }
-
-    private func tuileDestinataire(_ nom: String, _ nombre: Int) -> some View {
-        HStack {
-            Text(nomAffiche(nom))
+    /// Tuile « destinataires » : les personnes ayant reçu le MÊME nombre
+    /// d'œuvres, séparées par une virgule, et ce nombre en orange à droite.
+    /// Pendant de `tuileVendeur`, sans mise en forme monétaire — un compte
+    /// d'œuvres, pas un montant.
+    private func tuileDestinataires(_ noms: [String], _ nombre: Int) -> some View {
+        // Aligné en HAUT : une tuile peut compter plusieurs noms, donc
+        // plusieurs lignes, et le nombre doit rester en regard de la première.
+        HStack(alignment: .top) {
+            // Noms affichés TELS QU'EN BASE, sur les deux plateformes :
+            // l'abréviation du prénom propre à iOS (« F. Innocente ») a été
+            // retirée, avec le point qu'elle introduisait.
+            Text(noms.joined(separator: ", "))
                 .font(policeLibelle)
                 .foregroundStyle(Color.textePrincipal)
-                .lineLimit(1)
+                // PAS de `lineLimit(1)`, contrairement à la version où une
+                // tuile ne portait qu'UN nom : la liste doit se replier sur
+                // plusieurs lignes, la tronquer masquerait des personnes.
+                .fixedSize(horizontal: false, vertical: true)
             Spacer()
             Text("\(nombre)")
                 .font(policePrix)
                 .foregroundStyle(Color.orangeInternational)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.fondTuile))
     }
 }

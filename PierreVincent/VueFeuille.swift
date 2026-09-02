@@ -131,6 +131,15 @@ struct VueFeuille: View {
     @State private var bilanRecompression: RecompressionPhotos.Bilan?
     // Position courante dans la visionneuse intégrée (nil = fermée).
     @State private var indexVisionneuse: Int?
+    // Synchronisation du défilement entre Galerie et Liste : identifiant de
+    // l'œuvre en tête d'écran, entretenu par `VueGalerie` (`.scrollPosition`,
+    // continu) et capturé depuis le tableau AppKit au moment de quitter la
+    // Liste (`Table` n'a pas d'équivalent à `.scrollPosition(id:)`).
+    @State private var idPositionDefilement: UUID?
+    // Ligne à restaurer dans le tableau à la prochaine apparition de la
+    // Liste — UN SEUL coup : sans le reset après usage, chaque rafraîchissement
+    // ultérieur du tableau y redéfilerait, par-dessus tout défilement manuel.
+    @State private var ligneARestaurer: Int?
     // Affichage du panneau Inspecteur (mode galerie uniquement).
     /// ESSAI TEMPORAIRE (voir `TestFondPage`, `Couleurs.swift`) : observé
     /// pour que cette vue se redessine quand le fond de page testé change,
@@ -380,7 +389,7 @@ struct VueFeuille: View {
                         celluleInspecteur {
                             if estDon {
                                 ligneInspecteur("Vendeur", o.vendeur)
-                                ligneInspecteur("Destinataire", o.destinataire)
+                                ligneInspecteur("Donataire", o.destinataire)
                                 ligneInspecteur("Mode de vente", o.modeVente)
                             } else {
                                 ligneInspecteur("Vendeur", o.vendeur)
@@ -518,6 +527,11 @@ struct VueFeuille: View {
             typeRetenu = nil
             editionEntree = nil
             indexVisionneuse = nil
+            // La position mémorisée désigne une œuvre de l'ANCIENNE liste :
+            // sans reset, un changement de rubrique pourrait tenter de
+            // défiler vers un identifiant absent de la nouvelle.
+            idPositionDefilement = nil
+            ligneARestaurer = nil
         }
         // Panneau Inspecteur à droite (mode galerie uniquement) : affiche les
         // détails de la vignette sélectionnée, ou rien si 0 ou plusieurs.
@@ -527,8 +541,42 @@ struct VueFeuille: View {
         }
         // L'inspecteur est réservé au mode galerie : on le ferme si on repasse
         // en mode liste.
-        .onChange(of: modeAffichage) { _, nouveau in
+        //
+        // Ce même changement synchronise aussi le défilement entre Galerie et
+        // Liste — au CHANGEMENT plutôt que dans l'action des boutons, pour
+        // couvrir aussi le menu système « Présentation »
+        // (`PierreVincentApp.swift`), qui bascule `modeAffichage` sans passer
+        // par ces boutons.
+        .onChange(of: modeAffichage) { ancien, nouveau in
             if nouveau != "icone" { inspecteurVisible = false }
+            if ancien == "liste", nouveau == "icone" {
+                // On quitte la Liste : capture la ligne visible en tête du
+                // tableau AppKit, encore monté à cet instant. `Table` n'a pas
+                // d'équivalent à `.scrollPosition(id:)` : la lecture passe par
+                // la référence entretenue par `ForceSelectionBleueTableau`.
+                if let table = ReferenceTableau.courant {
+                    let visibles = table.rows(in: table.visibleRect)
+                    if visibles.location != NSNotFound,
+                       visibles.location >= 0, visibles.location < oeuvres.count {
+                        idPositionDefilement = oeuvres[visibles.location].id
+                    }
+                }
+            } else if ancien == "icone", nouveau == "liste" {
+                // On quitte la Galerie : `idPositionDefilement` a été tenu à
+                // jour en continu pendant qu'elle était affichée
+                // (`.scrollPosition(id:)`), donc encore à jour ici.
+                // `ligneARestaurer` est consommée UNE SEULE FOIS : sans ce
+                // reset différé, chaque rafraîchissement ultérieur du tableau
+                // redéfilerait vers cette ligne, par-dessus tout défilement
+                // manuel de l'utilisateur.
+                if let id = idPositionDefilement,
+                   let idx = oeuvres.firstIndex(where: { $0.id == id }) {
+                    ligneARestaurer = idx
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        ligneARestaurer = nil
+                    }
+                }
+            }
         }
         // Ouvrir l'éditeur depuis le menu « Édition » : sur la sélection courante.
         .onChange(of: signalOuvrirEditeur) { _, _ in
@@ -1260,7 +1308,8 @@ struct VueFeuille: View {
                 onOuvrir: { o in
                     if !lectureSeule { editionNouvelle = false; editionEntree = o }
                 },
-                nomEnGalerie: nomEnGalerie
+                nomEnGalerie: nomEnGalerie,
+                positionDefilement: $idPositionDefilement
             )
         } else {
             // Navigation clavier : capteur NSEvent au niveau fenêtre, actif
@@ -1281,8 +1330,12 @@ struct VueFeuille: View {
                         naviguerListe(delta: delta)
                     }
                 )
-                // Défilement vers la ligne sélectionnée, en VERTICAL seulement.
-                .background(DefilementTableau(ligne: ligneSelectionnee))
+                // Défilement vers la ligne sélectionnée (navigation dans
+                // l'éditeur), en VERTICAL seulement — sauf au retour de la
+                // Galerie, où c'est la position mémorisée qui prime et qui se
+                // replace en TÊTE d'écran.
+                .background(DefilementTableau(ligne: ligneSelectionnee,
+                                              ligneEnTete: ligneARestaurer))
                 // Le même NSTableView est réutilisé quand on change de
                 // rubrique. On réimpose donc son style bleu natif ici, afin
                 // qu'un réglage laissé par une vue précédente ne le fasse
@@ -1508,7 +1561,7 @@ struct VueFeuille: View {
                     }
             }
             .width(96)
-            TableColumn("Destinataire", value: \Oeuvre.destinataire) { o in
+            TableColumn("Donataire", value: \Oeuvre.destinataire) { o in
                 Text(o.destinataire)
                     .modifier(TexteLigneSelectionnee(estSelectionnee: selection.contains(o.id)))
                     .frame(minHeight: hauteurContenu, alignment: .leading)
@@ -1900,13 +1953,40 @@ struct VueFeuille: View {
 /// sidebar) dès que la fenêtre était trop étroite pour afficher toutes les
 /// colonnes — invisible en fenêtre large, puisqu'il n'y a alors rien à faire
 /// défiler horizontalement.
+/// Référence faible vers le `NSTableView` du panneau de contenu, entretenue
+/// par `ForceSelectionBleueTableau` à chaque rafraîchissement (donc quasiment
+/// à chaque rendu). Sert à lire la ligne visible en tête AU MOMENT où l'on
+/// quitte la Liste — la synchronisation du défilement avec la Galerie
+/// (`Table` n'a pas d'équivalent à `.scrollPosition(id:)`) en dépend.
+private final class ReferenceTableau {
+    static weak var courant: NSTableView?
+}
+
 private struct DefilementTableau: NSViewRepresentable {
     /// Indice de la ligne à rendre visible (nil = ne rien faire).
     let ligne: Int?
+    /// Ligne à placer **en TÊTE** de la zone visible (nil = aucune), et non
+    /// simplement à rendre visible. Prioritaire sur `ligne` : elle restaure la
+    /// position au retour de la Galerie, dont le repère est l'œuvre du HAUT de
+    /// l'écran — `scrollRowToVisible` fait le plus court chemin et la
+    /// placerait en BAS dès qu'on descend, soit un écran entier de décalage.
+    var ligneEnTete: Int? = nil
 
     func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        if let cible = ligneEnTete, cible >= 0 {
+            DispatchQueue.main.async {
+                guard let table = Self.tableauProche(de: nsView),
+                      cible < table.numberOfRows else { return }
+                // Seul l'axe VERTICAL bouge : l'abscisse courante est reprise
+                // telle quelle, un défilement horizontal parasite décalant
+                // tout le tableau (voir la remarque en tête de ce type).
+                let hauteur = table.rect(ofRow: cible).origin.y
+                table.scroll(NSPoint(x: table.visibleRect.origin.x, y: hauteur))
+            }
+            return
+        }
         guard let ligne, ligne >= 0 else { return }
         // Différé : au moment de la mise à jour SwiftUI, le NSTableView n'a pas
         // forcément encore pris en compte le nouveau nombre de lignes.
@@ -1964,6 +2044,7 @@ private struct ForceSelectionBleueTableau: NSViewRepresentable {
             DispatchQueue.main.async { [weak self] in
                 guard let self,
                       let table = DefilementTableau.tableauProche(de: self) else { return }
+                ReferenceTableau.courant = table
                 if table.selectionHighlightStyle != .regular {
                     table.selectionHighlightStyle = .regular
                 }

@@ -942,15 +942,23 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
   champs, dans le même ordre** : éditeur (boîte de dialogue), inspecteur
   (colonne) et fiche iPhone. Ordre de référence : Prix · Type/Thème ·
   Dimensions/Format · Statut/Collection personnelle/Lieu de stockage/
-  Emplacement · Vendeur-Acheteur-Mode de vente (ou Vendeur-Destinataire-Mode
+  Emplacement · Vendeur-Acheteur-Mode de vente (ou Vendeur-Donataire-Mode
   de vente) · Date · Remarques.
-  - **Vendeur figure aussi sur un don**, depuis peu, AVANT Destinataire :
-    Vendeur dit qui a donné l'œuvre, Destinataire qui l'a reçue. Le champ
+  - **Vendeur figure aussi sur un don**, depuis peu, AVANT Donataire :
+    Vendeur dit qui a donné l'œuvre, Donataire qui l'a reçue. Le champ
     existait déjà sur le modèle (utilisé pour les ventes) ; seul son
     affichage manquait pour cette feuille, aux trois surfaces à la fois.
     Une reprise ponctuelle, `renseignerVendeurDons`, a inscrit « Florian »
     sur tous les dons existants — en ÉCRASANT, le champ n'ayant jamais été
     saisi nulle part pour cette feuille jusque-là.
+  - **Libellé affiché « Donataire »/« Donataires »**, ex-« Destinataire(s) »,
+    aux TROIS surfaces, dans la Synthèse et dans le menu de tri des Dons sur
+    iOS. Le champ sous-jacent (`destinataire`) garde son ancien nom, comme
+    pour Support/Genre. **`Colonnes.swift` (exports) et `Import.swift`
+    (relecture CSV) N'ONT PAS été touchés, délibérément** — même risque
+    déjà rencontré pour Type/Thème : leur `titre`/`val("Destinataire")` est
+    la clé de correspondance à la réimportation d'un CSV exporté par cette
+    version, distincte du libellé affiché.
   - **Type et Thème partagent le même encadré, CÔTE À CÔTE** — le genre
     d'objet et son sujet se lisent ensemble. Thème n'est donc plus dans
     l'encadré Statut. Même présentation que Dimensions/Format, déjà côte à
@@ -1016,40 +1024,55 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
     réserver la ligne de prix vide de `tuileNombre` (`reserverEspace`), qui
     ne servait qu'à aligner leur hauteur sur des tuiles à prix dans
     l'ancienne grille commune.
-    - **Sous-section « Destinataires »** : TOUTES les personnes ayant reçu au
-      moins un don, nom + nombre d'œuvres. `destinatairesTries`
-      (`VueSynthese.swift`, ex-`topDestinataires` — renommée après le retrait
-      de la limite à cinq, qui ne correspondait plus à ce qu'elle renvoie)
-      groupe `oeuvresDonnees` par champ `destinataire`, écarte les valeurs
-      vides et « Inconnu » (un destinataire non identifié ne désigne personne
-      à classer), trie par nombre décroissant. Présentation proche de la
-      carte « Enchères et expositions » (nom à gauche, valeur orange à
-      droite) : `tuileDestinataire` est le pendant de `tuileVendeur`, sans
-      mise en forme monétaire — un COMPTE d'œuvres, pas un montant. Absente
-      si aucun don n'a de destinataire identifié.
-      - **Sur DEUX colonnes fixes** (`colonnesDestinataires`,
-        `GridItem(.flexible())` × 2 — pas `.adaptive` comme `colonnesTuiles`,
-        pour ne jamais retomber à une seule colonne), pour gagner de la
-        hauteur sur une liste qui peut compter beaucoup de destinataires. Le
-        nom porte `.lineLimit(1)` : une colonne deux fois plus étroite
-        qu'avant tronque plus vite un nom long.
-        - **Titre « Destinataires » aligné sur celui de la carte, « Dons »**
+    - **Sous-section « Donataires »** (ex-« Destinataires », voir plus haut le
+      renommage du libellé) : TOUTES les personnes ayant reçu au
+      moins un don, **UNE TUILE PAR NOMBRE D'ŒUVRES** — les personnes à
+      égalité y sont réunies, séparées par une virgule.
+      `destinatairesParNombre` (`VueSynthese.swift`, ex-`destinatairesTries`,
+      elle-même ex-`topDestinataires` — renommée à chaque fois que sa FORME a
+      changé, la limite à cinq d'abord, le regroupement ensuite) compte
+      `oeuvresDonnees` par champ `destinataire`, écarte les valeurs vides et
+      « Inconnu » (un destinataire non identifié ne désigne personne à
+      classer), puis **regroupe sur le COMPTE**, qui devient la clé. Groupes
+      triés par nombre décroissant, noms par ordre alphabétique à l'intérieur
+      d'un groupe. Présentation proche de la carte « Enchères et
+      expositions » (noms à gauche, valeur orange à droite) :
+      `tuileDestinataires` est le pendant de `tuileVendeur`, sans mise en
+      forme monétaire — un COMPTE d'œuvres, pas un montant. Absente si aucun
+      don n'a de destinataire identifié.
+      - **`ForEach(id: \.nombre)`** : l'identité d'une tuile est désormais le
+        NOMBRE, pas un nom — il n'y a plus qu'une tuile par valeur distincte.
+      - **UNE seule colonne** (`colonnesDestinataires`), sur les DEUX
+        plateformes — d'où un simple `let`, sans aiguillage `#if os`. Les
+        **deux** colonnes fixes d'avant valaient quand une tuile portait UN
+        nom ; depuis le regroupement par nombre elle en porte plusieurs, et
+        une demi-largeur les repliait sur tant de lignes que la hauteur
+        gagnée était reperdue. Passées à une colonne sur iOS d'abord, puis
+        sur macOS dans la foulée.
+      - **PLUS de `.lineLimit(1)` sur les noms**, contrairement à la version
+        où une tuile n'en portait qu'un : la liste doit se replier sur
+        plusieurs lignes (`.fixedSize(horizontal: false, vertical: true)`),
+        la tronquer masquerait des personnes. D'où aussi le
+        `HStack(alignment: .top)` — le nombre reste en regard de la première
+        ligne de noms, et non centré sur un bloc de plusieurs.
+        - **Titre « Donataires » aligné sur celui de la carte, « Dons »**
           (`.padding(.leading, 12)`) : le titre de carte porte ce même
           décalage pour s'aligner sur le padding interne des tuiles (voir
-          `carte(titre:)`) — sans lui, « Destinataires » retombait 12 pt
+          `carte(titre:)`) — sans lui, « Donataires » retombait 12 pt
           plus à gauche que « Dons ».
         - **Numéro de position devant chaque nom (1, 2, 3…) : ajouté puis
-          RETIRÉ**, dans la même session. Le rang venait de l'index dans
-          `destinatairesTries` (déjà trié par nombre décroissant), pas d'un
-          champ stocké — rien à défaire côté données si on le rajoute un jour.
-        - **Nom ABRÉGÉ sur iOS seulement** : « Florian Innocente » s'affiche
-          « F. Innocente » — initiale du prénom (premier mot du champ
-          `destinataire`) suivie du reste tel quel. `nomAffiche(_:)` fait
-          l'aiguillage par `#if os(iOS)` DANS cette vue partagée ; macOS
-          affiche le nom complet, sans y toucher. Purement un rendu :
-          `destinataire` n'est jamais modifié en base. Un nom sans espace (un
-          seul mot, y compris « Inconnu ») n'a rien à abréger et reste
-          inchangé (`nomAbrege(_:)`, garde-fou sur `mots.count > 1`).
+          RETIRÉ**, dans la même session. Le rang venait de l'index dans la
+          liste (déjà triée par nombre décroissant), pas d'un champ stocké —
+          rien à défaire côté données si on le rajoute un jour.
+        - **Nom abrégé sur iOS : AJOUTÉ PUIS RETIRÉ.** « Florian Innocente »
+          s'y affichait « F. Innocente » — initiale du prénom suivie du reste.
+          Prénoms rétablis EN ENTIER à la demande, et le point de
+          l'abréviation avec eux : les noms s'affichent désormais **tels
+          qu'en base sur les deux plateformes**. `nomAffiche(_:)` (qui faisait
+          l'aiguillage `#if os(iOS)`) et `nomAbrege(_:)` sont **supprimés**,
+          n'ayant plus aucun appelant — l'abréviation était leur seule raison
+          d'être. Rien à défaire côté données : `destinataire` n'a jamais été
+          modifié en base, ce n'était qu'un rendu.
   - **Le récapitulatif iOS « Vendues / Données »**, en tête de la carte
     Ventes, a été RETIRÉ : la carte Ventes a désormais un contenu IDENTIQUE
     sur les deux plateformes. Il faisait doublon avec la nouvelle carte
@@ -2313,6 +2336,15 @@ JavaScript, inexploitables par extraction) :
        le premier appui, défilement en cours ou non. Solution SwiftUI pure,
        sans passer par UIKit, contrairement à la piste 1 — et celle qui
        fonctionne, confirmé à l'usage.
+  - **Saccade de défilement corrigée** : le fond translucide et l'ombre
+    portée du bouton repassaient par le pipeline de rendu vectoriel à
+    CHAQUE image affichée derrière lui pendant qu'il défile — plus visible
+    sur le bloc de texte des vignettes (contours fins et contrastés) que
+    sur une photo. `.compositingGroup()` posé AVANT `.shadow` aplatit
+    d'abord l'image, le disque et son contour en une seule silhouette,
+    puis `.drawingGroup()` fige le tout dans une texture Metal fabriquée
+    une seule fois : le bouton ne change pas pendant le défilement, seul le
+    contenu en dessous bouge, donc plus rien à recalculer image par image.
 
 - **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit

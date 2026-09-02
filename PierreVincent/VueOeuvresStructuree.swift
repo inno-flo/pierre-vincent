@@ -67,6 +67,12 @@ struct VueOeuvresStructuree: View {
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
     @Namespace private var espaceZoom
+    // Synchronisation du défilement entre Galerie et Liste : identifiant de
+    // l'œuvre en tête d'écran, tenu à jour par `.scrollPosition(id:)`. Le
+    // même `ScrollView` sert aux deux présentations ici (seul le contenu
+    // change), mais le décalage brut ne correspond plus au même endroit une
+    // fois la mise en page changée — ce modificateur recale sur l'ŒUVRE.
+    @State private var idPositionDefilement: UUID?
 
 
     @State private var vendeurFiltre: String = "Toutes"
@@ -253,6 +259,24 @@ struct VueOeuvresStructuree: View {
                     }
                 }
                 .padding(.bottom, 30)
+            }
+            // Synchronisation Galerie ↔ Liste — voir `idPositionDefilement`.
+            .scrollPosition(id: $idPositionDefilement, anchor: .top)
+            // Le MÊME `ScrollView` sert aux deux présentations ici : seul son
+            // CONTENU change, et son décalage en POINTS est conservé tel quel
+            // d'un mode à l'autre. Or une rangée de galerie et une ligne de
+            // liste n'ont pas la même hauteur : le même décalage tombe donc
+            // plusieurs dizaines d'œuvres plus loin. On redemande donc
+            // explicitement la position, sur l'ŒUVRE cette fois.
+            //
+            // La cible est lue SYNCHRONIQUEMENT, avant que le changement de
+            // mise en page n'ait pu redéfinir `idPositionDefilement` ; le
+            // défilement, lui, attend que la nouvelle présentation soit posée.
+            .onChange(of: modeAffichage) { _, _ in
+                guard let cible = idPositionDefilement else { return }
+                DispatchQueue.main.async {
+                    proxy.scrollTo(cible, anchor: .top)
+                }
             }
             // Suit l'œuvre consultée dans la fiche de détail.
             .onChange(of: oeuvreADefiler) { _, cible in
@@ -518,6 +542,8 @@ struct VueOeuvresStructuree: View {
                 carte(o)
             }
         }
+        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+        .scrollTargetLayout()
         .padding(.horizontal, 16)
     }
 
@@ -652,6 +678,8 @@ struct VueOeuvresStructuree: View {
                 .id(o.id)
             }
         }
+        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+        .scrollTargetLayout()
         .padding(.horizontal, 16)
     }
 }

@@ -38,7 +38,18 @@ struct BoutonRetourHaut: View {
                     .fill(.black.opacity(0.275))
                     .overlay(Circle().strokeBorder(accent, lineWidth: 1))
             }
+            // `.compositingGroup()` AVANT `.shadow` : aplatit d'abord
+            // l'image, le disque translucide et le contour en UNE seule
+            // silhouette, puis `.drawingGroup()` la fige dans une texture
+            // Metal fabriquée une fois pour toutes. Le bouton ne change pas
+            // pendant un défilement, mais SANS ce figeage, son fond
+            // translucide et son ombre repassaient par le pipeline de
+            // rendu vectoriel à CHAQUE image affichée en dessous — d'où la
+            // saccade, plus visible sur le bloc de texte des vignettes
+            // (contours fins et contrastés) que sur une photo.
+            .compositingGroup()
             .shadow(radius: 3)
+            .drawingGroup()
             .contentShape(Circle())
             .highPriorityGesture(
                 TapGesture().onEnded { action() }

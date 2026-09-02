@@ -74,6 +74,10 @@ struct VueiOS: View {
     private let ancreHaut = "ancre-haut"
     // Position courante dans la visionneuse plein écran (nil = fermée).
     @State private var indexVisionneuse: Int?
+    // Synchronisation du défilement entre Galerie et Liste : identifiant de
+    // l'œuvre en tête d'écran, tenu à jour par `.scrollPosition(id:)` sur les
+    // deux présentations — voir `VueGalerie.positionDefilement`.
+    @State private var idPositionDefilement: UUID?
     // Type retenu par le bandeau de pastilles (nil = tous). Non persisté :
     // c'est un filtre de consultation, pas un réglage.
     @State private var typeRetenu: String?
@@ -322,7 +326,8 @@ struct VueiOS: View {
                     onOuvrir: { o in selection = [o.id]; detail = o },
                     onAppuiLong: appuiLongGalerie,
                     espaceZoom: espaceZoom,
-                    entete: entete
+                    entete: entete,
+                    positionDefilement: $idPositionDefilement
                 )
             } else {
                 liste
@@ -569,11 +574,15 @@ struct VueiOS: View {
                         .id(o.id)
                     }
                 }
+                // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+                .scrollTargetLayout()
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 30)
             }
             .background(Color.cremeFond)
+            // Synchronisation Galerie ↔ Liste : voir `VueGalerie.positionDefilement`.
+            .scrollPosition(id: $idPositionDefilement, anchor: .top)
             // Défile vers la dernière œuvre consultée à la fermeture de la fiche.
             .onChange(of: oeuvreADefiler) { _, cible in
                 guard let cible else { return }
@@ -824,7 +833,7 @@ struct DetailiOS: View {
                 cellule {
                     if estFeuilleDon {
                         ligne("Vendeur", oeuvre.vendeur)
-                        ligne("Destinataire", oeuvre.destinataire)
+                        ligne("Donataire", oeuvre.destinataire)
                         ligne("Mode de vente", oeuvre.modeVente)
                     } else {
                         ligne("Vendeur", oeuvre.vendeur)

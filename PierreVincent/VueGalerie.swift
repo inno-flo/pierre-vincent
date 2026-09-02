@@ -39,6 +39,13 @@ struct VueGalerie: View {
     /// Pied de page facultatif, placé APRÈS la grille, dans la même zone de
     /// défilement. Sert au bouton « Supprimer les favoris… » ; nul ailleurs.
     var piedDePage: AnyView? = nil
+    /// Identifiant de l'œuvre en tête d'écran, lu et écrit en continu par
+    /// `.scrollPosition(id:)` : sert à synchroniser le défilement avec la
+    /// présentation Liste au moment de basculer entre les deux (voir
+    /// `VueFeuille`/`VueiOS`, qui possèdent cet état). `.constant(nil)` par
+    /// défaut pour les appelants qui n'ont pas de présentation Liste à
+    /// synchroniser.
+    var positionDefilement: Binding<UUID?> = .constant(nil)
 
     // Ancre pour la sélection par plage (Maj + clic).
     @State private var derniere: UUID?
@@ -83,10 +90,27 @@ struct VueGalerie: View {
                             .id(o.id)
                     }
                 }
+                // INDISPENSABLE à `.scrollPosition(id:)` ci-dessous : sans
+                // elle, le binding ne reçoit JAMAIS l'œuvre en tête d'écran
+                // et reste à `nil` — la synchronisation avec la Liste n'a
+                // alors rien à restaurer. Elle désigne le conteneur dont les
+                // enfants sont les repères de défilement.
+                .scrollTargetLayout()
                 .padding(16)
                 piedDePage
             }
             .background(Color.cremeFond)
+            // Synchronisation Galerie ↔ Liste : tient `positionDefilement` à
+            // jour en continu avec l'œuvre en tête d'écran, et défile vers
+            // elle à l'apparition si elle était déjà renseignée (retour
+            // depuis la Liste).
+            //
+            // `anchor: .top` et non le défaut : c'est ce qui rend le repère
+            // SYMÉTRIQUE — l'œuvre lue est celle du haut de l'écran, et c'est
+            // en haut de l'écran qu'on la replace. Sans ancre explicite, le
+            // système se contente de « rendre visible », ce qui autorise un
+            // décalage d'un écran entier.
+            .scrollPosition(id: positionDefilement, anchor: .top)
             // Fait défiler vers l'œuvre sélectionnée quand la sélection change
             // (utile lors de la navigation Précédent / Suivant de l'éditeur).
             .onChange(of: selection) { _, nouvelle in

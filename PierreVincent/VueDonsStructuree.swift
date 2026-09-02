@@ -43,6 +43,10 @@ struct VueDonsStructuree: View {
     // devenir la visionneuse. C'est l'effet standard d'Apple pour une
     // présentation plein écran issue d'un élément précis.
     @Namespace private var espaceZoom
+    // Synchronisation du défilement entre Galerie et Liste : identifiant de
+    // l'œuvre en tête d'écran, tenu à jour par `.scrollPosition(id:)` — voir
+    // la même remarque dans `VueOeuvresStructuree`.
+    @State private var idPositionDefilement: UUID?
 
 
     @State private var selection: Set<UUID> = []
@@ -121,6 +125,19 @@ struct VueDonsStructuree: View {
                 }
                 .padding(.bottom, 30)
             }
+            // Synchronisation Galerie ↔ Liste — voir `idPositionDefilement`.
+            .scrollPosition(id: $idPositionDefilement, anchor: .top)
+            // Le même `ScrollView` sert aux deux présentations : son décalage
+            // en POINTS est conservé d'un mode à l'autre, alors qu'une rangée
+            // de galerie et une ligne de liste n'ont pas la même hauteur — on
+            // redemande donc la position sur l'ŒUVRE. Voir la remarque
+            // détaillée dans `VueOeuvresStructuree`.
+            .onChange(of: modeAffichage) { _, _ in
+                guard let cible = idPositionDefilement else { return }
+                DispatchQueue.main.async {
+                    proxy.scrollTo(cible, anchor: .top)
+                }
+            }
             // Suit l'œuvre consultée dans la fiche de détail.
             .onChange(of: oeuvreADefiler) { _, cible in
                 guard let cible else { return }
@@ -166,7 +183,7 @@ struct VueDonsStructuree: View {
                     // Tri : pour les dons, Acheteur (→ destinataire) et Dimensions.
                     Menu {
                         Button { triGalerie = "acheteur" } label: {
-                            Label(triGalerie == "acheteur" ? "✓ Destinataire" : "Destinataire",
+                            Label(triGalerie == "acheteur" ? "✓ Donataire" : "Donataire",
                                   systemImage: "person")
                         }
                         Button { triGalerie = "dimensions" } label: {
@@ -268,6 +285,8 @@ struct VueDonsStructuree: View {
                 carte(o)
             }
         }
+        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+        .scrollTargetLayout()
         .padding(.horizontal, 16)
     }
 
@@ -375,6 +394,8 @@ struct VueDonsStructuree: View {
                 .id(o.id)
             }
         }
+        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+        .scrollTargetLayout()
         .padding(.horizontal, 16)
     }
 }
