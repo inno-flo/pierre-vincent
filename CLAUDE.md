@@ -2381,16 +2381,26 @@ JavaScript, inexploitables par extraction) :
        conteneurs `.scrollTargetLayout()` dans le même `ScrollView`, gouvernés par
        le même `.scrollPosition(id:)`, se disputent le suivi de position —
        d'où la boucle en franchissant la frontière entre les deux.
-    3. **Correctif** : Ventes et Dons sont désormais dans une SEULE grille
-       (`grilleCatalogueComplet`) ou SEULE liste (`listeCatalogueComplete`),
-       chacune avec DEUX `Section` (une par titre) mais un SEUL
-       `.scrollTargetLayout()` posé sur le conteneur englobant. `carte(_:)`
-       est réutilisée telle quelle ; `ligneListe(_:)` a été extraite de
-       `listeLignes` pour la même raison — une ligne appelable depuis les
-       deux `Section` d'une même `LazyVStack`. `contenuSection`/
-       `grilleVignettes`/`listeLignes` restent utilisées telles quelles
-       pour le cas à UNE SEULE section (sous-rubriques de mode de vente),
-       qui n'a jamais eu ce problème.
+    3. **Premier correctif** : Ventes et Dons dans une SEULE grille/liste,
+       avec DEUX `Section` (une par titre) mais un SEUL
+       `.scrollTargetLayout()` posé sur le conteneur englobant.
+    4. **Simplifié encore, à la demande** : le Catalogue n'a plus DU TOUT de
+       découpage Ventes/Dons — une seule Galerie/Liste, `catalogueComplet`,
+       sans `Section` ni titre, triable par les pastilles de type. Plus de
+       récapitulatif non plus (les deux lignes « Ventes »/« Dons » avec
+       leur compte). `catalogueComplet` combine les deux listes BRUTES puis
+       filtre et trie UNE SEULE fois — `ventes + dons` aurait mis bout à
+       bout deux séries déjà triées séparément, pas un classement global.
+       `oeuvresAvecPhoto` et `listeNavigation` (navigation Précédent/Suivant
+       dans `DetailiOS`) suivent ce même ordre. `titreSection` et
+       `ancreDons`, plus aucun appelant, sont supprimées ;
+       `recapitulatif`/`recapInutile` ne servent plus qu'aux sous-rubriques
+       de mode de vente (`estModeVentes`), simplifiées en conséquence — leur
+       ligne « Dons » n'a plus de raison d'être puisque le Catalogue seul
+       l'affichait. `contenuSection`/`grilleVignettes`/`listeLignes`/
+       `ligneListe`/`carte` restent utilisées telles quelles pour ce cas à
+       une seule liste (Ventes des sous-rubriques de mode de vente), qui
+       n'a jamais eu ce problème de boucle.
 
 - **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit
