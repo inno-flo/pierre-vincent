@@ -488,13 +488,23 @@ struct VueOeuvresStructuree: View {
             }
             // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
             .scrollTargetLayout()
-            .padding(.horizontal, 16)
+            // `.padding(16)`, PAS `.padding(.horizontal, 16)` seul : c'est
+            // le même padding que `VueGalerie` pose sur sa propre grille
+            // (Catalogue de la Réserve). Sans le padding du haut, les
+            // pastilles retombaient directement sur la première rangée de
+            // vignettes — plus serré que la Réserve, qui garde 16 pt en
+            // plus des 8 pt internes au bas de `BandeauTypes`.
+            .padding(16)
         } else {
             LazyVStack(spacing: 8) {
                 ForEach(catalogueComplet) { o in ligneListe(o) }
             }
             .scrollTargetLayout()
+            // Même réglage que le mode Liste de `VueiOS` (Réserve) : 16 pt
+            // horizontaux, 8 pt en haut — pas les mêmes valeurs qu'en
+            // Galerie, la liste a déjà son propre rythme vertical.
             .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
     }
 
