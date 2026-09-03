@@ -543,7 +543,7 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 **EN COURS, sur la branche `affinites-oeuvres`** (poussée, pas encore
 fusionnée dans `main`). Deux rubriques, macOS et iOS, dans leur propre bloc
 de sidebar **« Labo »** — à part des deux blocs « Ventes et dons » et
-« Réserve », avec son propre accent (bleu système, voir Couleurs et
+« Réserve », avec son propre accent (violet système, voir Couleurs et
 sidebar plus bas) : « Affinités » (moteur maison) et « Affinités CLIP »
 (bibliothèque spécialisée), posées côte à côte pour comparer la qualité de
 leurs regroupements — pas encore tranché en faveur de l'une ou de l'autre.
@@ -2503,7 +2503,7 @@ JavaScript, inexploitables par extraction) :
   - Accent lu directement par `BoutonRetourHaut` via son propre
     `@Environment(\.accentRubrique)` : s'adapte tout seul à la rubrique
     (orange dans « Ventes et dons », bleu ardoise en Réserve — Favoris
-    comprise — et bleu système dans le Labo) sans rien à câbler dans les
+    comprise — et violet système dans le Labo) sans rien à câbler dans les
     vues appelantes.
   - **Fond TRANSPARENT (contour seul) essayé d'abord, ABANDONNÉ** : jugé
     trop peu visible. Un disque plein accent a ensuite été comparé côte à
@@ -2604,10 +2604,12 @@ JavaScript, inexploitables par extraction) :
   `Color.bleuArdoise.opacity(0.15)`).
   - **TROIS accents cohabitent donc**, comme avant l'existence de Favoris
     isolée : orange (« Ventes et dons »), bleu ardoise (« Réserve », Favoris
-    comprise), et le **bleu système** du bloc « Labo » (Affinités et
-    Affinités CLIP, `.bleuStandard` dans `Couleurs.swift`) — le seul des
-    trois à ne pas être une teinte réglée à la main : demandé explicitement
-    comme « le bleu standard d'Apple », `Color.blue` suffit.
+    comprise), et le **violet système** du bloc « Labo » (Affinités et
+    Affinités CLIP, `.violetStandard` dans `Couleurs.swift`) — le seul des
+    trois à ne pas être une teinte réglée à la main : d'abord le bleu
+    système (`Color.blue`), puis le violet système (`Color.purple`) sur
+    demande explicite — les deux fois « le [couleur] standard d'Apple »
+    tel quel, sans nuance sur mesure à calculer.
   - **Une seule source** : `Categorie.accent`. Seul subsiste, côté macOS, le
     test qui fait garder à Favoris SA couleur quand la rubrique est
     sélectionnée, là où les autres rubriques de la Réserve passent au blanc ;

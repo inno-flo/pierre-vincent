@@ -111,14 +111,13 @@ extension Color {
             vertClair:  (70, 100, 135), vertSombre:  (132, 168, 205))
     }
 
-    /// Accent bleu système — celui du bloc **Labo**.
+    /// Accent violet système — celui du bloc **Labo**.
     ///
-    /// Contrairement aux trois accents ci-dessus, PAS une teinte réglée à la
-    /// main : le bleu STANDARD d'Apple, demandé tel quel plutôt qu'une
-    /// nouvelle nuance sur mesure. `Color.blue` correspond déjà à ce bleu
-    /// système sur les deux plateformes, avec son adaptation automatique au
-    /// mode sombre — rien à recalculer.
-    static let bleuStandard = Color.blue
+    /// A d'abord été le bleu système (`Color.blue`), remplacé sur demande
+    /// explicite. Toujours PAS une teinte réglée à la main, comme les trois
+    /// autres accents ci-dessus : le violet STANDARD d'Apple, `Color.purple`,
+    /// qui s'adapte tout seul au mode sombre — rien à recalculer.
+    static let violetStandard = Color.purple
 
     // `taupeChaud` — l'accent qu'avait Favoris tant qu'elle était une
     // rubrique isolée hors des deux blocs — a été SUPPRIMÉ (audit de code) :

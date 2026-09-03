@@ -467,9 +467,9 @@ enum Categorie: Hashable, Identifiable {
         // rubrique isolée hors des deux blocs, ce qui n'est plus le cas.
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
              .reserveTheme, .reserveCollection, .favoris: return .bleuArdoise
-        // Bloc « Labo », à part de la Réserve : le bleu SYSTÈME standard,
-        // pas le bleu ardoise des autres rubriques de la Réserve.
-        case .affinites, .affinitesClip: return .bleuStandard
+        // Bloc « Labo », à part de la Réserve : le violet SYSTÈME standard
+        // (ex-bleu système), pas le bleu ardoise des rubriques de la Réserve.
+        case .affinites, .affinitesClip: return .violetStandard
         default:                 return .orangeInternational
         }
     }
