@@ -2598,6 +2598,40 @@ JavaScript, inexploitables par extraction) :
        `ligneListe`/`carte` restent utilisées telles quelles pour ce cas à
        une seule liste (Ventes des sous-rubriques de mode de vente), qui
        n'a jamais eu ce problème de boucle.
+    5. **La fluidité restait pourtant en retrait face au Catalogue de la
+       Réserve, à contenu et interface identiques — DIAGNOSTIQUÉ ET CORRIGÉ.**
+       Un seul `.scrollTargetLayout()` suffisait à stopper la boucle, mais
+       `VueOeuvresStructuree` gardait sa PROPRE grille (`grilleVignettes`/
+       `carte`), une implémentation dupliquée de celle, déjà éprouvée, de
+       `VueGalerie` — la vue que `VueiOS` (Réserve) délègue entièrement pour
+       sa Galerie. **Correctif retenu, à la demande explicite (« vas-y ») :
+       la Galerie de `VueOeuvresStructuree` DÉLÈGUE désormais à `VueGalerie`,
+       exactement comme `VueiOS`**, au lieu de maintenir sa propre grille.
+       `grilleVignettes`, `carte` et `contenuSection`/`contenuCatalogueComplet`
+       sont **supprimées** : code mort une fois la délégation en place.
+       - `body` se scinde tôt sur `modeAffichage` (`Group { if/else }`), sur
+         le même patron que `VueiOS.body` : Galerie devient un simple appel à
+         `VueGalerie(oeuvres:, selection:, onOuvrir:, onAppuiLong:,
+         espaceZoom:, nomEnGalerie:, entete:, positionDefilement:)` ; Liste
+         garde un `ScrollViewReader` LOCAL et propre à elle (`liste`,
+         calquée sur `VueiOS.liste`) — les deux présentations n'ont donc plus
+         de `ScrollView` commun, chacune le sien, comme partout ailleurs.
+       - **`entete: AnyView?`**, même mécanisme que `VueiOS.entete` : combine
+         le récapitulatif (`recapCell`, sans action — l'ancien tap-pour-
+         défiler vers `ancreVentes`, supprimée, n'a plus de sens, `VueGalerie`
+         possédant son propre `ScrollViewReader` interne hors de portée
+         d'ici) et `BandeauTypes`. Passé TEL QUEL à `VueGalerie` (Galerie) et
+         rendu directement en tête de `liste` (Liste) — un seul en-tête à
+         tenir à jour pour les deux présentations, au lieu de deux copies.
+       - `.onChange(of: modeAffichage)` (le recalage manuel du défilement
+         entre Galerie et Liste) est **retiré** : `VueiOS`, qui délègue déjà
+         entièrement sa Galerie, n'en a jamais eu besoin — chaque
+         présentation restaure sa position d'elle-même via
+         `.scrollPosition(id: $idPositionDefilement)`, partagé par les deux.
+       - **Conséquence attendue et voulue** : les deux Catalogue (Réserve et
+         Ventes-et-dons) partagent maintenant EXACTEMENT le même rendu de
+         vignette, donc la même fluidité de défilement — plus une seule
+         ligne de grille dupliquée à faire diverger de l'original.
 
 - **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit
