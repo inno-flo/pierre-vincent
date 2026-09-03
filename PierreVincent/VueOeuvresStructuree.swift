@@ -5,15 +5,17 @@ import UIKit
 
 /// Vue « Inventaire » structurée pour iPhone.
 ///
-/// Elle présente :
-///  1. un en-tête récapitulatif : deux lignes « Ventes » et « Œuvres données »
-///     avec le nombre d'œuvres correspondant (un tap fait défiler jusqu'à la
-///     section) ;
-///  2. une section « Ventes » avec les œuvres vendues ;
-///  3. une section « Œuvres données » avec les œuvres données.
+/// Sert deux rôles distincts :
+///  - **Catalogue** (`cat == .oeuvres`) : Ventes et Dons réunis en une seule
+///    Galerie/Liste (`catalogueComplet`), triable par les pastilles de
+///    type — pas de récapitulatif ni de découpage en sections, simplifié à
+///    la demande.
+///  - **Ventes et ses sous-rubriques de mode de vente** (`estModeVentes`) :
+///    un récapitulatif à une ligne (« Nombre de ventes ») au-dessus d'une
+///    seule Galerie/Liste des œuvres vendues.
 ///
-/// Le contenu de chaque section respecte le mode d'affichage choisi
-/// (liste ou galerie), comme dans les autres vues.
+/// Le contenu respecte le mode d'affichage choisi (liste ou galerie), comme
+/// dans les autres vues.
 struct VueOeuvresStructuree: View {
     /// Quand non vide, filtre les ventes sur ce mode de vente (ex. vue « Ventes »).
     let modesVente: [String]
@@ -80,9 +82,9 @@ struct VueOeuvresStructuree: View {
     // c'est un filtre de consultation, pas un réglage.
     @State private var typeRetenu: String?
 
-    // Identifiants d'ancrage pour le défilement vers une section.
+    // Cible du récapitulatif « Nombre de ventes » (sous-rubriques de mode
+    // de vente seulement — le Catalogue n'a plus de récapitulatif).
     private let ancreVentes = "ancre-ventes"
-    private let ancreDons   = "ancre-dons"
     // Tout en haut de la vue — cible du bouton « Retour en haut ».
     private let ancreHaut = "ancre-haut"
 
@@ -178,6 +180,16 @@ struct VueOeuvresStructuree: View {
         return trier(filtrerParType(base, mot: typeRetenu))
     }
 
+    /// Catalogue : Ventes et Dons RÉUNIS avant filtre et tri, pour un
+    /// classement global unique — `ventes + dons` (chacune déjà triée
+    /// séparément) donnerait deux séries triées mises bout à bout, pas un
+    /// classement d'ensemble. Remplace le découpage en sections.
+    private var catalogueComplet: [Oeuvre] {
+        let base = baseVentes
+            + toutes.filter { $0.feuille == .oeuvresDonnees }.filter(estVenduOuDonne)
+        return trier(filtrerParType(base, mot: typeRetenu))
+    }
+
     /// Applique le tri choisi (prix décroissant, ou acheteur alphabétique).
     private func trier(_ liste: [Oeuvre]) -> [Oeuvre] {
         // Tri de base en ordre croissant, puis inversion si demandé.
@@ -222,8 +234,9 @@ struct VueOeuvresStructuree: View {
                     if !typesFiltre.isEmpty {
                         BandeauTypes(mots: typesFiltre,
                                      typeRetenu: $typeRetenu,
-                                     nombreAffiche: ventes.count
-                                                  + (estModeVentes ? 0 : dons.count),
+                                     nombreAffiche: estModeVentes
+                                                  ? ventes.count
+                                                  : catalogueComplet.count,
                                      // Catalogue seulement (`!estModeVentes`) :
                                      // aligne le bord droit du compteur sur
                                      // celui de `ligneRecap`, juste en dessous.
@@ -234,24 +247,22 @@ struct VueOeuvresStructuree: View {
                                      paddingCompteur: estModeVentes ? 12 : 20)
                     }
 
-                    // --- 2. Récapitulatif, SOUS les capsules ---
-                    // Les deux lignes Ventes et Dons se lisent après le filtre
-                    // qui les détermine, et non avant.
-                    recapitulatif(proxy: proxy)
-
-                    // --- 3. Contenu ---
-                    // En mode Ventes (sous-rubrique de mode de vente), une
-                    // seule section : le titre de navigation dit déjà de
-                    // quoi il s'agit, le titre « Ventes » serait redondant.
+                    // --- 2. Contenu ---
+                    // En mode Ventes (sous-rubrique de mode de vente), le
+                    // récapitulatif à une ligne reste : le titre de
+                    // navigation dit déjà de quoi il s'agit, mais le compte
+                    // garde son utilité hors bandeau de pastilles
+                    // (`recapInutile`).
                     //
-                    // En mode Catalogue, Ventes ET Dons doivent se trouver
-                    // dans le MÊME conteneur paresseux (une seule grille ou
-                    // liste, avec deux `Section`), et non dans deux
-                    // conteneurs séparés l'un sous l'autre : deux
-                    // `.scrollTargetLayout()` dans le même `ScrollView`
-                    // font boucler `.scrollPosition(id:)` en passant de l'un
-                    // à l'autre — voir `contenuCatalogueComplet`.
+                    // En mode Catalogue, plus de récapitulatif NI de
+                    // découpage en sections « Ventes »/« Dons » — à la
+                    // demande, simplifié en UNE seule Galerie/Liste
+                    // filtrable par les pastilles (voir `catalogueComplet`).
+                    // Un bienfait de plus : un seul `.scrollTargetLayout()`
+                    // au lieu de deux, ce qui a aussi réglé une boucle de
+                    // défilement (voir CLAUDE.md).
                     if estModeVentes {
+                        recapitulatif(proxy: proxy)
                         Color.clear.frame(height: 0)
                             .padding(.top, 24)
                             .id(ancreVentes)
@@ -391,7 +402,7 @@ struct VueOeuvresStructuree: View {
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
         .sheet(item: $detail) { o in
             DetailiOS(oeuvre: o, estFeuilleDon: o.feuille == .oeuvresDonnees,
-                      listeNavigation: estModeVentes ? ventes : ventes + dons,
+                      listeNavigation: estModeVentes ? ventes : catalogueComplet,
                       onFermeture: { derniere in
                           selection = [derniere.id]
                           oeuvreADefiler = derniere.id
@@ -407,35 +418,24 @@ struct VueOeuvresStructuree: View {
 
     // MARK: En-tête récapitulatif
 
-    /// Deux lignes « Ventes » et « Œuvres données » avec leur nombre.
-    /// Un tap fait défiler la vue jusqu'à la section correspondante.
-    /// Vrai quand le récapitulatif n'a plus rien à apprendre : en mode Ventes,
-    /// sa seule ligne annonce un nombre que le compteur du bandeau de
-    /// pastilles donne déjà, juste en dessous.
+    /// Ligne « Nombre de ventes » avec son compte — pour les sous-rubriques
+    /// de mode de vente SEULEMENT, appelée seulement quand `estModeVentes`
+    /// (voir `body`). Le Catalogue n'a plus de récapitulatif ni de section
+    /// « Dons » depuis la simplification à une seule Galerie/Liste.
     ///
-    /// Les sous-rubriques de mode de vente, elles, n'ont PAS de bandeau
-    /// (`typesFiltre` y est vide) : elles gardent leur ligne, faute de quoi
-    /// le nombre d'œuvres ne s'afficherait plus nulle part.
-    private var recapInutile: Bool { estModeVentes && !typesFiltre.isEmpty }
+    /// Vrai quand le récapitulatif n'a plus rien à apprendre : le compteur
+    /// du bandeau de pastilles, juste en dessous, donne déjà ce nombre.
+    /// Les sous-rubriques de mode de vente sans bandeau (`typesFiltre` vide)
+    /// gardent leur ligne, faute de quoi le nombre ne s'afficherait plus
+    /// nulle part.
+    private var recapInutile: Bool { !typesFiltre.isEmpty }
 
     @ViewBuilder
     private func recapitulatif(proxy: ScrollViewProxy) -> some View {
         if !recapInutile {
         VStack(spacing: 0) {
-            ligneRecap(titre: estModeVentes ? "Nombre de ventes" : "Ventes",
-                       nombre: ventes.count, gras: estModeVentes) {
+            ligneRecap(titre: "Nombre de ventes", nombre: ventes.count, gras: true) {
                 withAnimation { proxy.scrollTo(ancreVentes, anchor: .top) }
-            }
-            if !estModeVentes {
-                Divider().padding(.leading, 20)
-                // `gras: false` : dans le Catalogue SEULEMENT (cette ligne ne
-                // s'affiche jamais dans les sous-rubriques de mode de vente,
-                // où `estModeVentes` vaut `true`) — style normal demandé pour
-                // « Ventes » et « Dons » et leurs compteurs. La ligne
-                // « Nombre de ventes » d'un mode de vente garde son gras.
-                ligneRecap(titre: "Dons", nombre: dons.count, gras: false) {
-                    withAnimation { proxy.scrollTo(ancreDons, anchor: .top) }
-                }
             }
         }
         .background(Color.fondLegende)
@@ -469,95 +469,33 @@ struct VueOeuvresStructuree: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: Sections
-
-    private func titreSection(_ texte: String) -> some View {
-        Text(texte)
-            .font(.title2)
-            .fontWeight(.semibold)
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Catalogue (Ventes ET Dons) : galerie ou liste selon le mode
-    /// d'affichage, dans un SEUL conteneur paresseux — voir `body`, qui
-    /// explique pourquoi les deux sections ne peuvent pas avoir chacune le
-    /// leur.
+    /// Catalogue : Ventes et Dons réunis, sans découpage en sections — à la
+    /// demande, pour n'avoir qu'une seule Galerie/Liste, triable par les
+    /// pastilles de type. Galerie ou liste selon le mode d'affichage, dans
+    /// un SEUL conteneur paresseux (un seul `.scrollTargetLayout()`) : deux
+    /// conteneurs séparés dans le même `ScrollView` avaient fait boucler
+    /// `.scrollPosition(id:)` en passant de l'un à l'autre (voir CLAUDE.md).
     @ViewBuilder
     private var contenuCatalogueComplet: some View {
-        if modeAffichage == "icone" {
-            grilleCatalogueComplet
+        if catalogueComplet.isEmpty {
+            Text("Aucune entrée")
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
+        } else if modeAffichage == "icone" {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)], spacing: 16) {
+                ForEach(catalogueComplet) { o in carte(o) }
+            }
+            // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+            .scrollTargetLayout()
+            .padding(.horizontal, 16)
         } else {
-            listeCatalogueComplete
+            LazyVStack(spacing: 8) {
+                ForEach(catalogueComplet) { o in ligneListe(o) }
+            }
+            .scrollTargetLayout()
+            .padding(.horizontal, 16)
         }
-    }
-
-    /// Une seule `LazyVGrid`, avec Ventes et Dons comme deux `Section` —
-    /// et donc un seul `.scrollTargetLayout()` pour tout le Catalogue.
-    private var grilleCatalogueComplet: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
-                            GridItem(.flexible(), spacing: 12)], spacing: 16) {
-            Section {
-                if ventes.isEmpty {
-                    Text("Aucune entrée")
-                        .foregroundStyle(.secondary)
-                        .gridCellColumns(2)
-                } else {
-                    ForEach(ventes) { o in carte(o) }
-                }
-            } header: {
-                titreSection("Ventes").id(ancreVentes)
-            }
-            Section {
-                if dons.isEmpty {
-                    Text("Aucune entrée")
-                        .foregroundStyle(.secondary)
-                        .gridCellColumns(2)
-                } else {
-                    ForEach(dons) { o in carte(o) }
-                }
-            } header: {
-                titreSection("Dons").id(ancreDons)
-            }
-        }
-        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`. UN
-        // SEUL appel pour tout le Catalogue, sur le conteneur englobant les
-        // deux `Section` — pas un par section.
-        .scrollTargetLayout()
-        .padding(.horizontal, 16)
-    }
-
-    /// Pendant liste de `grilleCatalogueComplet` : une seule `LazyVStack`,
-    /// Ventes et Dons en deux `Section`, un seul `.scrollTargetLayout()`.
-    private var listeCatalogueComplete: some View {
-        LazyVStack(spacing: 8) {
-            Section {
-                if ventes.isEmpty {
-                    Text("Aucune entrée")
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-                } else {
-                    ForEach(ventes) { o in ligneListe(o) }
-                }
-            } header: {
-                titreSection("Ventes").id(ancreVentes)
-            }
-            Section {
-                if dons.isEmpty {
-                    Text("Aucune entrée")
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-                } else {
-                    ForEach(dons) { o in ligneListe(o) }
-                }
-            } header: {
-                titreSection("Dons").id(ancreDons)
-            }
-        }
-        .scrollTargetLayout()
-        .padding(.horizontal, 16)
     }
 
     /// Contenu d'une section : galerie ou liste selon le mode d'affichage.
@@ -584,7 +522,7 @@ struct VueOeuvresStructuree: View {
     /// Œuvres affichées ayant réellement une photo — ce que parcourt la
     /// visionneuse. Une œuvre sans photo n'y mènerait qu'à un écran vide.
     private var oeuvresAvecPhoto: [Oeuvre] {
-        (estModeVentes ? ventes : ventes + dons).filter { !$0.photoNom.isEmpty }
+        (estModeVentes ? ventes : catalogueComplet).filter { !$0.photoNom.isEmpty }
     }
 
     private func ouvrirVisionneuse(_ o: Oeuvre) {
