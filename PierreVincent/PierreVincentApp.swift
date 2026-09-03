@@ -139,6 +139,14 @@ struct PierreVincentApp: App {
                 Divider()
                 // Entretien du dossier de photos. Séparée des imports : elle ne
                 // fait entrer aucune donnée, elle réécrit celles déjà là.
+                // Rapproche les œuvres de la Réserve par leur style et leurs
+                // couleurs. Seules les photos jamais analysées sont lues :
+                // la commande est donc rejouable à volonté, et c'est ainsi
+                // qu'on rattrape deux ou trois œuvres nouvellement ajoutées.
+                Button("Analyser les affinités…") {
+                    declencherFichier("analyserAffinites")
+                }
+                Divider()
                 Button("Recompresser les photos…") {
                     declencherFichier("recompresser")
                 }

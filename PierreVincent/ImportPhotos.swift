@@ -181,35 +181,6 @@ enum ImportPhotos {
     }
 }
 
-/// Progression de l'import en cours, affichée en pied de sidebar (macOS).
-///
-/// `@Observable` et non `ObservableObject` : ce dernier réclame
-/// `import Combine` depuis Swift 6.
-@MainActor
-@Observable
-final class ProgressionImport {
-    static let partagee = ProgressionImport()
-    private init() {}
-
-    private(set) var enCours = false
-    private(set) var traites = 0
-    private(set) var total = 0
-
-    func demarrer(total: Int) {
-        self.total = total
-        traites = 0
-        enCours = true
-    }
-
-    func avancer() { traites += 1 }
-
-    func terminer() {
-        enCours = false
-        traites = 0
-        total = 0
-    }
-}
-
 /// Traduit les métadonnées d'une photo en champs d'une œuvre.
 ///
 /// **C'est ici, et nulle part ailleurs, que se règle la correspondance.**

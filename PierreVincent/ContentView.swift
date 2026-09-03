@@ -25,6 +25,15 @@ enum Categorie: Hashable, Identifiable {
     /// n'existe pas encore, et l'entrée « Ajouter aux favoris » du menu
     /// contextuel iPhone reste inerte.
     case favoris
+    /// Rubrique de la Réserve : les œuvres rapprochées par leur STYLE et
+    /// leurs COULEURS, indépendamment ou non de leur genre (voir
+    /// `VueAffinites`, `Affinites.swift`).
+    ///
+    /// **macOS seulement pour l'instant** : elle n'est pas posée dans la
+    /// sidebar iOS, et `VueiOS` ne sait pas la rendre. Le moteur, lui
+    /// (`SignatureOeuvre`, `Affinites`), ne comporte aucun `#if` — le portage
+    /// se réduira à écrire la vue.
+    case affinites
     /// Sous-catégorie de la Réserve : un thème précis. Même principe que
     /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
     /// variable de rubriques déduites des données (voir `themesPresents`).
@@ -50,6 +59,7 @@ enum Categorie: Hashable, Identifiable {
         case .reserveTableaux:  return "Tableaux"
         case .reserveCollection: return "Collection personnelle"
         case .favoris:          return "Favoris"
+        case .affinites:        return "Affinités"
         // Rendu au pluriel — et « Portraits » pour « Personnage » — comme les
         // modes de vente plus bas : la valeur STOCKÉE sur l'œuvre ne change
         // pas, c'est elle que voient l'éditeur, l'inspecteur et le filtre.
@@ -100,6 +110,8 @@ enum Categorie: Hashable, Identifiable {
         // Contour, comme les autres icônes de sidebar (`star.fill` essayé,
         // moins cohérent avec le reste du style).
         case .favoris:          return "star"
+        // Le geste de rapprocher : une baguette qui trie toute seule.
+        case .affinites:        return "wand.and.rays"
         case .reserveTheme:     return "paintbrush.pointed"
         case .synthese:         return "chart.bar.doc.horizontal"
         // Les trois sous-rubriques de « Modes de vente » — et tout mode inédit
@@ -129,6 +141,10 @@ enum Categorie: Hashable, Identifiable {
         // `.reserve` par provision avant que `favori` existe ; voir
         // `favoriSeul`, qui fait maintenant le tri.
         case .favoris:          return nil
+        // Même feuille que le reste de la Réserve : la rubrique n'y ajoute
+        // aucun filtre de données, elle change seulement la façon de PRÉSENTER
+        // les mêmes œuvres.
+        case .affinites:        return .reserve
         // Même feuille que le reste de la Réserve : c'est le THÈME qui
         // restreint, pas la feuille.
         case .reserveTheme:     return .reserve
@@ -152,6 +168,10 @@ enum Categorie: Hashable, Identifiable {
             return .tableauxVendus
         case .tableauxVendus, .dessinsVendus, .tapisVendus,
              .reserveDessins, .reserveTableaux, .reserveCollection:
+            return nil
+        // Vue de PRÉSENTATION, sans liste ni éditeur : une œuvre créée ici
+        // n'aurait pas de signature et n'apparaîtrait dans aucune famille.
+        case .affinites:
             return nil
         case .reserveTheme:
             return nil
@@ -194,7 +214,7 @@ enum Categorie: Hashable, Identifiable {
         case .favoris:
             return []
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection:
+             .reserveTheme, .reserveCollection, .affinites:
             return statutsReserve
         // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
         // dons ont leur propre rubrique.
@@ -409,7 +429,7 @@ enum Categorie: Hashable, Identifiable {
     var accent: Color {
         switch self {
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection: return .bleuArdoise
+             .reserveTheme, .reserveCollection, .affinites: return .bleuArdoise
         case .favoris:              return .taupeChaud
         default:                 return .orangeInternational
         }
@@ -442,6 +462,19 @@ struct ContentView: View {
     #endif
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
+    #if os(macOS)
+    // Commande du menu Fichier, écoutée ICI et non dans `VueFeuille`.
+    //
+    // `VueFeuille` traite déjà ce signal pour ses propres commandes (imports,
+    // exports, recompression), mais elle N'EST PAS MONTÉE quand la rubrique
+    // Affinités est affichée — or c'est précisément là qu'on voudra lancer
+    // l'analyse. `ContentView`, elle, est toujours à l'écran. Les deux vues
+    // aiguillent sur le nom de l'action : chacune ignore celles de l'autre.
+    @AppStorage("actionFichier") private var actionFichier = ""
+    @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
+    @State private var messageAffinites: String?
+    @State private var analyseAffinitesEnCours = false
+    #endif
     /// ESSAI TEMPORAIRE — voir `TestFondPage` (`Couleurs.swift`) : pilote les
     /// cinq boutons de test de fond de page en bas de la sidebar.
     @AppStorage(TestFondPage.cle) private var testFondPage = "creme"
@@ -723,6 +756,18 @@ struct ContentView: View {
                     VueSynthese(toutes: toutes)
                 } else {
                     #if os(macOS)
+                    // Affinités a sa propre présentation — ni liste ni galerie
+                    // ordinaire, mais des familles constituées par le calcul.
+                    // Elle reçoit `toutes` et découpe elle-même son lot, avec
+                    // la MÊME fonction que la commande d'analyse.
+                    //
+                    // L'aiguillage est ICI, à l'intérieur du `#if` existant, et
+                    // non dans la chaîne `if/else` au-dessus : une directive de
+                    // compilation ne peut pas couper un enchaînement `else if`
+                    // en deux, les accolades ne s'y retrouvent plus.
+                    if cat == .affinites {
+                        VueAffinites(toutes: toutes)
+                    } else {
                     // Interface Mac complète (édition, exports, etc.).
                     VueFeuille(feuille: cat.feuille,
                                feuilleAjout: cat.feuilleAjout,
@@ -742,6 +787,7 @@ struct ContentView: View {
                                menuFiltreTypeToolbar: cat.menuFiltreTypeToolbar,
                                estSectionVentesEtDons: cat.estSectionVentesEtDons,
                                nbSelection: $nbSelection)
+                    }
                     // PAS de `.id(cat)` ici. Il détruisait et reconstruisait
                     // toute la vue à chaque changement de rubrique, donc aussi
                     // sa `.toolbar` — et la NSToolbar reconstruite réanimait le
@@ -794,6 +840,17 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        #if os(macOS)
+        .onChange(of: actionFichierSignal) { _, _ in
+            guard actionFichier == "analyserAffinites" else { return }
+            lancerAnalyseAffinites()
+        }
+        .alert("Analyse des affinités", isPresented: Binding(
+            get: { messageAffinites != nil },
+            set: { if !$0 { messageAffinites = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(messageAffinites ?? "") }
+        #endif
         .onAppear {
             // Nettoyage des photos orphelines au démarrage : on retire du dossier
             // Photos les fichiers qui ne sont plus liés à aucune entrée (restes
@@ -994,6 +1051,8 @@ struct ContentView: View {
             if sousBlocReserveThemesOuvert {
                 liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
+            // MÊME ORDRE qu'à l'écran : la rubrique est en fin de bloc Réserve.
+            liste.append(.affinites)
         }
         // Hors des deux blocs, et donc jamais dépendante d'un repli.
         // TOUJOURS présente désormais, même sans aucun favori.
@@ -1072,10 +1131,36 @@ struct ContentView: View {
                     $0.caseInsensitiveCompare(o.modeVente) == .orderedSame
                 })
             }.count
+        // **Pas de pastille pour Affinités**, et c'est délibéré : la
+        // rubrique ne filtre RIEN, elle re-présente exactement les œuvres du
+        // Catalogue de la Réserve. Son chiffre répéterait donc celui d'une
+        // autre ligne sans rien apprendre. Y mettre le nombre de FAMILLES
+        // serait pire : il change à chaque mouvement des curseurs, et la
+        // sidebar n'a aucun moyen de le savoir.
         default:
             return nil
         }
     }
+
+    // MARK: Analyse des affinités (macOS)
+
+    #if os(macOS)
+    /// Lance l'analyse des photos de la Réserve depuis le menu Fichier.
+    ///
+    /// Ne calcule que les signatures MANQUANTES : relancer après avoir ajouté
+    /// deux ou trois œuvres coûte deux ou trois calculs, pas mille. « Tout
+    /// recalculer » existe à part, dans la barre d'outils de la rubrique.
+    private func lancerAnalyseAffinites() {
+        guard !analyseAffinitesEnCours else { return }
+        analyseAffinitesEnCours = true
+        Task {
+            let texte = await AnalyseAffinites.executerEtDecrire(
+                toutes: toutes, toutRecalculer: false)
+            analyseAffinitesEnCours = false
+            messageAffinites = texte
+        }
+    }
+    #endif
 
     // MARK: Zone du bas de la sidebar
 
@@ -1092,7 +1177,7 @@ struct ContentView: View {
         return HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.small)
-            Text("Import \(suivi.traites) / \(suivi.total)")
+            Text("\(suivi.libelle) \(suivi.traites) / \(suivi.total)")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
             Spacer()
@@ -1310,6 +1395,12 @@ struct ContentView: View {
             // garde son nom — seul CE libellé de sidebar est renommé.
             Text("Genres").foregroundStyle(.secondary)
         }
+        // Rapprochement par style et couleurs. macOS seulement à ce stade :
+        // `VueiOS` ne sait pas rendre cette rubrique, et une ligne de sidebar
+        // qui ouvrirait une vue vide serait pire que son absence.
+        #if os(macOS)
+        lien(.affinites)
+        #endif
     }
 
     /// Thèmes réellement présents dans la Réserve, par ordre alphabétique.
