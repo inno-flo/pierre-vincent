@@ -440,7 +440,7 @@ struct VueFeuille: View {
             VStack {
                 Spacer()
                 Text(selection.count > 1
-                     ? "Plusieurs œuvres sélectionnées"
+                     ? "\(selection.count) œuvres sélectionnées"
                      : "Sélectionnez une œuvre")
                     .foregroundStyle(.secondary)
                 Spacer()

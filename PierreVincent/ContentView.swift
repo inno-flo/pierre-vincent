@@ -26,17 +26,14 @@ enum Categorie: Hashable, Identifiable {
     /// contextuel iPhone reste inerte.
     case favoris
     /// Rubrique de la Réserve : les œuvres rapprochées par leur STYLE et
-    /// leurs COULEURS, indépendamment ou non de leur genre (voir
-    /// `VueAffinites`, `Affinites.swift`).
-    ///
-    /// **macOS seulement pour l'instant** : elle n'est pas posée dans la
-    /// sidebar iOS, et `VueiOS` ne sait pas la rendre. Le moteur, lui
-    /// (`SignatureOeuvre`, `Affinites`), ne comporte aucun `#if` — le portage
-    /// se réduira à écrire la vue.
+    /// leurs COULEURS, indépendamment ou non de leur genre. Deux vues, une
+    /// par plateforme (`VueAffinites` sur Mac, `VueAffinitesiOS` sur iPhone) —
+    /// le moteur qu'elles partagent (`SignatureOeuvre`, `Affinites.swift`) ne
+    /// comporte, lui, aucun `#if`.
     case affinites
     /// Même rubrique, mais regroupée par **CLIP** (MobileCLIP-S0, Apple, Core
     /// ML) au lieu du moteur maison — posée à côté pour comparer les deux à
-    /// l'écran. Voir `VueAffinitesCLIP.swift`.
+    /// l'écran. `VueAffinitesCLIP` (Mac) / `VueAffinitesCLIPiOS` (iPhone).
     case affinitesClip
     /// Sous-catégorie de la Réserve : un thème précis. Même principe que
     /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
@@ -466,6 +463,10 @@ struct ContentView: View {
     #if os(macOS)
     // Surbrillance de la rubrique Favoris pendant un glisser-déposer.
     @State private var favorisCibleDepot = false
+    // Ouvre « Affinités CLIP » dans sa propre fenêtre (menu contextuel de
+    // son intitulé, voir `lien`) — la `WindowGroup` dédiée est déclarée dans
+    // `PierreVincentApp.swift`.
+    @Environment(\.openWindow) private var openWindow
     #endif
     // Masquage des prix (partagé iOS + Mac).
     @AppStorage("prixMasques") private var prixMasques = false
@@ -825,6 +826,12 @@ struct ContentView: View {
                                              titre: cat.titre,
                                              nomEnGalerie: cat.nomEnGalerie,
                                              typesFiltre: cat.typesFiltre)
+                            .id(cat)
+                    } else if cat == .affinites {
+                        VueAffinitesiOS(toutes: toutes)
+                            .id(cat)
+                    } else if cat == .affinitesClip {
+                        VueAffinitesCLIPiOS(toutes: toutes)
                             .id(cat)
                     } else if cat == .oeuvresDonnees {
                         VueDonsStructuree(typesFiltre: cat.typesFiltre)
@@ -1420,13 +1427,20 @@ struct ContentView: View {
             // garde son nom — seul CE libellé de sidebar est renommé.
             Text("Genres").foregroundStyle(.secondary)
         }
-        // Rapprochement par style et couleurs. macOS seulement à ce stade :
-        // `VueiOS` ne sait pas rendre cette rubrique, et une ligne de sidebar
-        // qui ouvrirait une vue vide serait pire que son absence.
-        #if os(macOS)
+        // Rapprochement par style et couleurs — présent sur les deux
+        // plateformes, chacune avec sa propre vue.
         lien(.affinites)
         lien(.affinitesClip)
-        #endif
+            #if os(macOS)
+            // Seule rubrique à proposer ceci : comparer « Affinités » et
+            // « Affinités CLIP » a tout son sens côte à côte, dans deux
+            // fenêtres, plutôt qu'en changeant de rubrique dans la même.
+            .contextMenu {
+                Button("Ouvrir dans une fenêtre") {
+                    openWindow(id: FenetreAffinitesCLIP.identifiant)
+                }
+            }
+            #endif
     }
 
     /// Thèmes réellement présents dans la Réserve, par ordre alphabétique.

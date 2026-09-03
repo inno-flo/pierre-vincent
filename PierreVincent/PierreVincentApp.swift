@@ -326,6 +326,22 @@ struct PierreVincentApp: App {
             }
         }
         #endif
+
+        // Seconde fenêtre, INDÉPENDANTE de la principale : « Affinités CLIP »
+        // ouverte à part, depuis le menu contextuel de son intitulé dans la
+        // sidebar (« Ouvrir dans une fenêtre », voir `ContentView.lien`).
+        // Partage le MÊME conteneur SwiftData que la fenêtre principale — les
+        // deux voient la même base, en temps réel — mais sa propre sélection,
+        // ses propres réglages de curseurs et son propre cycle de vie : la
+        // fermer ne ferme pas l'app tant que la fenêtre principale reste
+        // ouverte, et inversement.
+        #if os(macOS)
+        WindowGroup(id: FenetreAffinitesCLIP.identifiant) {
+            FenetreAffinitesCLIP()
+        }
+        .modelContainer(conteneur)
+        .windowStyle(.titleBar)
+        #endif
     }
 
     #if os(macOS)
@@ -337,3 +353,32 @@ struct PierreVincentApp: App {
     }
     #endif
 }
+
+#if os(macOS)
+/// Contenu de la seconde fenêtre — « Affinités CLIP » en solo, sans sidebar
+/// ni le reste de l'app autour.
+///
+/// **Un simple `@Query`, pas `ContentView` avec une catégorie forcée.**
+/// `ContentView` porte tout l'état de la fenêtre principale (sélection,
+/// import en cours, alertes…) ; dupliquer cette machinerie pour n'en garder
+/// qu'une seule vue aurait été plus fragile que d'aller chercher directement
+/// ce dont `VueAffinitesCLIP` a besoin.
+struct FenetreAffinitesCLIP: View {
+    /// Identifiant de la fenêtre, partagé entre la déclaration de la
+    /// `WindowGroup` et l'appel à `openWindow(id:)` — un seul endroit à tenir
+    /// d'accord si jamais il change.
+    static let identifiant = "affinites-clip"
+
+    @Query private var toutes: [Oeuvre]
+
+    var body: some View {
+        VueAffinitesCLIP(toutes: toutes)
+            // Posé explicitement : cette vue n'est plus sous `ContentView`,
+            // qui pose normalement l'accent de la rubrique une seule fois sur
+            // la colonne de contenu. Sans lui, l'orange par défaut
+            // s'afficherait ici au lieu du bleu ardoise de la Réserve.
+            .environment(\.accentRubrique, Categorie.affinitesClip.accent)
+            .frame(minWidth: 700, minHeight: 500)
+    }
+}
+#endif
