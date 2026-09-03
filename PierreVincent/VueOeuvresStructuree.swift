@@ -15,7 +15,10 @@ import UIKit
 ///    seule Galerie/Liste des œuvres vendues.
 ///
 /// Le contenu respecte le mode d'affichage choisi (liste ou galerie), comme
-/// dans les autres vues.
+/// dans les autres vues. **La Galerie délègue à `VueGalerie`** — le MÊME
+/// composant que le Catalogue de la Réserve (`VueiOS`) — plutôt qu'une
+/// grille dupliquée : les deux Catalogue restent ainsi identiques en rendu
+/// ET en fluidité de défilement (voir CLAUDE.md).
 struct VueOeuvresStructuree: View {
     /// Quand non vide, filtre les ventes sur ce mode de vente (ex. vue « Ventes »).
     let modesVente: [String]
@@ -82,9 +85,6 @@ struct VueOeuvresStructuree: View {
     // c'est un filtre de consultation, pas un réglage.
     @State private var typeRetenu: String?
 
-    // Cible du récapitulatif « Nombre de ventes » (sous-rubriques de mode
-    // de vente seulement — le Catalogue n'a plus de récapitulatif).
-    private let ancreVentes = "ancre-ventes"
     // Tout en haut de la vue — cible du bouton « Retour en haut ».
     private let ancreHaut = "ancre-haut"
 
@@ -221,90 +221,28 @@ struct VueOeuvresStructuree: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    // Tout en haut : cible du bouton « Retour en haut ».
-                    Color.clear.frame(height: 0).id(ancreHaut)
-
-                    // --- 1. Filtre par type, DIRECTEMENT sous le titre ---
-                    // Rendu DANS la zone de défilement, comme le
-                    // récapitulatif : ancré au-dessus, la barre de navigation
-                    // perdrait sa translucidité.
-                    if !typesFiltre.isEmpty {
-                        BandeauTypes(mots: typesFiltre,
-                                     typeRetenu: $typeRetenu,
-                                     nombreAffiche: estModeVentes
-                                                  ? ventes.count
-                                                  : catalogueComplet.count,
-                                     // Catalogue seulement (`!estModeVentes`) :
-                                     // aligne le bord droit du compteur sur
-                                     // celui de `ligneRecap`, juste en dessous.
-                                     // Les sous-rubriques de mode de vente
-                                     // n'ont pas de récapitulatif visible ici
-                                     // (`recapInutile`) : elles gardent le
-                                     // réglage par défaut du composant.
-                                     paddingCompteur: estModeVentes ? 12 : 20)
-                    }
-
-                    // --- 2. Contenu ---
-                    // En mode Ventes (sous-rubrique de mode de vente), le
-                    // récapitulatif à une ligne reste : le titre de
-                    // navigation dit déjà de quoi il s'agit, mais le compte
-                    // garde son utilité hors bandeau de pastilles
-                    // (`recapInutile`).
-                    //
-                    // En mode Catalogue, plus de récapitulatif NI de
-                    // découpage en sections « Ventes »/« Dons » — à la
-                    // demande, simplifié en UNE seule Galerie/Liste
-                    // filtrable par les pastilles (voir `catalogueComplet`).
-                    // Un bienfait de plus : un seul `.scrollTargetLayout()`
-                    // au lieu de deux, ce qui a aussi réglé une boucle de
-                    // défilement (voir CLAUDE.md).
-                    if estModeVentes {
-                        recapitulatif(proxy: proxy)
-                        Color.clear.frame(height: 0)
-                            .padding(.top, 24)
-                            .id(ancreVentes)
-                        contenuSection(ventes, estDon: false)
-                    } else {
-                        contenuCatalogueComplet
-                    }
-                }
-                .padding(.bottom, 30)
-            }
-            // Synchronisation Galerie ↔ Liste — voir `idPositionDefilement`.
-            .scrollPosition(id: $idPositionDefilement, anchor: .top)
-            // Le MÊME `ScrollView` sert aux deux présentations ici : seul son
-            // CONTENU change, et son décalage en POINTS est conservé tel quel
-            // d'un mode à l'autre. Or une rangée de galerie et une ligne de
-            // liste n'ont pas la même hauteur : le même décalage tombe donc
-            // plusieurs dizaines d'œuvres plus loin. On redemande donc
-            // explicitement la position, sur l'ŒUVRE cette fois.
-            //
-            // La cible est lue SYNCHRONIQUEMENT, avant que le changement de
-            // mise en page n'ait pu redéfinir `idPositionDefilement` ; le
-            // défilement, lui, attend que la nouvelle présentation soit posée.
-            .onChange(of: modeAffichage) { _, _ in
-                guard let cible = idPositionDefilement else { return }
-                DispatchQueue.main.async {
-                    proxy.scrollTo(cible, anchor: .top)
-                }
-            }
-            // Suit l'œuvre consultée dans la fiche de détail.
-            .onChange(of: oeuvreADefiler) { _, cible in
-                guard let cible else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(cible, anchor: .center)
-                    }
-                }
-            }
-            // Bouton « Retour en haut » — voir `BoutonRetourHaut.swift`.
-            // Plus restreint au Catalogue : Ventes et modes de vente ont
-            // aussi une présentation Galerie/Liste défilante.
-            .retourEnHaut(visible: $boutonHautVisible) {
-                withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
+        // La Galerie DÉLÈGUE désormais à `VueGalerie` — le MÊME composant
+        // que le Catalogue de la Réserve (`VueiOS`) — au lieu d'une grille
+        // dupliquée : même patron d'en-tête (`entete`, ci-dessous), même
+        // fluidité de défilement déjà éprouvée là-bas. La Liste garde son
+        // propre `ScrollViewReader` local (`liste`), calqué sur celui de
+        // `VueiOS`. Plus de `ScrollView` unique partagé entre les deux
+        // présentations : chacune a désormais la sienne, comme partout
+        // ailleurs dans l'app.
+        Group {
+            if modeAffichage == "icone" {
+                VueGalerie(
+                    oeuvres: estModeVentes ? ventes : catalogueComplet,
+                    selection: $selection,
+                    onOuvrir: { o in selection = [o.id]; detail = o },
+                    onAppuiLong: { o in ouvrirVisionneuse(o) },
+                    espaceZoom: espaceZoom,
+                    nomEnGalerie: nomEnGalerie,
+                    entete: entete,
+                    positionDefilement: $idPositionDefilement
+                )
+            } else {
+                liste
             }
         }
         .background(Color.cremeFond)
@@ -416,116 +354,102 @@ struct VueOeuvresStructuree: View {
         }
     }
 
-    // MARK: En-tête récapitulatif
+    // MARK: En-tête (récapitulatif + bandeau de pastilles)
 
-    /// Ligne « Nombre de ventes » avec son compte — pour les sous-rubriques
-    /// de mode de vente SEULEMENT, appelée seulement quand `estModeVentes`
-    /// (voir `body`). Le Catalogue n'a plus de récapitulatif ni de section
-    /// « Dons » depuis la simplification à une seule Galerie/Liste.
-    ///
-    /// Vrai quand le récapitulatif n'a plus rien à apprendre : le compteur
-    /// du bandeau de pastilles, juste en dessous, donne déjà ce nombre.
-    /// Les sous-rubriques de mode de vente sans bandeau (`typesFiltre` vide)
-    /// gardent leur ligne, faute de quoi le nombre ne s'afficherait plus
-    /// nulle part.
-    private var recapInutile: Bool { !typesFiltre.isEmpty }
+    /// Vrai quand le récapitulatif « Nombre de ventes » a quelque chose à
+    /// dire que le compteur du bandeau de pastilles, juste en dessous, ne
+    /// donne pas déjà — n'existe que pour les sous-rubriques de mode de
+    /// vente (`estModeVentes`), jamais pour le Catalogue, et seulement sans
+    /// bandeau (`typesFiltre` vide).
+    private var afficherRecap: Bool { estModeVentes && typesFiltre.isEmpty }
 
-    @ViewBuilder
-    private func recapitulatif(proxy: ScrollViewProxy) -> some View {
-        if !recapInutile {
-        VStack(spacing: 0) {
-            ligneRecap(titre: "Nombre de ventes", nombre: ventes.count, gras: true) {
-                withAnimation { proxy.scrollTo(ancreVentes, anchor: .top) }
+    /// En-tête commun aux deux présentations (Galerie ET Liste), même
+    /// patron que `VueiOS.entete` (Réserve) : rendu DANS la zone de
+    /// défilement — pas au-dessus, où la barre de navigation perdrait sa
+    /// translucidité — et passé tel quel à `VueGalerie` comme à `liste`.
+    private var entete: AnyView? {
+        guard afficherRecap || !typesFiltre.isEmpty else { return nil }
+        return AnyView(
+            VStack(spacing: 0) {
+                if afficherRecap { recapCell }
+                if !typesFiltre.isEmpty {
+                    BandeauTypes(mots: typesFiltre,
+                                 typeRetenu: $typeRetenu,
+                                 nombreAffiche: estModeVentes
+                                              ? ventes.count
+                                              : catalogueComplet.count,
+                                 // Catalogue (`!estModeVentes`) : 20 pt plutôt
+                                 // que le défaut 12, valeur retenue pour
+                                 // l'alignement visuel avec le bord de
+                                 // l'écran — cette rubrique n'a plus de
+                                 // récapitulatif à aligner en dessous depuis
+                                 // la simplification à une seule Galerie/Liste.
+                                 paddingCompteur: estModeVentes ? 12 : 20)
+                }
             }
+        )
+    }
+
+    /// Ligne « Nombre de ventes » avec son compte — sans action, comme
+    /// `VueiOS.recapCell` : le tap-pour-défiler qu'avait l'ancienne version
+    /// n'a plus de sens, `VueGalerie` possédant son propre `ScrollViewReader`
+    /// interne, hors de portée de cette vue.
+    private var recapCell: some View {
+        HStack {
+            Text("Nombre de ventes")
+                .font(.headline)
+                .foregroundStyle(Color.texteLegende)
+            Spacer()
+            Text("\(ventes.count)")
+                .font(.headline.bold())
+                .foregroundStyle(Color.orangeInternational)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
         .background(Color.fondLegende)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        // Marge basse portée ICI, par la cellule qui en a besoin : c'était le
-        // bandeau qui la tenait quand il suivait, et il le précède désormais.
         .padding(.bottom, 8)
-        }
     }
 
-    private func ligneRecap(titre: String, nombre: Int, gras: Bool = true,
-                            action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Text(titre)
-                    .font(.headline)
-                    .fontWeight(gras ? nil : .regular)
-                    .foregroundStyle(Color.texteLegende)
-                Spacer()
-                Text("\(nombre)")
-                    .font(.headline)
-                    .fontWeight(gras ? .bold : .regular)
-                    .foregroundStyle(Color.orangeInternational)
+    /// Présentation Liste — même patron que `VueiOS.liste` (Réserve) : un
+    /// `ScrollViewReader` local et propre à cette présentation (Galerie a le
+    /// sien, interne à `VueGalerie`), `entete` en tête de la zone de
+    /// défilement, puis les lignes.
+    private var liste: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                // Tout en haut : cible du bouton « Retour en haut ».
+                Color.clear.frame(height: 0).id(ancreHaut)
+                if let entete {
+                    entete
+                } else {
+                    // Sans en-tête, la première ligne se collerait au haut de
+                    // la zone de défilement (voir le piège des marges portées
+                    // par un voisin, CLAUDE.md).
+                    Color.clear.frame(height: 8)
+                }
+                listeLignes(estModeVentes ? ventes : catalogueComplet)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Catalogue : Ventes et Dons réunis, sans découpage en sections — à la
-    /// demande, pour n'avoir qu'une seule Galerie/Liste, triable par les
-    /// pastilles de type. Galerie ou liste selon le mode d'affichage, dans
-    /// un SEUL conteneur paresseux (un seul `.scrollTargetLayout()`) : deux
-    /// conteneurs séparés dans le même `ScrollView` avaient fait boucler
-    /// `.scrollPosition(id:)` en passant de l'un à l'autre (voir CLAUDE.md).
-    @ViewBuilder
-    private var contenuCatalogueComplet: some View {
-        if catalogueComplet.isEmpty {
-            Text("Aucune entrée")
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-        } else if modeAffichage == "icone" {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)], spacing: 16) {
-                ForEach(catalogueComplet) { o in carte(o) }
+            .background(Color.cremeFond)
+            // Synchronisation Galerie ↔ Liste — voir `idPositionDefilement`.
+            .scrollPosition(id: $idPositionDefilement, anchor: .top)
+            // Suit l'œuvre consultée dans la fiche de détail.
+            .onChange(of: oeuvreADefiler) { _, cible in
+                guard let cible else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(cible, anchor: .center)
+                    }
+                }
             }
-            // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
-            .scrollTargetLayout()
-            // `.padding(16)`, PAS `.padding(.horizontal, 16)` seul : c'est
-            // le même padding que `VueGalerie` pose sur sa propre grille
-            // (Catalogue de la Réserve). Sans le padding du haut, les
-            // pastilles retombaient directement sur la première rangée de
-            // vignettes — plus serré que la Réserve, qui garde 16 pt en
-            // plus des 8 pt internes au bas de `BandeauTypes`.
-            .padding(16)
-        } else {
-            LazyVStack(spacing: 8) {
-                ForEach(catalogueComplet) { o in ligneListe(o) }
+            // Bouton « Retour en haut » — voir `BoutonRetourHaut.swift`.
+            .retourEnHaut(visible: $boutonHautVisible) {
+                withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
-            .scrollTargetLayout()
-            // Même réglage que le mode Liste de `VueiOS` (Réserve) : 16 pt
-            // horizontaux, 8 pt en haut — pas les mêmes valeurs qu'en
-            // Galerie, la liste a déjà son propre rythme vertical.
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
         }
     }
-
-    /// Contenu d'une section : galerie ou liste selon le mode d'affichage.
-    /// Utilisée pour le Catalogue seulement quand il n'a QU'UNE section
-    /// (mode Ventes) — le cas à deux sections passe par
-    /// `contenuCatalogueComplet`, voir `body`.
-    @ViewBuilder
-    private func contenuSection(_ liste: [Oeuvre], estDon: Bool) -> some View {
-        if liste.isEmpty {
-            Text("Aucune entrée")
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-        } else if modeAffichage == "icone" {
-            grilleVignettes(liste)
-        } else {
-            listeLignes(liste)
-        }
-    }
-
-    /// Grille de vignettes (2 colonnes), style « polaroïd » comme la galerie.
 
     // MARK: Visionneuse
 
@@ -567,98 +491,26 @@ struct VueOeuvresStructuree: View {
         }
     }
 
-    private func grilleVignettes(_ liste: [Oeuvre]) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
-                            GridItem(.flexible(), spacing: 12)], spacing: 16) {
-            ForEach(liste) { o in
-                carte(o)
-            }
-        }
-        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
-        .scrollTargetLayout()
-        .padding(.horizontal, 16)
-    }
-
-    private func carte(_ o: Oeuvre) -> some View {
-        VStack(spacing: 0) {
-            ZStack {
-                Color.gray.opacity(0.12)
-                VignetteCacheeFlexible(nom: o.photoNom, coteSource: 240)
-            }
-            .frame(maxWidth: .infinity)
-            .aspectRatio(1, contentMode: .fit)
-            .clipped()
-
-            VStack(alignment: .leading, spacing: 5) {
-                if nomEnGalerie {
-                    // ESSAI VISUEL : `.headline` garde sa taille, plus sa
-                    // graisse — même vignette que `VueGalerie.swift`, à
-                    // tenir d'accord avec elle.
-                    Text(ligneNom(o).isEmpty ? " " : ligneNom(o))
-                        .font(.headline)
-                        .fontWeight(.regular)
-                        .foregroundStyle(Color.texteLegende)
-                        .lineLimit(1)
-                }
-                HStack {
-                    if aUnPrix(o) {
-                        PrixText(o.prix)
-                            .foregroundStyle(Color.orangeInternational)
-                        Spacer()
-                        Text(o.dimensions)
-                            .foregroundStyle(Color.texteLegende.opacity(0.6))
-                    } else {
-                        // Dons : les dimensions prennent la place du prix,
-                        // alignées à gauche comme le destinataire au-dessus.
-                        Text(o.dimensions)
-                            .foregroundStyle(Color.texteLegende.opacity(0.6))
-                        Spacer()
-                    }
-                }
-                .font(.subheadline)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
-            .background(Color.fondLegende)
-        }
-        .background(Color.fondLegende)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                // Même filet de sélection que `VueGalerie` : orange et 3 px
-                // sur la vignette retenue, gris et 1 px sinon. Ces vues ont
-                // leur propre rendu de vignette et l'avaient perdu.
-                .strokeBorder(selection.contains(o.id)
-                              ? Color.orangeInternational : Color.filetVignette,
-                              lineWidth: selection.contains(o.id) ? 3 : 1)
-        )
-        .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
-        .contentShape(Rectangle())
-        // Cible de défilement (proxy.scrollTo).
-        .id(o.id)
-        // Sur iPhone : un simple tap ouvre la fiche de détail.
-
-        // Source de la transition de zoom vers la visionneuse.
-        .matchedTransitionSource(id: o.id, in: espaceZoom)
-        // Tap et appui prolongé pris par une vue UIKit en overlay :
-        // elle seule peut prévenir d'un tap sur l'aperçu du menu contextuel,
-        // le geste de Photos, que SwiftUI n'expose pas.
-        .overlay(InteractionApercu(
-            oeuvre: o,
-            onTap: { selection = [o.id]; detail = o },
-            onAfficher: { ouvrirVisionneuse(o) }))
-    }
-
-    /// Liste de lignes compactes (vignette + informations).
+    /// Liste de lignes compactes (vignette + informations). Gère elle-même
+    /// le cas vide — auparavant à la charge de l'appelant (`contenuSection`,
+    /// supprimée avec la délégation de la Galerie à `VueGalerie`).
+    @ViewBuilder
     private func listeLignes(_ liste: [Oeuvre]) -> some View {
-        // Lazy : ne construit que les lignes visibles à l'écran.
-        LazyVStack(spacing: 8) {
-            ForEach(liste) { o in ligneListe(o) }
+        if liste.isEmpty {
+            Text("Aucune entrée")
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
+        } else {
+            // Lazy : ne construit que les lignes visibles à l'écran.
+            LazyVStack(spacing: 8) {
+                ForEach(liste) { o in ligneListe(o) }
+            }
+            // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
+            .scrollTargetLayout()
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 30)
         }
-        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
-        .scrollTargetLayout()
-        .padding(.horizontal, 16)
     }
 
     /// Une ligne de la présentation Liste — extraite de `listeLignes` pour
