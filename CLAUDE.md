@@ -538,6 +538,147 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 - La colonne « Mode de vente » du PDF n'a pas d'équivalent dans le modèle (non importée
   sauf décision d'étendre le modèle).
 
+## Affinités — rapprochement des œuvres par style et couleurs
+
+**EN COURS, sur la branche `affinites-oeuvres`** (poussée, pas encore
+fusionnée dans `main`). Deux rubriques dans la Réserve, macOS et iOS :
+« Affinités » (moteur maison) et « Affinités CLIP » (bibliothèque
+spécialisée), posées côte à côte pour comparer la qualité de leurs
+regroupements — pas encore tranché en faveur de l'une ou de l'autre.
+
+Le besoin : rapprocher les œuvres de la Réserve par leur **facture et leur
+gamme de couleurs**, indépendamment ou non de leur genre (Tableau/Dessin) —
+pas par leur sujet, ce que ferait un moteur de reconnaissance d'image
+générique.
+
+### Deux moteurs, délibérément séparés
+
+- **Affinités** (`SignatureOeuvre.swift`) : trois descripteurs calculés en
+  local avec les seuls frameworks Apple (Vision, ImageIO, Accelerate,
+  **aucune dépendance tierce**) —
+  1. un **histogramme de couleurs en espace Lab** (perceptuel, contrairement
+     au RVB), avec répartition sur les cases voisines pour rester continu
+     autour d'une frontière ;
+  2. trois **mesures de matière** (contraste, densité de contours par
+     Sobel, granularité par écart au flou local), calculées sur la seule
+     clarté — donc aveugles à la couleur ET au sujet, ce qui les rend
+     capables de rapprocher deux œuvres de teintes opposées mais de même
+     facture (vérifié : 0,003 de distance sur un test synthétique conçu
+     pour ça, contre 1,0 en distance de couleur) ;
+  3. l'**empreinte Vision** (`GenerateImageFeaturePrintRequest`, macOS 15+),
+     qui apporte la composition générale — la seule des trois composantes
+     encore marquée par le sujet, d'où son poids minoritaire
+     (`DistanceSignature.partEmpreinte = 0.4`) dans le versant « style ».
+  Une distance par composante, combinées par un curseur Couleur ↔ Style
+  (`DistanceSignature.totale(_:_:poidsCouleur:)`).
+- **Affinités CLIP** (`AffinitesCLIP.swift`) : **MobileCLIP-S0**, converti
+  en Core ML par Apple, téléchargé depuis `apple/coreml-mobileclip`
+  (Hugging Face). Une seule distance (cosinus sur l'embedding 512D,
+  normalisé). Volontairement gardé À PART de `SignatureOeuvre` — mélanger
+  les deux aurait masqué la différence qu'on cherche justement à voir.
+  - **Licence RESTREINTE, à ne pas oublier** : les poids sont sous la
+    licence recherche d'Apple (« Apple Machine Learning Research Model
+    License »), qui exclut explicitement « tout développement de produit »
+    et « tout produit ou service commercial ». Bon pour cet essai de
+    comparaison ; à reconsidérer avant un usage durable dans l'app
+    distribuée — voir `PierreVincent/ModeleCLIP/README.md`.
+  - **Le modèle (23 Mo) n'est PAS versionné** : exclu par `.gitignore`,
+    récupérable via `PierreVincent/ModeleCLIP/telecharger.sh`. Sans lui,
+    la rubrique affiche un état « Modèle CLIP non installé » au lieu de
+    planter.
+  - **Piège rencontré** : la classe Swift que Xcode génère automatiquement
+    pour le `.mlpackage` hérite du réglage du projet
+    `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, ce qui isole ses méthodes
+    au fil principal — inutilisable depuis l'acteur dédié à l'inférence
+    (`MoteurCLIP`). Contournement : piloter `MLModel` directement (type
+    système, non concerné par ce réglage), reconstruire l'entrée à la main
+    plutôt que d'utiliser la classe générée.
+
+### Un algorithme de regroupement, partagé par les deux moteurs
+
+`Regroupement.partitionner`/`.ordonnerGenerique`/`.prochesGenerique`
+(`Affinites.swift`) — voisins mutuels réciproques puis seuil,
+**déterministe** (contrairement à un k-moyennes). Fonctions génériques sur
+une distance quelconque (`(Int, Int) -> Float`), réutilisées telles quelles
+par `RegroupementCLIP` (`AffinitesCLIP.swift`). **Choix délibéré** : la
+comparaison entre les deux vues doit porter sur la seule qualité de la
+distance, pas sur deux façons de trancher les familles. Chaque famille
+porte une **cohésion** (distance moyenne au médoïde) — le seul chiffre
+directement comparable d'un moteur à l'autre.
+
+Le genre (Tableau/Dessin) est une **CONDITION sur les liens** (case « Même
+genre » dans l'interface), jamais un ingrédient de la distance : la
+distance ne mesure que le style et les couleurs dans les deux cas, avec ou
+sans la case cochée.
+
+### Signatures hors base, indexées par photo
+
+Rangées dans `Application Support/Pierre-Vincent/Signatures/`
+(`signatures.json` / `signatures_clip.json`), **pas dans le modèle
+SwiftData** : un vecteur par œuvre alourdirait le `.pvbase`, déjà proche de
+sa limite. Indexées par **nom de fichier photo**, pas par identifiant
+d'œuvre — c'est ce qui rend l'analyse relançable sans tout recalculer :
+une photo remplacée ou recompressée change de nom, son ancienne signature
+ne correspond plus à rien et se refait d'elle-même ; ajouter deux ou trois
+œuvres et relancer ne coûte que deux ou trois calculs. Un numéro de version
+par signature invalide tout d'un coup si la façon de mesurer change.
+
+### Deux vues par rubrique, une par plateforme
+
+`VueAffinites`/`VueAffinitesCLIP` (macOS) et
+`VueAffinitesiOS`/`VueAffinitesCLIPiOS` (iPhone) — fichiers séparés, et non
+une vue partagée avec des `#if` internes : trois différences sont
+STRUCTURELLES, pas cosmétiques —
+- le bandeau de réglages doit défiler AVEC le contenu sur iOS
+  (`.safeAreaInset` y casserait la translucidité de la barre de
+  navigation, piège déjà rencontré pour le récapitulatif de `VueiOS`) ;
+- polices sémantiques sur iOS (Dynamic Type), figées en points sur macOS ;
+- ouverture d'une œuvre via `VisionneuseOeuvres` (iOS) contre
+  `VisionneusePanneau` (macOS, AppKit).
+Sur iPhone, **simplification assumée** : un tap simple ouvre directement la
+visionneuse, sans passer par le menu contextuel à aperçu (`InteractionApercu`)
+qu'utilisent les vignettes de Galerie ailleurs — ce mécanisme sert surtout à
+la bascule des favoris, sans objet ici. L'appui prolongé garde un rôle :
+« Voir les œuvres proches », via un `.contextMenu` natif.
+
+Le moteur lui-même (`SignatureOeuvre.swift`, `Affinites.swift`,
+`AffinitesCLIP.swift`, `ProgressionTache.swift`) ne comporte AUCUN `#if` —
+seules les vues varient. `ProgressionTache.swift` existe à part
+(anciennement dans `ImportPhotos.swift`, qui est macOS seulement) pour
+rester partagé par l'import de photos ET les deux analyses, sur les deux
+plateformes ; la classe `ProgressionImport` porte désormais un `libelle`
+(« Import », « Analyse », « Analyse CLIP ») qui les distingue à l'écran.
+
+- **Piège corrigé — écran qui clignotait pendant une analyse (iOS).** La
+  clé qui pilote `.task(id:)` (`cleLot`) lisait
+  `BanqueSignatures.partagee.signatures.count` en direct dans
+  `VueAffinitesiOS` — une valeur `@Observable` qui change à CHAQUE photo
+  pendant l'analyse. Chaque incrément relançait `preparerLot()`, d'où
+  l'oscillation entre le contenu et l'état de préparation. Corrigé en
+  s'alignant sur les trois autres vues : un compteur
+  (`AnalyseAffinites.cleVersionBanque` / `AnalyseAffinitesCLIP.cleVersionBanque`,
+  `@AppStorage`) incrémenté UNE SEULE FOIS par analyse **terminée**, jamais
+  par photo. **Règle à retenir** : ne jamais lire une propriété
+  `@Observable` qui varie en continu dans une clé de `.task(id:)` ou tout
+  autre contexte suivi par SwiftUI.
+  - Ajouté dans la foulée : un écran de progression plein écran
+    (`progressionEnCours`, dans les deux vues iOS), prioritaire sur tout le
+    reste tant que `ProgressionImport.partagee.enCours` est vrai — et non
+    sur le plus grossier `analyseEnCours`, qui reste vrai même lors d'un
+    aller-retour à vide (« déjà tout analysé »).
+
+### Fenêtre indépendante (macOS)
+
+« Ouvrir dans une fenêtre » (menu contextuel de l'intitulé « Affinités
+CLIP » dans la sidebar) ouvre une **seconde `WindowGroup`**
+(`PierreVincentApp.swift`), pour comparer les deux moteurs côte à côte sans
+changer de rubrique dans la fenêtre principale. Partage le MÊME conteneur
+SwiftData (`.modelContainer(conteneur)` posé sur les deux scènes) — les
+deux fenêtres voient la même base, en temps réel. `FenetreAffinitesCLIP`
+pose explicitement l'accent bleu ardoise (`Categorie.affinitesClip.accent`)
+: hors de `ContentView`, rien d'autre ne le ferait, et l'orange par défaut
+s'afficherait à la place.
+
 ## Pièges déjà rencontrés (à ne pas refaire)
 
 - **Préchauffage des vignettes au lancement : ESSAYÉ, ABANDONNÉ.** Un cache de
