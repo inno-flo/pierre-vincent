@@ -2408,6 +2408,17 @@ JavaScript, inexploitables par extraction) :
     rubriques (Tableaux/Dessins de la Réserve) tant que le drapeau est à
     `false` — sans ce garde-fou, ↑↓ aurait pu s'arrêter sur une rubrique
     invisible à l'écran.
+  - **ESSAI, DEUX plateformes — icônes retirées des trois sous-rubriques de
+    « Modes de vente »** (Exposition, Vente aux enchères, Vente privée…),
+    via `afficherIconesModesDeVente` dans `TriEtTotaux.swift` et
+    `Categorie.estModeVenteIndividuel` (distinct d'`estVenteRealisee`, qui
+    couvre AUSSI `.ventesRealisees` elle-même — seules les sous-rubriques
+    du mode sont concernées, pas « Ventes »). L'icône de l'EN-TÊTE « Modes
+    de vente » (voir plus haut, Typographie) n'est pas concernée : deux
+    essais distincts, deux drapeaux distincts. Sur iOS, la ligne bascule
+    d'un `Label` (icône + texte) à un `Text` nu plutôt que de garder un
+    `Label` à icône vide, qui aurait réservé la place de l'icône. `true`
+    restaure les icônes.
 - **Ordre de « Ventes et dons » : Dons remonté AVANT Ventes et Modes de
   vente**, sur les DEUX plateformes — Catalogue, (Supports), **Dons**,
   Ventes, Modes de vente, Synthèse. `contenuVentesEtDons` (ordre partagé

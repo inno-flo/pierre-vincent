@@ -147,6 +147,13 @@ let afficherPastillesVentesEtDons = false
 /// l'occurrence de la Réserve. `true` la restaure (`ContentView.swift`).
 let afficherSupportsSidebarReserve = false
 
+/// Icône des trois sous-rubriques de « Modes de vente » (Exposition, Vente
+/// aux enchères, Vente privée…) dans la sidebar : essai, masquées sans
+/// supprimer le code. `true` les restaure (`ContentView.swift`, `lien()`).
+/// Ne concerne QUE ces rubriques individuelles — l'icône de l'en-tête
+/// « Modes de vente » lui-même n'est pas concernée.
+let afficherIconesModesDeVente = false
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

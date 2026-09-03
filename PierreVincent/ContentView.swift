@@ -427,6 +427,15 @@ enum Categorie: Hashable, Identifiable {
         }
     }
 
+    /// Vrai pour une sous-rubrique de mode de vente PRÉCISE (`.modeVente`),
+    /// FAUX pour `.ventesRealisees` elle-même — distinct de `estVenteRealisee`
+    /// ci-dessus, qui couvre les deux. Sert uniquement à masquer l'icône de
+    /// CES rubriques dans la sidebar (essai, voir `afficherIconesModesDeVente`).
+    var estModeVenteIndividuel: Bool {
+        if case .modeVente = self { return true }
+        return false
+    }
+
     /// Accent de la rubrique : **bleu ardoise dans la Réserve**, orange
     /// ailleurs. La couleur dit d'un coup d'œil dans quelle section on se
     /// trouve, sans avoir à lire le titre.
@@ -1534,15 +1543,19 @@ struct ContentView: View {
             #if os(macOS)
             // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
             HStack(spacing: 6) {
-                Image(systemName: cat.symbole)
-                    // Favoris garde SA teinte même sélectionnée, là où les
-                    // autres rubriques passent au blanc de la sélection : sa
-                    // couleur propre est ce qui la signale comme rubrique
-                    // isolée. `cat.accent` et non la couleur en dur — la
-                    // teinte se change alors à un seul endroit.
-                    .foregroundStyle(cat == .favoris ? cat.accent : categorie == cat
-                                     ? Color.texteSelectionSidebarMac
-                                     : cat.accent)
+                // ESSAI : icône retirée pour les trois sous-rubriques de
+                // mode de vente — voir `afficherIconesModesDeVente`.
+                if afficherIconesModesDeVente || !cat.estModeVenteIndividuel {
+                    Image(systemName: cat.symbole)
+                        // Favoris garde SA teinte même sélectionnée, là où les
+                        // autres rubriques passent au blanc de la sélection : sa
+                        // couleur propre est ce qui la signale comme rubrique
+                        // isolée. `cat.accent` et non la couleur en dur — la
+                        // teinte se change alors à un seul endroit.
+                        .foregroundStyle(cat == .favoris ? cat.accent : categorie == cat
+                                         ? Color.texteSelectionSidebarMac
+                                         : cat.accent)
+                }
                 // Rubrique sélectionnée : libellé blanc et gras, conformément
                 // au contraste de la sélection native affichée par macOS.
                 // 13 pt = NSFont.systemFontSize, la taille standard d'un
@@ -1588,11 +1601,19 @@ struct ContentView: View {
             }
             #else
             HStack(spacing: 6) {
-                Label {
+                // ESSAI : icône retirée pour les trois sous-rubriques de
+                // mode de vente — voir `afficherIconesModesDeVente`. Un
+                // simple `Text`, et non un `Label` à icône vide : ce dernier
+                // réserverait quand même la place de l'icône.
+                if afficherIconesModesDeVente || !cat.estModeVenteIndividuel {
+                    Label {
+                        Text(cat.titre)
+                    } icon: {
+                        Image(systemName: cat.symbole)
+                            .foregroundStyle(cat.accent)
+                    }
+                } else {
                     Text(cat.titre)
-                } icon: {
-                    Image(systemName: cat.symbole)
-                        .foregroundStyle(cat.accent)
                 }
                 if let n = compteurPourCategorie(cat) {
                     Spacer()
