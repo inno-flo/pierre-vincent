@@ -62,15 +62,30 @@ struct BoutonRetourHaut: View {
 
 /// Ajoute à un `ScrollView` le suivi de défilement et le bouton flottant
 /// « Retour en haut » : apparaît après un défilement de deux fois la
-/// hauteur visible, positionné à la limite haute du TIERS BAS de l'écran,
-/// côté droit — calculé via un `GeometryReader`, pas un simple padding
-/// depuis le coin.
+/// hauteur visible, positionné à la moitié du TIERS BAS de l'écran, centré
+/// horizontalement.
+///
+/// **Pas de `GeometryReader` imbriqué dans l'`.overlay`** : un premier
+/// essai en posait un pour mesurer la hauteur du conteneur au moment de
+/// placer le bouton — source d'une boucle de défilement dans la vue
+/// Catalogue (la section Dons reprenait du début avant d'atteindre la fin
+/// de la liste). Un `GeometryReader` posé en `.overlay` d'un `ScrollView`
+/// perturbe visiblement le calcul interne de la position de défilement sur
+/// iOS. La hauteur du conteneur, déjà connue via `.onScrollGeometryChange`,
+/// est donc mémorisée dans un `@State` et réutilisée par un simple
+/// `.padding(.top:)`, sans second lecteur de géométrie.
 private struct RetourEnHautModifier: ViewModifier {
     @Binding var visible: Bool
     let action: () -> Void
+    @State private var hauteurConteneur: CGFloat = 0
 
     func body(content: Content) -> some View {
         content
+            .onScrollGeometryChange(for: CGFloat.self) { geometrie in
+                geometrie.containerSize.height
+            } action: { _, nouvelle in
+                hauteurConteneur = nouvelle
+            }
             .onScrollGeometryChange(for: Bool.self) { geometrie in
                 geometrie.contentOffset.y > geometrie.containerSize.height * 2
             } action: { _, doitAfficher in
@@ -78,18 +93,10 @@ private struct RetourEnHautModifier: ViewModifier {
                     visible = doitAfficher
                 }
             }
-            .overlay {
+            .overlay(alignment: .top) {
                 if visible {
-                    // Centré horizontalement — accessible de la même façon
-                    // pour droitiers et gauchers, plutôt que collé à un
-                    // bord. Verticalement, à la MOITIÉ du tiers bas de
-                    // l'écran (hauteur * 5/6), pas à sa limite haute
-                    // (hauteur * 2/3, l'ancien réglage).
-                    GeometryReader { geo in
-                        BoutonRetourHaut(action: action)
-                            .position(x: geo.size.width / 2,
-                                      y: geo.size.height * 5 / 6)
-                    }
+                    BoutonRetourHaut(action: action)
+                        .padding(.top, hauteurConteneur * 5 / 6)
                 }
             }
     }
