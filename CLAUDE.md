@@ -2509,11 +2509,17 @@ JavaScript, inexploitables par extraction) :
     trop peu visible. Un disque plein accent a ensuite été comparé côte à
     côte avec le cercle sombre actuel ; le disque plein a été retiré, le
     cercle sombre retenu seul.
-  - **Position calculée, pas un simple padding depuis un coin** : un
-    `GeometryReader` posé dans l'`.overlay` lit la hauteur du `ScrollView`,
-    et `.position(x:, y:)` en dérive la position du bouton — pas une marge
-    fixe depuis un bord. Hauteur passée de `hauteur * 2/3` (limite haute du
-    tiers bas) à **`hauteur * 5/6`** (MILIEU du tiers bas), à la demande.
+  - **Position calculée, pas un simple padding depuis un coin.** Premier
+    essai : un `GeometryReader` posé DANS l'`.overlay` pour lire la hauteur
+    du conteneur, avec `.position(x:, y:)`. **ABANDONNÉ** — voir plus bas,
+    « boucle de défilement dans Catalogue » : un `GeometryReader` imbriqué
+    dans l'`.overlay` d'un `ScrollView` perturbait le calcul interne de la
+    position de défilement sur iOS. Remplacé par une hauteur mémorisée dans
+    un `@State` via un second `.onScrollGeometryChange` (celui déjà utilisé
+    pour la visibilité du bouton), et un simple `.padding(.top:)` sur un
+    `.overlay(alignment: .top)` — plus aucun `GeometryReader` sur le
+    `ScrollView`. Hauteur passée de `hauteur * 2/3` (limite haute du tiers
+    bas) à **`hauteur * 5/6`** (MILIEU du tiers bas), à la demande.
   - **Centré horizontalement** (`x: largeur / 2`), et non collé à un bord —
     d'abord posé à droite, puis recentré à la demande pour rester accessible
     de la même façon aux droitiers et aux gauchers.
@@ -2551,6 +2557,37 @@ JavaScript, inexploitables par extraction) :
     puis `.drawingGroup()` fige le tout dans une texture Metal fabriquée
     une seule fois : le bouton ne change pas pendant le défilement, seul le
     contenu en dessous bouge, donc plus rien à recalculer image par image.
+  - **Boucle de défilement dans le Catalogue de « Ventes et dons »,
+    RÉSOLUE — DEUX causes, une piste fausse avant la bonne.**
+    Symptôme : passé l'intitulé « Dons », le défilement repartait du début
+    de cette section au bout d'une quinzaine d'œuvres, en boucle — jamais
+    moyen d'atteindre la fin de la vue. Absent des trois autres vues qui
+    ont pourtant le même bouton (`VueGalerie`, `VueDonsStructuree`,
+    `VueiOS`), et de la sous-rubrique Ventes de cette même vue.
+    1. **Piste fausse, corrigée quand même** : le `GeometryReader` imbriqué
+       dans l'`.overlay` du bouton (voir plus haut, « Position calculée »)
+       a été retiré en premier réflexe — un vrai correctif dans l'absolu,
+       mais qui n'a PAS réglé la boucle : le symptôme persistait à
+       l'identique une fois ce changement fait et testé.
+    2. **Cause réelle** : `VueOeuvresStructuree` est la SEULE des quatre
+       vues à empiler DEUX sections l'une sous l'autre dans le MÊME
+       `ScrollView` (Ventes puis Dons), chacune avec sa propre grille ou
+       liste — donc DEUX `.scrollTargetLayout()` distincts. Les trois
+       autres vues, et la sous-rubrique Ventes seule
+       (`estModeVentes == true`), n'en ont jamais qu'UN SEUL. Deux
+       conteneurs `.scrollTargetLayout()` dans le même `ScrollView`, gouvernés par
+       le même `.scrollPosition(id:)`, se disputent le suivi de position —
+       d'où la boucle en franchissant la frontière entre les deux.
+    3. **Correctif** : Ventes et Dons sont désormais dans une SEULE grille
+       (`grilleCatalogueComplet`) ou SEULE liste (`listeCatalogueComplete`),
+       chacune avec DEUX `Section` (une par titre) mais un SEUL
+       `.scrollTargetLayout()` posé sur le conteneur englobant. `carte(_:)`
+       est réutilisée telle quelle ; `ligneListe(_:)` a été extraite de
+       `listeLignes` pour la même raison — une ligne appelable depuis les
+       deux `Section` d'une même `LazyVStack`. `contenuSection`/
+       `grilleVignettes`/`listeLignes` restent utilisées telles quelles
+       pour le cas à UNE SEULE section (sous-rubriques de mode de vente),
+       qui n'a jamais eu ce problème.
 
 - **Piège : `init` explicite et initialiseur mémberwise.** `VueiOS` et
   `VueOeuvresStructuree` en déclarent un ; ajouter une propriété ne suffit
