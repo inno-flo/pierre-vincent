@@ -1679,6 +1679,16 @@ s'afficherait à la place.
   Règle : **l'en-tête de section doit être plus PETIT que les libellés qu'il
   regroupe** (11 < 13). Le code imposait 14 pt aux en-têtes, donc plus gros
   que les libellés — hiérarchie visuelle inversée par rapport à Mail.
+  - **EXCEPTION délibérée — en-tête « Genres » de la Réserve, macOS
+    SEULEMENT** (demande explicite) : icône pinceau (`paintbrush.pointed`,
+    bleu ardoise) + libellé au style d'un LIBELLÉ de rubrique (13 pt,
+    `textePrincipal`, sans graisse) plutôt que le style gris 11 pt des
+    autres en-têtes de sous-groupe. Enfreint donc sciemment la règle
+    ci-dessus, ICI SEULEMENT — ne pas la généraliser aux autres en-têtes de
+    sous-groupe (Supports, Modes de vente) sans nouvelle demande. iOS n'est
+    pas concerné, `#if os(macOS)` : la version iPhone garde le style natif
+    gris sans icône. Le libellé lui-même (« Genres », pluriel) est
+    identique aux deux plateformes — seul le STYLE diverge.
   - *En-têtes* : **ne pas imposer de police NI de graisse**.
     `listStyle(.sidebar)` fournit lui-même l'apparence standard (petit corps,
     gris, graisse normale).

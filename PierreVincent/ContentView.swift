@@ -1444,7 +1444,25 @@ struct ContentView: View {
         } label: {
             // Ex-« Thèmes ». Le champ sous-jacent (`theme`, `themesPresents`)
             // garde son nom — seul CE libellé de sidebar est renommé.
+            #if os(macOS)
+            // ESSAI VISUEL, macOS SEULEMENT (demande explicite) : icône
+            // pinceau + libellé au même style que les rubriques (13 pt,
+            // `textePrincipal`, sans graisse), et non le style gris 11 pt
+            // habituel des en-têtes de sous-groupe — déroge donc, ICI
+            // SEULEMENT et sciemment, à la règle « l'en-tête doit rester
+            // plus petit que les libellés qu'il regroupe » (voir plus haut,
+            // Typographie). iOS n'est pas concerné : toujours « Genres »,
+            // gris, sans icône, style natif de sous-groupe.
+            HStack(spacing: 6) {
+                Image(systemName: "paintbrush.pointed")
+                    .foregroundStyle(Color.bleuArdoise)
+                Text("Genres")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textePrincipal)
+            }
+            #else
             Text("Genres").foregroundStyle(.secondary)
+            #endif
         }
     }
 
