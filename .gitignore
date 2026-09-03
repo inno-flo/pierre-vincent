@@ -15,3 +15,8 @@ DerivedData/
 # chaque version de chaque binaire : versionner des photos ferait grossir le
 # dépôt de façon irréversible, pour des fichiers qui ne sont pas du code.
 Images exportées/
+
+# Modèle CLIP (Core ML) — voir PierreVincent/ModeleCLIP/README.md : licence
+# recherche uniquement, et 23 Mo de poids qui n'ont pas leur place dans
+# l'historique Git. Le script telecharger.sh le récupère à la demande.
+PierreVincent/ModeleCLIP/mobileclip_s0_image.mlpackage/

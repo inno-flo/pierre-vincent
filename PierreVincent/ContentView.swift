@@ -34,6 +34,10 @@ enum Categorie: Hashable, Identifiable {
     /// (`SignatureOeuvre`, `Affinites`), ne comporte aucun `#if` — le portage
     /// se réduira à écrire la vue.
     case affinites
+    /// Même rubrique, mais regroupée par **CLIP** (MobileCLIP-S0, Apple, Core
+    /// ML) au lieu du moteur maison — posée à côté pour comparer les deux à
+    /// l'écran. Voir `VueAffinitesCLIP.swift`.
+    case affinitesClip
     /// Sous-catégorie de la Réserve : un thème précis. Même principe que
     /// `modeVente` — la valeur est portée par le cas, ce qui permet un nombre
     /// variable de rubriques déduites des données (voir `themesPresents`).
@@ -60,6 +64,7 @@ enum Categorie: Hashable, Identifiable {
         case .reserveCollection: return "Collection personnelle"
         case .favoris:          return "Favoris"
         case .affinites:        return "Affinités"
+        case .affinitesClip:    return "Affinités CLIP"
         // Rendu au pluriel — et « Portraits » pour « Personnage » — comme les
         // modes de vente plus bas : la valeur STOCKÉE sur l'œuvre ne change
         // pas, c'est elle que voient l'éditeur, l'inspecteur et le filtre.
@@ -112,6 +117,7 @@ enum Categorie: Hashable, Identifiable {
         case .favoris:          return "star"
         // Le geste de rapprocher : une baguette qui trie toute seule.
         case .affinites:        return "wand.and.rays"
+        case .affinitesClip:    return "wand.and.stars"
         case .reserveTheme:     return "paintbrush.pointed"
         case .synthese:         return "chart.bar.doc.horizontal"
         // Les trois sous-rubriques de « Modes de vente » — et tout mode inédit
@@ -145,6 +151,7 @@ enum Categorie: Hashable, Identifiable {
         // aucun filtre de données, elle change seulement la façon de PRÉSENTER
         // les mêmes œuvres.
         case .affinites:        return .reserve
+        case .affinitesClip:    return .reserve
         // Même feuille que le reste de la Réserve : c'est le THÈME qui
         // restreint, pas la feuille.
         case .reserveTheme:     return .reserve
@@ -171,7 +178,7 @@ enum Categorie: Hashable, Identifiable {
             return nil
         // Vue de PRÉSENTATION, sans liste ni éditeur : une œuvre créée ici
         // n'aurait pas de signature et n'apparaîtrait dans aucune famille.
-        case .affinites:
+        case .affinites, .affinitesClip:
             return nil
         case .reserveTheme:
             return nil
@@ -214,7 +221,7 @@ enum Categorie: Hashable, Identifiable {
         case .favoris:
             return []
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection, .affinites:
+             .reserveTheme, .reserveCollection, .affinites, .affinitesClip:
             return statutsReserve
         // Ventes et ses sous-catégories : les œuvres VENDUES seulement — les
         // dons ont leur propre rubrique.
@@ -429,7 +436,7 @@ enum Categorie: Hashable, Identifiable {
     var accent: Color {
         switch self {
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection, .affinites: return .bleuArdoise
+             .reserveTheme, .reserveCollection, .affinites, .affinitesClip: return .bleuArdoise
         case .favoris:              return .taupeChaud
         default:                 return .orangeInternational
         }
@@ -474,6 +481,7 @@ struct ContentView: View {
     @AppStorage("actionFichierSignal") private var actionFichierSignal = 0
     @State private var messageAffinites: String?
     @State private var analyseAffinitesEnCours = false
+    @State private var analyseAffinitesClipEnCours = false
     #endif
     /// ESSAI TEMPORAIRE — voir `TestFondPage` (`Couleurs.swift`) : pilote les
     /// cinq boutons de test de fond de page en bas de la sidebar.
@@ -767,6 +775,8 @@ struct ContentView: View {
                     // en deux, les accolades ne s'y retrouvent plus.
                     if cat == .affinites {
                         VueAffinites(toutes: toutes)
+                    } else if cat == .affinitesClip {
+                        VueAffinitesCLIP(toutes: toutes)
                     } else {
                     // Interface Mac complète (édition, exports, etc.).
                     VueFeuille(feuille: cat.feuille,
@@ -842,8 +852,8 @@ struct ContentView: View {
         }
         #if os(macOS)
         .onChange(of: actionFichierSignal) { _, _ in
-            guard actionFichier == "analyserAffinites" else { return }
-            lancerAnalyseAffinites()
+            if actionFichier == "analyserAffinites" { lancerAnalyseAffinites() }
+            if actionFichier == "analyserAffinitesClip" { lancerAnalyseAffinitesClip() }
         }
         .alert("Analyse des affinités", isPresented: Binding(
             get: { messageAffinites != nil },
@@ -1051,8 +1061,9 @@ struct ContentView: View {
             if sousBlocReserveThemesOuvert {
                 liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
-            // MÊME ORDRE qu'à l'écran : la rubrique est en fin de bloc Réserve.
+            // MÊME ORDRE qu'à l'écran : les deux rubriques sont en fin de bloc Réserve.
             liste.append(.affinites)
+            liste.append(.affinitesClip)
         }
         // Hors des deux blocs, et donc jamais dépendante d'un repli.
         // TOUJOURS présente désormais, même sans aucun favori.
@@ -1157,6 +1168,20 @@ struct ContentView: View {
             let texte = await AnalyseAffinites.executerEtDecrire(
                 toutes: toutes, toutRecalculer: false)
             analyseAffinitesEnCours = false
+            messageAffinites = texte
+        }
+    }
+
+    /// Pendant de `lancerAnalyseAffinites`, pour le moteur CLIP — même
+    /// message d'alerte, réutilisé tel quel : les deux commandes ne
+    /// s'exécutent jamais en même temps, aucune ambiguïté sur qui répond.
+    private func lancerAnalyseAffinitesClip() {
+        guard !analyseAffinitesClipEnCours else { return }
+        analyseAffinitesClipEnCours = true
+        Task {
+            let texte = await AnalyseAffinitesCLIP.executerEtDecrire(
+                toutes: toutes, toutRecalculer: false)
+            analyseAffinitesClipEnCours = false
             messageAffinites = texte
         }
     }
@@ -1400,6 +1425,7 @@ struct ContentView: View {
         // qui ouvrirait une vue vide serait pire que son absence.
         #if os(macOS)
         lien(.affinites)
+        lien(.affinitesClip)
         #endif
     }
 

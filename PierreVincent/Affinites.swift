@@ -311,6 +311,12 @@ struct GroupeAffinite: Identifiable {
     let palette: [TeinteDominante]
     /// Caractérisation en quelques mots (« clair · vif · contrasté · chaud »).
     let caractere: String
+    /// Distance moyenne des membres à leur médoïde : plus c'est bas, plus la
+    /// famille est visuellement SERRÉE. Chiffre comparable d'un moteur à
+    /// l'autre (voir `AffinitesCLIP.swift`) — c'est lui qui permet de dire
+    /// objectivement laquelle des deux approches fait des familles plus
+    /// cohérentes, à taille de famille égale.
+    let cohesion: Float
 }
 
 /// Constitution des familles.
@@ -333,6 +339,81 @@ enum Regroupement {
 
     /// Nombre de voisins examinés pour chaque œuvre.
     static let voisinsExamines = 6
+
+    // MARK: Cœur générique, indépendant de la façon dont la distance est calculée
+
+    /// Voisins mutuels + seuil, sur une distance quelconque.
+    ///
+    /// **Extrait pour être partagé avec `AffinitesCLIP.swift`.** Les deux
+    /// moteurs (style/couleurs d'un côté, empreinte CLIP de l'autre) doivent
+    /// tourner sur EXACTEMENT le même algorithme de regroupement pour que la
+    /// comparaison porte sur la SEULE différence qui nous intéresse — la
+    /// qualité de la distance — et non sur deux façons de trancher les
+    /// familles. Un doublon de cette fonction aurait fini par diverger, comme
+    /// tant d'autres endroits du projet où deux copies d'une même règle ont
+    /// déjà pris des chemins différents.
+    static func partitionner(n: Int, seuil: Float,
+                             genres: [Set<String>],
+                             memeGenreSeulement: Bool,
+                             distance: (Int, Int) -> Float) -> [[Int]] {
+        guard n > 1 else { return n == 1 ? [[0]] : [] }
+
+        var voisins = [Set<Int>](repeating: [], count: n)
+        for i in 0..<n {
+            var candidats: [(Int, Float)] = []
+            candidats.reserveCapacity(n - 1)
+            for j in 0..<n where j != i {
+                candidats.append((j, distance(i, j)))
+            }
+            candidats.sort { $0.1 < $1.1 }
+            voisins[i] = Set(candidats.prefix(voisinsExamines).map(\.0))
+        }
+
+        var partition = Partition(taille: n)
+        for i in 0..<n {
+            for j in voisins[i] where j > i && voisins[j].contains(i) {
+                if memeGenreSeulement, genres.count == n,
+                   genres[i].isDisjoint(with: genres[j]) { continue }
+                if distance(i, j) <= seuil { partition.reunir(i, j) }
+            }
+        }
+
+        var paquets: [Int: [Int]] = [:]
+        for i in 0..<n { paquets[partition.racine(i), default: []].append(i) }
+        return Array(paquets.values)
+    }
+
+    /// Ordonne un groupe autour de son médoïde et rend, avec l'ordre, la
+    /// COHÉSION du groupe : la distance moyenne du médoïde aux autres
+    /// membres. Plus elle est basse, plus le groupe est visuellement serré.
+    static func ordonnerGenerique(_ membres: [Int], distance: (Int, Int) -> Float)
+        -> (ordre: [Int], cohesion: Float) {
+        var medoide = membres[0]
+        var meilleure = Float.greatestFiniteMagnitude
+        for candidat in membres {
+            var somme: Float = 0
+            for autre in membres where autre != candidat {
+                somme += distance(candidat, autre)
+            }
+            if somme < meilleure { meilleure = somme; medoide = candidat }
+        }
+        let ordre = membres.sorted { distance(medoide, $0) < distance(medoide, $1) }
+        let cohesion = membres.count > 1 ? meilleure / Float(membres.count - 1) : 0
+        return (ordre, cohesion)
+    }
+
+    /// Les indices les plus proches d'un index donné, le plus proche d'abord.
+    static func prochesGenerique(de index: Int, n: Int, combien: Int,
+                                 distance: (Int, Int) -> Float) -> [(Int, Float)] {
+        guard index < n else { return [] }
+        var liste: [(Int, Float)] = []
+        liste.reserveCapacity(max(0, n - 1))
+        for j in 0..<n where j != index {
+            liste.append((j, distance(index, j)))
+        }
+        liste.sort { $0.1 < $1.1 }
+        return Array(liste.prefix(combien))
+    }
 
     struct Resultat {
         let groupes: [GroupeAffinite]
@@ -362,49 +443,28 @@ enum Regroupement {
         guard n > 1, matrices.nombre == n else {
             return Resultat(groupes: [], isolees: oeuvres)
         }
-
-        // 1. Les `voisinsExamines` plus proches de chaque œuvre.
-        var voisins = [Set<Int>](repeating: [], count: n)
-        for i in 0..<n {
-            var candidats: [(Int, Float)] = []
-            candidats.reserveCapacity(n - 1)
-            for j in 0..<n where j != i {
-                candidats.append((j, matrices.distance(i, j, poidsCouleur: poidsCouleur)))
-            }
-            candidats.sort { $0.1 < $1.1 }
-            voisins[i] = Set(candidats.prefix(voisinsExamines).map(\.0))
+        let distance: (Int, Int) -> Float = {
+            matrices.distance($0, $1, poidsCouleur: poidsCouleur)
         }
-
-        // 2. Les liens : réciproques ET sous le seuil.
-        var partition = Partition(taille: n)
-        for i in 0..<n {
-            for j in voisins[i] where j > i && voisins[j].contains(i) {
-                if memeGenreSeulement, genres.count == n,
-                   genres[i].isDisjoint(with: genres[j]) { continue }
-                if matrices.distance(i, j, poidsCouleur: poidsCouleur) <= seuil {
-                    partition.reunir(i, j)
-                }
-            }
-        }
-
-        // 3. Les paquets ainsi formés.
-        var paquets: [Int: [Int]] = [:]
-        for i in 0..<n { paquets[partition.racine(i), default: []].append(i) }
+        let paquets = partitionner(n: n, seuil: seuil, genres: genres,
+                                   memeGenreSeulement: memeGenreSeulement,
+                                   distance: distance)
 
         var groupes: [GroupeAffinite] = []
         var isolees: [Oeuvre] = []
-        for membres in paquets.values {
+        for membres in paquets {
             guard membres.count > 1 else {
                 isolees.append(oeuvres[membres[0]])
                 continue
             }
-            let ordonnes = ordonner(membres, matrices: matrices, poidsCouleur: poidsCouleur)
-            let representant = ordonnes[0]
+            let (ordre, cohesion) = ordonnerGenerique(membres, distance: distance)
+            let representant = ordre[0]
             groupes.append(GroupeAffinite(
                 id: representant,
-                oeuvres: ordonnes.map { oeuvres[$0] },
+                oeuvres: ordre.map { oeuvres[$0] },
                 palette: signatures[representant].palette,
-                caractere: caractere(de: signatures[representant])))
+                caractere: caractere(de: signatures[representant]),
+                cohesion: cohesion))
         }
 
         // Familles nombreuses en premier ; à égalité, l'ordre reste stable
@@ -414,38 +474,15 @@ enum Regroupement {
         return Resultat(groupes: groupes, isolees: isolees)
     }
 
-    /// Range les membres d'un groupe autour de son **médoïde** — celui dont la
-    /// distance moyenne aux autres est la plus faible, donc le plus
-    /// représentatif de la famille. Il vient en tête, les autres suivent par
-    /// éloignement croissant.
-    private static func ordonner(_ membres: [Int], matrices: MatricesAffinites,
-                                 poidsCouleur: Float) -> [Int] {
-        var medoide = membres[0]
-        var meilleure = Float.greatestFiniteMagnitude
-        for candidat in membres {
-            var somme: Float = 0
-            for autre in membres where autre != candidat {
-                somme += matrices.distance(candidat, autre, poidsCouleur: poidsCouleur)
-            }
-            if somme < meilleure { meilleure = somme; medoide = candidat }
-        }
-        return membres.sorted {
-            matrices.distance(medoide, $0, poidsCouleur: poidsCouleur)
-                < matrices.distance(medoide, $1, poidsCouleur: poidsCouleur)
-        }
-    }
-
     /// Les œuvres les plus proches d'une œuvre donnée, la plus proche d'abord.
     static func proches(de index: Int, parmi oeuvres: [Oeuvre],
                         matrices: MatricesAffinites, poidsCouleur: Float,
                         combien: Int) -> [(oeuvre: Oeuvre, distance: Float)] {
         guard matrices.nombre == oeuvres.count, index < oeuvres.count else { return [] }
-        var liste: [(Int, Float)] = []
-        for j in oeuvres.indices where j != index {
-            liste.append((j, matrices.distance(index, j, poidsCouleur: poidsCouleur)))
+        let resultats = prochesGenerique(de: index, n: oeuvres.count, combien: combien) {
+            matrices.distance($0, $1, poidsCouleur: poidsCouleur)
         }
-        liste.sort { $0.1 < $1.1 }
-        return liste.prefix(combien).map { (oeuvres[$0.0], $0.1) }
+        return resultats.map { (oeuvres[$0.0], $0.1) }
     }
 
     /// Caractérise une signature en quelques mots, pour l'afficher en tête de

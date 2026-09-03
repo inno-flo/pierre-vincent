@@ -146,6 +146,11 @@ struct PierreVincentApp: App {
                 Button("Analyser les affinités…") {
                     declencherFichier("analyserAffinites")
                 }
+                // Moteur CLIP, posé à côté pour comparer : voir
+                // `VueAffinitesCLIP.swift` et `PierreVincent/ModeleCLIP/README.md`.
+                Button("Analyser les affinités (CLIP)…") {
+                    declencherFichier("analyserAffinitesClip")
+                }
                 Divider()
                 Button("Recompresser les photos…") {
                     declencherFichier("recompresser")
