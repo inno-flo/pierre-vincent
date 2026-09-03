@@ -25,11 +25,14 @@ enum Categorie: Hashable, Identifiable {
     /// n'existe pas encore, et l'entrée « Ajouter aux favoris » du menu
     /// contextuel iPhone reste inerte.
     case favoris
-    /// Rubrique de la Réserve : les œuvres rapprochées par leur STYLE et
-    /// leurs COULEURS, indépendamment ou non de leur genre. Deux vues, une
-    /// par plateforme (`VueAffinites` sur Mac, `VueAffinitesiOS` sur iPhone) —
-    /// le moteur qu'elles partagent (`SignatureOeuvre`, `Affinites.swift`) ne
-    /// comporte, lui, aucun `#if`.
+    /// Bloc « Labo » : les œuvres de la Réserve rapprochées par leur STYLE
+    /// et leurs COULEURS, indépendamment ou non de leur genre. Même
+    /// `feuille`/`statuts` que la Réserve (mêmes données), mais posée à
+    /// part dans la sidebar, avec son propre en-tête et son propre accent
+    /// (bleu système) — un rapprochement n'est pas une catégorie d'œuvres.
+    /// Deux vues, une par plateforme (`VueAffinites` sur Mac,
+    /// `VueAffinitesiOS` sur iPhone) — le moteur qu'elles partagent
+    /// (`SignatureOeuvre`, `Affinites.swift`) ne comporte, lui, aucun `#if`.
     case affinites
     /// Même rubrique, mais regroupée par **CLIP** (MobileCLIP-S0, Apple, Core
     /// ML) au lieu du moteur maison — posée à côté pour comparer les deux à
@@ -432,9 +435,15 @@ enum Categorie: Hashable, Identifiable {
     /// vignettes, pastilles, prix et boutons de la visionneuse.
     var accent: Color {
         switch self {
+        // Favoris vit désormais dans le bloc Réserve (sous Collection
+        // personnelle) : même accent que le reste du bloc, bleu ardoise —
+        // elle avait sa propre teinte (taupe chaud) tant qu'elle était une
+        // rubrique isolée hors des deux blocs, ce qui n'est plus le cas.
         case .reserveInventaire, .reserveDessins, .reserveTableaux,
-             .reserveTheme, .reserveCollection, .affinites, .affinitesClip: return .bleuArdoise
-        case .favoris:              return .taupeChaud
+             .reserveTheme, .reserveCollection, .favoris: return .bleuArdoise
+        // Bloc « Labo », à part de la Réserve : le bleu SYSTÈME standard,
+        // pas le bleu ardoise des autres rubriques de la Réserve.
+        case .affinites, .affinitesClip: return .bleuStandard
         default:                 return .orangeInternational
         }
     }
@@ -539,6 +548,10 @@ struct ContentView: View {
     #endif
     @State private var blocVentesOuvert = true
     @State private var blocStockOuvert = true
+    // Petit bloc (deux rubriques), donc déplié par défaut comme les deux
+    // grands blocs — le replier n'économiserait pas grand-chose et
+    // cacherait tout de suite les deux seules rubriques qu'il contient.
+    @State private var blocLaboOuvert = true
     @State private var sousBlocModesVenteOuvert = false
     @State private var sousBlocReserveCategoriesOuvert = false
     @State private var sousBlocReserveThemesOuvert = false
@@ -574,29 +587,12 @@ struct ContentView: View {
                     } header: {
                         Text("Réserve").foregroundStyle(.secondary)
                     }
-                    // Rubrique ISOLÉE : une section sans en-tête et sans
-                    // repli, détachée des deux blocs. Elle ne relève ni des
-                    // ventes ni de la réserve — un favori peut venir de l'une
-                    // comme de l'autre.
-                    //
-                    // TOUJOURS visible désormais, même sans aucun favori —
-                    // condition retirée pour que la rubrique reste une cible
-                    // de glisser-déposer valide en permanence (sans elle,
-                    // impossible de créer le tout premier favori par ce
-                    // geste, la rubrique n'existant pas encore à l'écran).
-                    Section {
-                        lien(.favoris)
-                            // Glisser-déposer une œuvre depuis une vue
-                            // Liste/Galerie directement sur cette
-                            // rubrique : voir `.draggable` posé sur les
-                            // vignettes (VueFeuille, VueGalerie).
-                            .dropDestination(for: String.self) { textes, _ in
-                                ajouterAuxFavoris(textes)
-                            } isTargeted: { cible in
-                                favorisCibleDepot = cible
-                            }
-                            .listRowBackground(
-                                favorisCibleDepot ? Color.taupeChaud.opacity(0.15) : nil)
+                    // Nouveau bloc, à part de la Réserve : rapprochement des
+                    // œuvres par style et couleurs (voir `contenuLabo`).
+                    Section(isExpanded: $blocLaboOuvert) {
+                        contenuLabo
+                    } header: {
+                        Text("Labo").foregroundStyle(.secondary)
                     }
                     #endif
                     #if os(iOS)
@@ -628,13 +624,14 @@ struct ContentView: View {
                     } header: {
                         boutonEnTeteBloc("Réserve", ouvert: $blocStockOuvert)
                     }
-                    // Rubrique ISOLÉE, détachée des deux blocs : elle ne
-                    // relève ni des ventes ni de la réserve, un favori pouvant
-                    // venir de l'une comme de l'autre. Pas de repliement non
-                    // plus — elle n'a qu'une ligne. TOUJOURS visible, même
-                    // sans aucun favori — voir la note côté macOS.
+                    // Nouveau bloc, à part de la Réserve — voir `contenuLabo`.
                     Section {
-                        lien(.favoris)
+                        if blocLaboOuvert {
+                            contenuLabo
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    } header: {
+                        boutonEnTeteBloc("Labo", ouvert: $blocLaboOuvert)
                     }
                     #endif
                 }
@@ -1059,6 +1056,11 @@ struct ContentView: View {
         if blocStockOuvert {
             liste.append(.reserveInventaire)
             liste.append(.reserveCollection)
+            // Favoris juste sous Collection personnelle, comme à l'écran.
+            // Elle n'est donc plus une exception TOUJOURS visible : repliée
+            // avec le reste de la Réserve, comme n'importe quelle autre
+            // rubrique de ce bloc.
+            liste.append(.favoris)
             // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
             // rubrique dans un ordre qui ne correspond à rien de visible.
             if afficherSupportsSidebarReserve && sousBlocReserveCategoriesOuvert {
@@ -1068,13 +1070,13 @@ struct ContentView: View {
             if sousBlocReserveThemesOuvert {
                 liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
-            // MÊME ORDRE qu'à l'écran : les deux rubriques sont en fin de bloc Réserve.
+        }
+        // Bloc « Labo » : les deux rubriques de rapprochement, à part de la
+        // Réserve désormais — leur propre en-tête, leur propre accent.
+        if blocLaboOuvert {
             liste.append(.affinites)
             liste.append(.affinitesClip)
         }
-        // Hors des deux blocs, et donc jamais dépendante d'un repli.
-        // TOUJOURS présente désormais, même sans aucun favori.
-        liste.append(.favoris)
         return liste
     }
 
@@ -1404,6 +1406,23 @@ struct ContentView: View {
     private var contenuStock: some View {
         lien(.reserveInventaire)
         lien(.reserveCollection)
+        // Favoris juste sous Collection personnelle — plus une rubrique
+        // isolée hors des deux blocs (voir git blame pour l'ancien
+        // emplacement) : elle vit désormais dans la Réserve, et se replie
+        // avec elle.
+        lien(.favoris)
+            #if os(macOS)
+            // Glisser-déposer une œuvre depuis une vue Liste/Galerie
+            // directement sur cette rubrique : voir `.draggable` posé sur
+            // les vignettes (VueFeuille, VueGalerie).
+            .dropDestination(for: String.self) { textes, _ in
+                ajouterAuxFavoris(textes)
+            } isTargeted: { cible in
+                favorisCibleDepot = cible
+            }
+            .listRowBackground(
+                favorisCibleDepot ? Color.bleuArdoise.opacity(0.15) : nil)
+            #endif
         // Même structure que « Ventes et dons » : un sous-groupe repliable
         // pour les catégories d'œuvres.
         //
@@ -1427,8 +1446,14 @@ struct ContentView: View {
             // garde son nom — seul CE libellé de sidebar est renommé.
             Text("Genres").foregroundStyle(.secondary)
         }
-        // Rapprochement par style et couleurs — présent sur les deux
-        // plateformes, chacune avec sa propre vue.
+    }
+
+    /// Contenu du bloc « Labo » : rapprochement des œuvres par style et
+    /// couleurs — présent sur les deux plateformes, chacune avec sa propre
+    /// vue. À part de la Réserve : son propre en-tête, son propre accent
+    /// (bleu système, voir `Categorie.accent`).
+    @ViewBuilder
+    private var contenuLabo: some View {
         lien(.affinites)
         lien(.affinitesClip)
             #if os(macOS)

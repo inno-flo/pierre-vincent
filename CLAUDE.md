@@ -541,10 +541,14 @@ Deux imports déjà réalisés (Dons, Dessins vendus). Méthode validée :
 ## Affinités — rapprochement des œuvres par style et couleurs
 
 **EN COURS, sur la branche `affinites-oeuvres`** (poussée, pas encore
-fusionnée dans `main`). Deux rubriques dans la Réserve, macOS et iOS :
-« Affinités » (moteur maison) et « Affinités CLIP » (bibliothèque
-spécialisée), posées côte à côte pour comparer la qualité de leurs
-regroupements — pas encore tranché en faveur de l'une ou de l'autre.
+fusionnée dans `main`). Deux rubriques, macOS et iOS, dans leur propre bloc
+de sidebar **« Labo »** — à part des deux blocs « Ventes et dons » et
+« Réserve », avec son propre accent (bleu système, voir Couleurs et
+sidebar plus bas) : « Affinités » (moteur maison) et « Affinités CLIP »
+(bibliothèque spécialisée), posées côte à côte pour comparer la qualité de
+leurs regroupements — pas encore tranché en faveur de l'une ou de l'autre.
+Les données qu'elles montrent restent celles de la Réserve (même `feuille`,
+mêmes `statuts`) ; seule leur PRÉSENTATION dans la sidebar en est détachée.
 
 Le besoin : rapprocher les œuvres de la Réserve par leur **facture et leur
 gamme de couleurs**, indépendamment ou non de leur genre (Tableau/Dessin) —
@@ -2057,16 +2061,16 @@ JavaScript, inexploitables par extraction) :
   identique sur les deux plateformes :
 
   ```
-  ▼ VENTES ET DONS               ▼ RÉSERVE
-       Catalogue                      Catalogue
-     ▼ Supports                       Collection personnelle
-          Tableaux                  ▼ Genres
-          Dessins                        …déduits des données
-          Tapis                     ▼ Supports
-       Ventes                            Tableaux
-     ▼ Modes de vente                    Dessins
-          Expositions
-          Ventes aux enchères           Favoris
+  ▼ VENTES ET DONS               ▼ RÉSERVE                    ▼ LABO
+       Catalogue                      Catalogue                    Affinités
+     ▼ Supports                       Collection personnelle       Affinités CLIP
+          Tableaux                    Favoris
+          Dessins                   ▼ Genres
+          Tapis                          …déduits des données
+       Ventes                       ▼ Supports
+     ▼ Modes de vente                    Tableaux
+          Expositions                    Dessins
+          Ventes aux enchères
           Vente privée
           …tout mode inédit
        Dons
@@ -2085,18 +2089,27 @@ JavaScript, inexploitables par extraction) :
     vente, Dons, Synthèse — les deux sous-groupes s'intercalent entre les
     rubriques de premier niveau, ils ne sont plus regroupés à la fin.
     `categoriesSidebar` suit ce même ordre pour la navigation ↑↓.
-  - **Favoris est une rubrique ISOLÉE**, dans sa propre section sans en-tête
-    ni repli, détachée des deux blocs : un favori pourra venir de l'un comme
-    de l'autre. Elle ne dépend d'aucun repli.
-    - **TOUJOURS visible désormais, même sans aucun favori** — la condition
-      `auMoinsUnFavori` (qui masquait la rubrique tant qu'elle était vide,
-      sur les DEUX `Section` de la sidebar ET dans `categoriesSidebar`) a
-      été retirée avec la propriété elle-même, à la demande : elle
-      empêchait de créer le tout premier favori par glisser-déposer, la
-      rubrique n'existant pas encore à l'écran pour servir de cible. La vue
-      vide qu'elle ouvre reste gérée par l'état DISCRET déjà en place
-      (`VueiOS.swift`, voir plus bas), donc rien d'autre à changer côté
-      contenu.
+  - **Favoris a longtemps été une rubrique ISOLÉE**, dans sa propre section
+    sans en-tête ni repli, détachée des deux blocs — un favori pouvant venir
+    de l'un comme de l'autre, rien ne la rattachait à la Réserve plus qu'aux
+    Ventes et dons.
+    - **Déplacée depuis, à la demande explicite : juste sous « Collection
+      personnelle », dans le bloc Réserve.** Elle se replie donc désormais
+      AVEC ce bloc, comme n'importe quelle autre rubrique — ce n'est plus
+      une exception. **Conséquence acceptée, pas un oubli** : le glisser-
+      déposer qui en faisait une cible permanente (voir plus bas) ne
+      fonctionne plus si la Réserve est repliée, contrairement à l'objectif
+      d'origine (« cible valide en permanence »). Si ça pose un problème à
+      l'usage, la reculer hors des deux blocs redonnerait cette garantie.
+    - **TOUJOURS visible tant que la Réserve est dépliée, même sans aucun
+      favori** — la condition `auMoinsUnFavori` (qui masquait la rubrique
+      tant qu'elle était vide, sur les DEUX `Section` de la sidebar ET dans
+      `categoriesSidebar`) a été retirée avec la propriété elle-même, à la
+      demande : elle empêchait de créer le tout premier favori par
+      glisser-déposer, la rubrique n'existant pas encore à l'écran pour
+      servir de cible. La vue vide qu'elle ouvre reste gérée par l'état
+      DISCRET déjà en place (`VueiOS.swift`, voir plus bas), donc rien
+      d'autre à changer côté contenu.
     - **Le champ `Oeuvre.favori` existe désormais** (Bool, défaut `false`,
       exporté en optionnel dans `.pvbase` comme tout champ ajouté après coup).
       La rubrique est donc passée d'une coquille vide à une VUE AGRÉGÉE
@@ -2154,8 +2167,9 @@ JavaScript, inexploitables par extraction) :
       retrouve chaque œuvre par UUID dans `toutes` et la marque favorite —
       ignore silencieusement un morceau sans correspondance plutôt que
       d'échouer tout le dépôt. Surbrillance légère
-      (`Color.taupeChaud.opacity(0.15)`) pendant que le glissé survole la
-      ligne, via `isTargeted` et `favorisCibleDepot`.
+      (`Color.bleuArdoise.opacity(0.15)`, ex-`taupeChaud` — voir plus bas,
+      Couleurs) pendant que le glissé survole la ligne, via `isTargeted` et
+      `favorisCibleDepot`.
       - **Sélection multiple prise en compte** : glisser une ligne/carte qui
         fait partie de la sélection courante embarque TOUTE la sélection,
         pas la seule œuvre sous le doigt — `identifiantsGlisse(pour:)`
@@ -2447,8 +2461,9 @@ JavaScript, inexploitables par extraction) :
     `ScrollView`, aucun état partagé entre Galerie et Liste.
   - Accent lu directement par `BoutonRetourHaut` via son propre
     `@Environment(\.accentRubrique)` : s'adapte tout seul à la rubrique
-    (orange dans « Ventes et dons », bleu ardoise en Réserve, taupe pour
-    Favoris) sans rien à câbler dans les vues appelantes.
+    (orange dans « Ventes et dons », bleu ardoise en Réserve — Favoris
+    comprise — et bleu système dans le Labo) sans rien à câbler dans les
+    vues appelantes.
   - **Fond TRANSPARENT (contour seul) essayé d'abord, ABANDONNÉ** : jugé
     trop peu visible. Un disque plein accent a ensuite été comparé côte à
     côte avec le cercle sombre actuel ; le disque plein a été retiré, le
@@ -2534,29 +2549,32 @@ JavaScript, inexploitables par extraction) :
   centralisé dans `TexteLigneSelectionnee`, afin que les trois tableaux restent
   cohérents.
 
-- **Favoris — accent TAUPE CHAUD** (`Couleurs.swift`, `ContentView.swift`) :
-  `Color.taupeChaud`, (125, 106, 88) en clair, éclairci en sombre. Il remplace
-  le jaune, qui n'a plus aucune occurrence dans le code. Il s'applique à
-  l'icône de la sidebar, au fond du compteur de la sidebar, au compteur de la
-  vue et aux trois pastilles de type. Le bleu ardoise reste l'accent des
-  autres rubriques de la Réserve.
-  - **TROIS accents cohabitent donc**, et non deux : orange (« Ventes et
-    dons »), bleu ardoise (« Réserve »), taupe (Favoris). Favoris est une
-    rubrique ISOLÉE, qui n'appartient à aucune des deux sections — sa teinte
-    propre le dit.
-  - **La valeur claire est contrainte par la pastille de comptage**, qui pose
-    du texte BLANC sur un fond plein de cette teinte. (125, 106, 88) donne
-    5,15:1, au-dessus du seuil AA ; (138, 118, 98), essayé d'abord, tombait à
-    4,33:1. Ne pas éclaircir ce taupe sans refaire ce calcul — c'est le même
-    écueil qui avait fait écarter la plus claire des deux nuances de sélection
-    de sidebar macOS.
-  - **Une seule source** : `Categorie.accent`. Les deux tests
-    `cat == .favoris ? Color.yellow : …` qui traînaient dans `lien()` ont
-    disparu — celui d'iOS était même redondant, `accent` renvoyant déjà cette
-    teinte. Seul subsiste, côté macOS, le test qui fait garder à Favoris SA
-    couleur quand la rubrique est sélectionnée, là où les autres passent au
-    blanc ; il passe désormais par `cat.accent`, donc la teinte se change à un
-    seul endroit.
+- **Favoris — accent BLEU ARDOISE, comme le reste de la Réserve** (`Couleurs.swift`,
+  `ContentView.swift`). A porté successivement le jaune, puis un taupe chaud
+  dédié (`Color.taupeChaud`) tant qu'elle était une rubrique isolée hors des
+  deux blocs — sa teinte propre disait alors qu'elle n'appartenait à aucune
+  des deux sections. **Depuis qu'elle vit dans le bloc Réserve** (sous
+  Collection personnelle, voir plus haut la sidebar), elle en partage
+  l'accent : demande explicite, la position suffit désormais à la distinguer,
+  plus besoin d'une troisième teinte. `taupeChaud` est **supprimée**
+  (`Couleurs.swift`, audit de code) : plus aucun appelant, ni sur l'icône de
+  la sidebar, ni sur le fond du compteur, ni sur le surlignage de la cible de
+  glisser-déposer (`favorisCibleDepot`, passé lui aussi à
+  `Color.bleuArdoise.opacity(0.15)`).
+  - **TROIS accents cohabitent donc**, comme avant l'existence de Favoris
+    isolée : orange (« Ventes et dons »), bleu ardoise (« Réserve », Favoris
+    comprise), et le **bleu système** du bloc « Labo » (Affinités et
+    Affinités CLIP, `.bleuStandard` dans `Couleurs.swift`) — le seul des
+    trois à ne pas être une teinte réglée à la main : demandé explicitement
+    comme « le bleu standard d'Apple », `Color.blue` suffit.
+  - **Une seule source** : `Categorie.accent`. Seul subsiste, côté macOS, le
+    test qui fait garder à Favoris SA couleur quand la rubrique est
+    sélectionnée, là où les autres rubriques de la Réserve passent au blanc ;
+    il passe par `cat.accent`, donc la teinte (désormais bleu ardoise, comme
+    ses voisines) se change à un seul endroit — l'effet visuel de cette
+    exception est aujourd'hui plus discret qu'avant (même teinte de base),
+    mais la règle reste en place si Favoris devait un jour reprendre une
+    couleur propre.
 
 - **Accent système et Synthèse** (`project.pbxproj`, `Couleurs.swift`,
   `VueSynthese.swift`) : le projet ne déclare plus le catalogue `AccentColor`

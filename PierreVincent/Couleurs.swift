@@ -111,30 +111,19 @@ extension Color {
             vertClair:  (70, 100, 135), vertSombre:  (132, 168, 205))
     }
 
-    /// Accent taupe chaud — celui de la rubrique **Favoris**.
+    /// Accent bleu système — celui du bloc **Labo**.
     ///
-    /// Troisième accent, aux côtés de l'orange (« Ventes et dons ») et du bleu
-    /// ardoise (« Réserve ») : Favoris est une rubrique ISOLÉE, qui n'appartient
-    /// à aucune des deux sections, et sa teinte propre le dit.
-    ///
-    /// Un brun-gris chaud, franchement distinct des deux autres.
-    ///
-    /// **La valeur claire est contrainte par la pastille de comptage**, qui
-    /// pose du texte BLANC sur un fond plein de cette teinte : (125, 106, 88)
-    /// donne 5,15:1, au-dessus du seuil AA. Un taupe plus clair est vite
-    /// illisible — (138, 118, 98), essayé d'abord, tombait à 4,33:1. Même
-    /// écueil que la sélection de sidebar macOS, où la plus claire des deux
-    /// nuances comparées avait dû être écartée pour cette raison.
-    ///
-    /// Éclairci en mode sombre, où un taupe foncé se confondrait avec le fond
-    /// — même parti que `bleuArdoise`, et même compromis assumé : la teinte
-    /// claire y sert surtout d'icône et de contour.
-    static var taupeChaud: Color {
-        couleurTheme(
-            cremeClair: (125, 106, 88), cremeSombre: (192, 172, 148),
-            grisClair:  (125, 106, 88), grisSombre:  (192, 172, 148),
-            vertClair:  (125, 106, 88), vertSombre:  (192, 172, 148))
-    }
+    /// Contrairement aux trois accents ci-dessus, PAS une teinte réglée à la
+    /// main : le bleu STANDARD d'Apple, demandé tel quel plutôt qu'une
+    /// nouvelle nuance sur mesure. `Color.blue` correspond déjà à ce bleu
+    /// système sur les deux plateformes, avec son adaptation automatique au
+    /// mode sombre — rien à recalculer.
+    static let bleuStandard = Color.blue
+
+    // `taupeChaud` — l'accent qu'avait Favoris tant qu'elle était une
+    // rubrique isolée hors des deux blocs — a été SUPPRIMÉ (audit de code) :
+    // Favoris vit désormais dans le bloc Réserve et partage son bleu
+    // ardoise, plus aucun appelant. Historique dans Git au besoin.
 
     /// Fond général de l'app — **la PAGE**, sous les cartes.
     ///
