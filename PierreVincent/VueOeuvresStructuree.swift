@@ -239,23 +239,25 @@ struct VueOeuvresStructuree: View {
                     // qui les détermine, et non avant.
                     recapitulatif(proxy: proxy)
 
-                    // --- 3. Section Ventes ---
-                    // En mode Inventaire, le titre distingue la section "Ventes" des "Œuvres données".
-                    // En mode Ventes, il est redondant avec le titre de navigation → masqué.
-                    // L'ancre invisible garantit que le scroll du recap fonctionne dans les deux modes.
-                    if !estModeVentes {
-                        titreSection("Ventes")
-                    }
-                    Color.clear.frame(height: 0)
-                        .padding(.top, estModeVentes ? 24 : 0)
-                        .id(ancreVentes)
-                    contenuSection(ventes, estDon: false)
-
-                    // --- 4. Section Œuvres données (masquée en mode filtre) ---
-                    if !estModeVentes {
-                        titreSection("Dons")
-                            .id(ancreDons)
-                        contenuSection(dons, estDon: true)
+                    // --- 3. Contenu ---
+                    // En mode Ventes (sous-rubrique de mode de vente), une
+                    // seule section : le titre de navigation dit déjà de
+                    // quoi il s'agit, le titre « Ventes » serait redondant.
+                    //
+                    // En mode Catalogue, Ventes ET Dons doivent se trouver
+                    // dans le MÊME conteneur paresseux (une seule grille ou
+                    // liste, avec deux `Section`), et non dans deux
+                    // conteneurs séparés l'un sous l'autre : deux
+                    // `.scrollTargetLayout()` dans le même `ScrollView`
+                    // font boucler `.scrollPosition(id:)` en passant de l'un
+                    // à l'autre — voir `contenuCatalogueComplet`.
+                    if estModeVentes {
+                        Color.clear.frame(height: 0)
+                            .padding(.top, 24)
+                            .id(ancreVentes)
+                        contenuSection(ventes, estDon: false)
+                    } else {
+                        contenuCatalogueComplet
                     }
                 }
                 .padding(.bottom, 30)
@@ -479,7 +481,89 @@ struct VueOeuvresStructuree: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Catalogue (Ventes ET Dons) : galerie ou liste selon le mode
+    /// d'affichage, dans un SEUL conteneur paresseux — voir `body`, qui
+    /// explique pourquoi les deux sections ne peuvent pas avoir chacune le
+    /// leur.
+    @ViewBuilder
+    private var contenuCatalogueComplet: some View {
+        if modeAffichage == "icone" {
+            grilleCatalogueComplet
+        } else {
+            listeCatalogueComplete
+        }
+    }
+
+    /// Une seule `LazyVGrid`, avec Ventes et Dons comme deux `Section` —
+    /// et donc un seul `.scrollTargetLayout()` pour tout le Catalogue.
+    private var grilleCatalogueComplet: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                            GridItem(.flexible(), spacing: 12)], spacing: 16) {
+            Section {
+                if ventes.isEmpty {
+                    Text("Aucune entrée")
+                        .foregroundStyle(.secondary)
+                        .gridCellColumns(2)
+                } else {
+                    ForEach(ventes) { o in carte(o) }
+                }
+            } header: {
+                titreSection("Ventes").id(ancreVentes)
+            }
+            Section {
+                if dons.isEmpty {
+                    Text("Aucune entrée")
+                        .foregroundStyle(.secondary)
+                        .gridCellColumns(2)
+                } else {
+                    ForEach(dons) { o in carte(o) }
+                }
+            } header: {
+                titreSection("Dons").id(ancreDons)
+            }
+        }
+        // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`. UN
+        // SEUL appel pour tout le Catalogue, sur le conteneur englobant les
+        // deux `Section` — pas un par section.
+        .scrollTargetLayout()
+        .padding(.horizontal, 16)
+    }
+
+    /// Pendant liste de `grilleCatalogueComplet` : une seule `LazyVStack`,
+    /// Ventes et Dons en deux `Section`, un seul `.scrollTargetLayout()`.
+    private var listeCatalogueComplete: some View {
+        LazyVStack(spacing: 8) {
+            Section {
+                if ventes.isEmpty {
+                    Text("Aucune entrée")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                } else {
+                    ForEach(ventes) { o in ligneListe(o) }
+                }
+            } header: {
+                titreSection("Ventes").id(ancreVentes)
+            }
+            Section {
+                if dons.isEmpty {
+                    Text("Aucune entrée")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                } else {
+                    ForEach(dons) { o in ligneListe(o) }
+                }
+            } header: {
+                titreSection("Dons").id(ancreDons)
+            }
+        }
+        .scrollTargetLayout()
+        .padding(.horizontal, 16)
+    }
+
     /// Contenu d'une section : galerie ou liste selon le mode d'affichage.
+    /// Utilisée pour le Catalogue seulement quand il n'a QU'UNE section
+    /// (mode Ventes) — le cas à deux sections passe par
+    /// `contenuCatalogueComplet`, voir `body`.
     @ViewBuilder
     private func contenuSection(_ liste: [Oeuvre], estDon: Bool) -> some View {
         if liste.isEmpty {
@@ -622,65 +706,70 @@ struct VueOeuvresStructuree: View {
     private func listeLignes(_ liste: [Oeuvre]) -> some View {
         // Lazy : ne construit que les lignes visibles à l'écran.
         LazyVStack(spacing: 8) {
-            ForEach(liste) { o in
-                HStack(spacing: 14) {
-                        VignetteCachee(nom: o.photoNom, cote: 76)
-                        VStack(alignment: .leading, spacing: 3) {
-                            if aUnPrix(o) {
-                                // Acheteur en premier, puis prix.
-                                // ESSAI VISUEL : `.headline` garde sa taille,
-                                // plus sa graisse — même traitement qu'en
-                                // Galerie.
-                                Text(o.acheteur.isEmpty ? "—" : o.acheteur)
-                                    .font(.headline)
-                                    .fontWeight(.regular)
-                                    .lineLimit(1)
-                                PrixText(o.prix)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.orangeInternational)
-                            } else {
-                                Text(o.destinataire.isEmpty ? "—" : o.destinataire)
-                                    .font(.headline)
-                                    .fontWeight(.regular)
-                            }
-                            Text(o.type.isEmpty ? "—" : o.type)
-                                .font(.subheadline).foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            if !o.dimensions.isEmpty {
-                                Text(o.dimensions)
-                                    .font(.caption).foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer()
-                    }
-                .frame(height: 92)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.fondLegende)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(selection.contains(o.id)
-                                      ? Color.orangeInternational : Color.clear,
-                                      lineWidth: 3)
-                )
-                .contentShape(Rectangle())
-                // Appui prolongé : la visionneuse, avec le menu contextuel
-                // « Ajouter aux favoris » — même mécanisme que sur les
-                // vignettes de galerie. PLUS un `Button` : c'est justement
-                // ce qui empêchait l'appui prolongé d'aboutir ici.
-                .overlay(InteractionApercu(
-                    oeuvre: o,
-                    onTap: { selection = [o.id]; detail = o },
-                    onAfficher: { ouvrirVisionneuse(o) }))
-                // Cible de défilement (proxy.scrollTo).
-                .id(o.id)
-            }
+            ForEach(liste) { o in ligneListe(o) }
         }
         // Indispensable à `.scrollPosition(id:)` — voir `VueGalerie`.
         .scrollTargetLayout()
         .padding(.horizontal, 16)
+    }
+
+    /// Une ligne de la présentation Liste — extraite de `listeLignes` pour
+    /// être réutilisable telle quelle par `listeCatalogueComplete`, qui a
+    /// besoin de la poser dans DEUX `Section` d'une même `LazyVStack`.
+    private func ligneListe(_ o: Oeuvre) -> some View {
+        HStack(spacing: 14) {
+                VignetteCachee(nom: o.photoNom, cote: 76)
+                VStack(alignment: .leading, spacing: 3) {
+                    if aUnPrix(o) {
+                        // Acheteur en premier, puis prix.
+                        // ESSAI VISUEL : `.headline` garde sa taille,
+                        // plus sa graisse — même traitement qu'en
+                        // Galerie.
+                        Text(o.acheteur.isEmpty ? "—" : o.acheteur)
+                            .font(.headline)
+                            .fontWeight(.regular)
+                            .lineLimit(1)
+                        PrixText(o.prix)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.orangeInternational)
+                    } else {
+                        Text(o.destinataire.isEmpty ? "—" : o.destinataire)
+                            .font(.headline)
+                            .fontWeight(.regular)
+                    }
+                    Text(o.type.isEmpty ? "—" : o.type)
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    if !o.dimensions.isEmpty {
+                        Text(o.dimensions)
+                            .font(.caption).foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+            }
+        .frame(height: 92)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.fondLegende)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(selection.contains(o.id)
+                              ? Color.orangeInternational : Color.clear,
+                              lineWidth: 3)
+        )
+        .contentShape(Rectangle())
+        // Appui prolongé : la visionneuse, avec le menu contextuel
+        // « Ajouter aux favoris » — même mécanisme que sur les
+        // vignettes de galerie. PLUS un `Button` : c'est justement
+        // ce qui empêchait l'appui prolongé d'aboutir ici.
+        .overlay(InteractionApercu(
+            oeuvre: o,
+            onTap: { selection = [o.id]; detail = o },
+            onAfficher: { ouvrirVisionneuse(o) }))
+        // Cible de défilement (proxy.scrollTo).
+        .id(o.id)
     }
 }
 
