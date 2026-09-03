@@ -154,6 +154,13 @@ let afficherSupportsSidebarReserve = false
 /// « Modes de vente » lui-même n'est pas concernée.
 let afficherIconesModesDeVente = false
 
+/// Icône des sous-rubriques de « Genres » dans la Réserve (Bouquets, Natures
+/// mortes, Paysages, Portraits, tout genre inédit) : essai, masquées sans
+/// supprimer le code. `true` les restaure (`ContentView.swift`, `lien()`).
+/// Même principe que `afficherIconesModesDeVente` ci-dessus, sur l'autre
+/// sous-groupe qui a reçu un en-tête à icône.
+let afficherIconesGenres = false
+
 /// Valeur du champ `collectionPersonnelle` quand l'œuvre en relève.
 /// Le vide vaut « non » : voir la remarque dans `RepriseDonnees`.
 let valeurCollectionPersonnelle = "Oui"

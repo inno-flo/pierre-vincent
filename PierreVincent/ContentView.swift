@@ -436,6 +436,23 @@ enum Categorie: Hashable, Identifiable {
         return false
     }
 
+    /// Vrai pour une sous-rubrique de genre PRÉCISE (`.reserveTheme`). Même
+    /// rôle qu'`estModeVenteIndividuel` ci-dessus, sur l'autre sous-groupe
+    /// (essai, voir `afficherIconesGenres`).
+    var estThemeIndividuel: Bool {
+        if case .reserveTheme = self { return true }
+        return false
+    }
+
+    /// Vrai si la rubrique doit apparaître SANS icône dans la sidebar —
+    /// centralisé ici pour que macOS et iOS lisent EXACTEMENT la même règle,
+    /// au lieu de la répéter (et risquer de la faire diverger) à chacun des
+    /// deux points d'affichage.
+    var iconeMasqueeEnSidebar: Bool {
+        (estModeVenteIndividuel && !afficherIconesModesDeVente)
+            || (estThemeIndividuel && !afficherIconesGenres)
+    }
+
     /// Accent de la rubrique : **bleu ardoise dans la Réserve**, orange
     /// ailleurs. La couleur dit d'un coup d'œil dans quelle section on se
     /// trouve, sans avoir à lire le titre.
@@ -557,10 +574,11 @@ struct ContentView: View {
     #endif
     @State private var blocVentesOuvert = true
     @State private var blocStockOuvert = true
-    // Petit bloc (deux rubriques), donc déplié par défaut comme les deux
-    // grands blocs — le replier n'économiserait pas grand-chose et
-    // cacherait tout de suite les deux seules rubriques qu'il contient.
-    @State private var blocLaboOuvert = true
+    // Replié par défaut au lancement, comme les sous-groupes Modes de vente
+    // et Genres (demande explicite) — malgré son statut de bloc de premier
+    // niveau, il en partage la convention plutôt que celle des deux grands
+    // blocs, dépliés eux.
+    @State private var blocLaboOuvert = false
     @State private var sousBlocModesVenteOuvert = false
     @State private var sousBlocReserveCategoriesOuvert = false
     @State private var sousBlocReserveThemesOuvert = false
@@ -1365,23 +1383,11 @@ struct ContentView: View {
                 lien(.modeVente(mode))
             }
         } label: {
-            // Même exception que l'en-tête « Genres » de la Réserve (voir
-            // CLAUDE.md, Typographie) : icône + style de libellé sur macOS
-            // seulement, iOS garde le style natif gris sans icône. `bag`
-            // reprend l'icône des rubriques individuelles de ce sous-groupe
-            // (`Categorie.symbole` pour `.modeVente`), l'orange celui de
-            // « Ventes et dons ».
-            #if os(macOS)
-            HStack(spacing: 6) {
-                Image(systemName: "bag")
-                    .foregroundStyle(Color.orangeInternational)
-                Text("Modes de vente")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textePrincipal)
-            }
-            #else
-            Text("Modes de vente").foregroundStyle(.secondary)
-            #endif
+            // `bag` reprend l'icône des rubriques individuelles de ce
+            // sous-groupe (`Categorie.symbole` pour `.modeVente`), l'orange
+            // celui de « Ventes et dons ».
+            enTeteSousGroupe("Modes de vente", symbole: "bag",
+                            couleur: .orangeInternational)
         }
         lien(.synthese)
     }
@@ -1469,26 +1475,47 @@ struct ContentView: View {
         } label: {
             // Ex-« Thèmes ». Le champ sous-jacent (`theme`, `themesPresents`)
             // garde son nom — seul CE libellé de sidebar est renommé.
-            #if os(macOS)
-            // ESSAI VISUEL, macOS SEULEMENT (demande explicite) : icône
-            // pinceau + libellé au même style que les rubriques (13 pt,
-            // `textePrincipal`, sans graisse), et non le style gris 11 pt
-            // habituel des en-têtes de sous-groupe — déroge donc, ICI
-            // SEULEMENT et sciemment, à la règle « l'en-tête doit rester
-            // plus petit que les libellés qu'il regroupe » (voir plus haut,
-            // Typographie). iOS n'est pas concerné : toujours « Genres »,
-            // gris, sans icône, style natif de sous-groupe.
-            HStack(spacing: 6) {
-                Image(systemName: "paintbrush.pointed")
-                    .foregroundStyle(Color.bleuArdoise)
-                Text("Genres")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textePrincipal)
-            }
-            #else
-            Text("Genres").foregroundStyle(.secondary)
-            #endif
+            enTeteSousGroupe("Genres", symbole: "paintbrush.pointed",
+                            couleur: .bleuArdoise)
         }
+    }
+
+    /// En-tête de sous-groupe au style d'un LIBELLÉ de rubrique — icône +
+    /// texte — plutôt que le style natif gris des en-têtes de sous-groupe.
+    /// Sert « Genres » et « Modes de vente » (demande explicite, étendue de
+    /// l'un à l'autre puis aux deux plateformes) : ENFREINT sciemment la
+    /// règle « l'en-tête doit rester plus petit que les libellés qu'il
+    /// regroupe » (voir CLAUDE.md, Typographie) — ICI SEULEMENT, ne pas
+    /// généraliser à « Supports » sans nouvelle demande.
+    ///
+    /// **Écrit une seule fois** pour que les deux en-têtes ne divergent
+    /// pas, et pour que le passage à iOS se fasse à un seul endroit.
+    ///
+    /// Sur macOS, taille figée à 13 pt comme les libellés de rubrique
+    /// (`lien()`) : la référence à égaler est un nombre de points précis.
+    /// Sur iOS, **aucune taille imposée** — un `Label` nu, exactement comme
+    /// un libellé de rubrique (`lien()`, branche iOS) : y figer 13 pt
+    /// casserait le Dynamic Type, que la référence à égaler (Catalogue) ne
+    /// casse pas non plus.
+    @ViewBuilder
+    private func enTeteSousGroupe(_ titre: String, symbole: String, couleur: Color)
+        -> some View {
+        #if os(macOS)
+        HStack(spacing: 6) {
+            Image(systemName: symbole)
+                .foregroundStyle(couleur)
+            Text(titre)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.textePrincipal)
+        }
+        #else
+        Label {
+            Text(titre)
+        } icon: {
+            Image(systemName: symbole)
+                .foregroundStyle(couleur)
+        }
+        #endif
     }
 
     /// Contenu du bloc « Labo » : rapprochement des œuvres par style et
@@ -1543,9 +1570,9 @@ struct ContentView: View {
             #if os(macOS)
             // Sur Mac : HStack personnalisé pour pouvoir placer la pastille à droite.
             HStack(spacing: 6) {
-                // ESSAI : icône retirée pour les trois sous-rubriques de
-                // mode de vente — voir `afficherIconesModesDeVente`.
-                if afficherIconesModesDeVente || !cat.estModeVenteIndividuel {
+                // ESSAI : icône retirée pour les sous-rubriques de mode de
+                // vente et de genre — voir `Categorie.iconeMasqueeEnSidebar`.
+                if !cat.iconeMasqueeEnSidebar {
                     Image(systemName: cat.symbole)
                         // Favoris garde SA teinte même sélectionnée, là où les
                         // autres rubriques passent au blanc de la sélection : sa
@@ -1601,11 +1628,11 @@ struct ContentView: View {
             }
             #else
             HStack(spacing: 6) {
-                // ESSAI : icône retirée pour les trois sous-rubriques de
-                // mode de vente — voir `afficherIconesModesDeVente`. Un
-                // simple `Text`, et non un `Label` à icône vide : ce dernier
-                // réserverait quand même la place de l'icône.
-                if afficherIconesModesDeVente || !cat.estModeVenteIndividuel {
+                // ESSAI : icône retirée pour les sous-rubriques de mode de
+                // vente et de genre — voir `Categorie.iconeMasqueeEnSidebar`.
+                // Un simple `Text`, et non un `Label` à icône vide : ce
+                // dernier réserverait quand même la place de l'icône.
+                if !cat.iconeMasqueeEnSidebar {
                     Label {
                         Text(cat.titre)
                     } icon: {

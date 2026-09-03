@@ -1680,20 +1680,26 @@ s'afficherait à la place.
   regroupe** (11 < 13). Le code imposait 14 pt aux en-têtes, donc plus gros
   que les libellés — hiérarchie visuelle inversée par rapport à Mail.
   - **EXCEPTION délibérée — en-têtes « Genres » (Réserve) et « Modes de
-    vente » (Ventes et dons), macOS SEULEMENT** (demande explicite,
-    étendue d'un en-tête à l'autre) : icône + libellé au style d'un
-    LIBELLÉ de rubrique (13 pt, `textePrincipal`, sans graisse) plutôt que
-    le style gris 11 pt des autres en-têtes de sous-groupe. Enfreint donc
-    sciemment la règle ci-dessus, sur CES DEUX en-têtes seulement — ne pas
-    généraliser à « Supports » sans nouvelle demande. Chacun reprend
-    l'icône ET l'accent de son propre sous-groupe, pas une valeur commune :
-    `paintbrush.pointed` + bleu ardoise pour Genres (Réserve),
-    `bag` + orange pour Modes de vente (Ventes et dons) — c'est
-    `Categorie.symbole`/`.accent` du sous-groupe qu'on relit, pas une
-    icône inventée pour l'occasion. iOS n'est pas concerné, `#if
-    os(macOS)` : la version iPhone garde le style natif gris sans icône,
-    aux deux en-têtes. Le libellé lui-même est identique aux deux
-    plateformes — seul le STYLE diverge.
+    vente » (Ventes et dons), DEUX plateformes** (demande explicite,
+    étendue d'un en-tête à l'autre, puis de macOS à iOS) : icône + libellé
+    au style d'un LIBELLÉ de rubrique plutôt que le style gris des autres
+    en-têtes de sous-groupe. Enfreint donc sciemment la règle ci-dessus,
+    sur CES DEUX en-têtes seulement — ne pas généraliser à « Supports »
+    sans nouvelle demande. Chacun reprend l'icône ET l'accent de son propre
+    sous-groupe, pas une valeur commune : `paintbrush.pointed` + bleu
+    ardoise pour Genres (Réserve), `bag` + orange pour Modes de vente
+    (Ventes et dons) — c'est `Categorie.symbole`/`.accent` du sous-groupe
+    qu'on relit, pas une icône inventée pour l'occasion. Le libellé
+    lui-même est identique aux deux plateformes — seul le STYLE diverge.
+    - **Écrit UNE FOIS** (`ContentView.enTeteSousGroupe(_:symbole:couleur:)`),
+      appelé par les deux `DisclosureGroup` plutôt que dupliqué : un premier
+      essai avait deux copies, une par en-tête, vouées à diverger comme tant
+      d'autres endroits du projet où c'est déjà arrivé.
+    - **macOS** : taille figée à 13 pt (`textePrincipal`, sans graisse),
+      comme les libellés de `lien()`. **iOS** : AUCUNE taille imposée — un
+      `Label` nu, exactement comme un libellé de `lien()` côté iOS ; y
+      figer 13 pt casserait le Dynamic Type, ce que « Catalogue » (la
+      référence à égaler) ne fait pas non plus.
   - *En-têtes* : **ne pas imposer de police NI de graisse**.
     `listStyle(.sidebar)` fournit lui-même l'apparence standard (petit corps,
     gris, graisse normale).
@@ -2044,15 +2050,18 @@ JavaScript, inexploitables par extraction) :
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à
   1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
 - **Sidebar — DÉROGATION assumée : aucune mémoire entre les sessions.**
-  Une sidebar système mémorise ses blocs repliés ; celle-ci non. Les six
-  états d'ouverture (`blocVentesOuvert`, `blocStockOuvert` et les quatre
-  sous-groupes) sont de simples `@State` dans `ContentView`, avec pour
-  défaut les deux grands blocs dépliés et les QUATRE sous-groupes repliés
-  (les deux « Catégories », « Modes de vente », « Thèmes »). L'ouverture
+  Une sidebar système mémorise ses blocs repliés ; celle-ci non. Les sept
+  états d'ouverture (`blocVentesOuvert`, `blocStockOuvert`, `blocLaboOuvert`
+  et les quatre sous-groupes) sont de simples `@State` dans `ContentView`,
+  avec pour défaut les DEUX GRANDS blocs dépliés (Ventes et dons, Réserve)
+  et TOUT LE RESTE replié — les quatre sous-groupes (les deux « Catégories »,
+  « Modes de vente », « Thèmes ») ET le bloc « Labo », qui partage donc la
+  convention des sous-groupes plutôt que celle des deux grands blocs, malgré
+  son statut de bloc de premier niveau (demande explicite). L'ouverture
   montre ainsi les seules vues d'ensemble, six rubriques au lieu d'une
   vingtaine. Un `@State` n'a pas de mémoire d'une session à l'autre par
   construction : les replis faits à la main ne valent donc que pour la
-  session, sans rien à écrire nulle part.
+  session, sans rien à écrire nulle part. Vrai sur les DEUX plateformes.
   - **Ce n'est pas un oubli, ne pas « réparer »** en remettant la
     mémorisation. Décision prise le 22 août 2026.
   - **Étaient en `@AppStorage` au départ**, avec une réécriture des six clés
@@ -2408,17 +2417,23 @@ JavaScript, inexploitables par extraction) :
     rubriques (Tableaux/Dessins de la Réserve) tant que le drapeau est à
     `false` — sans ce garde-fou, ↑↓ aurait pu s'arrêter sur une rubrique
     invisible à l'écran.
-  - **ESSAI, DEUX plateformes — icônes retirées des trois sous-rubriques de
-    « Modes de vente »** (Exposition, Vente aux enchères, Vente privée…),
-    via `afficherIconesModesDeVente` dans `TriEtTotaux.swift` et
-    `Categorie.estModeVenteIndividuel` (distinct d'`estVenteRealisee`, qui
-    couvre AUSSI `.ventesRealisees` elle-même — seules les sous-rubriques
-    du mode sont concernées, pas « Ventes »). L'icône de l'EN-TÊTE « Modes
-    de vente » (voir plus haut, Typographie) n'est pas concernée : deux
-    essais distincts, deux drapeaux distincts. Sur iOS, la ligne bascule
-    d'un `Label` (icône + texte) à un `Text` nu plutôt que de garder un
-    `Label` à icône vide, qui aurait réservé la place de l'icône. `true`
-    restaure les icônes.
+  - **ESSAI, DEUX plateformes — icônes retirées des sous-rubriques de
+    « Modes de vente » ET de « Genres »** (Exposition, Vente aux enchères,
+    Vente privée… ; Bouquets, Natures mortes, Paysages, Portraits…), via
+    `afficherIconesModesDeVente` / `afficherIconesGenres` dans
+    `TriEtTotaux.swift`. `Categorie.iconeMasqueeEnSidebar` centralise la
+    règle des DEUX essais en une seule propriété, lue par les deux
+    plateformes — plutôt que de la répéter à chacun des deux points
+    d'affichage, avec le risque de divergence que ça aurait ouvert.
+    `estModeVenteIndividuel`/`estThemeIndividuel` ciblent chacun leur seul
+    sous-groupe : `estVenteRealisee` couvre AUSSI `.ventesRealisees`
+    elle-même, qui n'est pas concernée ici. Les icônes des EN-TÊTES
+    « Modes de vente »/« Genres » (voir plus haut, Typographie) ne sont pas
+    concernées : essais distincts, drapeaux distincts. Sur iOS, la ligne
+    bascule d'un `Label` (icône + texte) à un `Text` nu plutôt que de
+    garder un `Label` à icône vide, qui aurait réservé la place de
+    l'icône. `true` restaure les icônes de l'un ou l'autre sous-groupe,
+    indépendamment.
 - **Ordre de « Ventes et dons » : Dons remonté AVANT Ventes et Modes de
   vente**, sur les DEUX plateformes — Catalogue, (Supports), **Dons**,
   Ventes, Modes de vente, Synthèse. `contenuVentesEtDons` (ordre partagé
