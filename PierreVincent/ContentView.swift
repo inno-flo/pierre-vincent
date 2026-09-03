@@ -1356,7 +1356,23 @@ struct ContentView: View {
                 lien(.modeVente(mode))
             }
         } label: {
+            // Même exception que l'en-tête « Genres » de la Réserve (voir
+            // CLAUDE.md, Typographie) : icône + style de libellé sur macOS
+            // seulement, iOS garde le style natif gris sans icône. `bag`
+            // reprend l'icône des rubriques individuelles de ce sous-groupe
+            // (`Categorie.symbole` pour `.modeVente`), l'orange celui de
+            // « Ventes et dons ».
+            #if os(macOS)
+            HStack(spacing: 6) {
+                Image(systemName: "bag")
+                    .foregroundStyle(Color.orangeInternational)
+                Text("Modes de vente")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textePrincipal)
+            }
+            #else
             Text("Modes de vente").foregroundStyle(.secondary)
+            #endif
         }
         lien(.synthese)
     }

@@ -1679,16 +1679,21 @@ s'afficherait à la place.
   Règle : **l'en-tête de section doit être plus PETIT que les libellés qu'il
   regroupe** (11 < 13). Le code imposait 14 pt aux en-têtes, donc plus gros
   que les libellés — hiérarchie visuelle inversée par rapport à Mail.
-  - **EXCEPTION délibérée — en-tête « Genres » de la Réserve, macOS
-    SEULEMENT** (demande explicite) : icône pinceau (`paintbrush.pointed`,
-    bleu ardoise) + libellé au style d'un LIBELLÉ de rubrique (13 pt,
-    `textePrincipal`, sans graisse) plutôt que le style gris 11 pt des
-    autres en-têtes de sous-groupe. Enfreint donc sciemment la règle
-    ci-dessus, ICI SEULEMENT — ne pas la généraliser aux autres en-têtes de
-    sous-groupe (Supports, Modes de vente) sans nouvelle demande. iOS n'est
-    pas concerné, `#if os(macOS)` : la version iPhone garde le style natif
-    gris sans icône. Le libellé lui-même (« Genres », pluriel) est
-    identique aux deux plateformes — seul le STYLE diverge.
+  - **EXCEPTION délibérée — en-têtes « Genres » (Réserve) et « Modes de
+    vente » (Ventes et dons), macOS SEULEMENT** (demande explicite,
+    étendue d'un en-tête à l'autre) : icône + libellé au style d'un
+    LIBELLÉ de rubrique (13 pt, `textePrincipal`, sans graisse) plutôt que
+    le style gris 11 pt des autres en-têtes de sous-groupe. Enfreint donc
+    sciemment la règle ci-dessus, sur CES DEUX en-têtes seulement — ne pas
+    généraliser à « Supports » sans nouvelle demande. Chacun reprend
+    l'icône ET l'accent de son propre sous-groupe, pas une valeur commune :
+    `paintbrush.pointed` + bleu ardoise pour Genres (Réserve),
+    `bag` + orange pour Modes de vente (Ventes et dons) — c'est
+    `Categorie.symbole`/`.accent` du sous-groupe qu'on relit, pas une
+    icône inventée pour l'occasion. iOS n'est pas concerné, `#if
+    os(macOS)` : la version iPhone garde le style natif gris sans icône,
+    aux deux en-têtes. Le libellé lui-même est identique aux deux
+    plateformes — seul le STYLE diverge.
   - *En-têtes* : **ne pas imposer de police NI de graisse**.
     `listStyle(.sidebar)` fournit lui-même l'apparence standard (petit corps,
     gris, graisse normale).
