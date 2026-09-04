@@ -270,10 +270,12 @@ struct VueAffinitesCLIPiOS: View {
                         valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
                         plage: 0...0.35)
             }
-            blocReglage(titre: "Genre") {
-                Toggle("Genre", isOn: $memeGenre)
-                    .font(.subheadline)
-            }
+            // Pas d'en-tête ici : contrairement au curseur, le libellé du
+            // bascule dit déjà lui-même ce qu'il règle.
+            Toggle("Genre", isOn: $memeGenre)
+                .font(.subheadline)
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
             Text("Moteur : MobileCLIP-S0 (Apple, Core ML)")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)

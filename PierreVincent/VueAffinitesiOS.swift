@@ -333,10 +333,12 @@ struct VueAffinitesiOS: View {
                             valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
                             plage: 0...0.42)
                 }
-                blocReglage(titre: "Genre") {
-                    Toggle("Genre", isOn: $memeGenre)
-                        .font(.subheadline)
-                }
+                // Pas d'en-tête ici : contrairement aux deux curseurs, le
+                // libellé du bascule dit déjà lui-même ce qu'il règle.
+                Toggle("Genre", isOn: $memeGenre)
+                    .font(.subheadline)
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
             }
         }
     }
