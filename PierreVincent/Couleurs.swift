@@ -348,17 +348,16 @@ extension EnvironmentValues {
 }
 
 extension Font {
-    /// **La** police des grands en-têtes de bloc de la sidebar iOS
-    /// (« Ventes et dons », « Réserve », « Labo » — `boutonEnTeteBloc`,
-    /// `ContentView.swift`) : `.footnote`, sans graisse imposée. Posée
-    /// dans le `header:` d'une `Section` d'un `List(.insetGrouped)`, cette
-    /// police vient nativement du style système d'en-tête de section — le
-    /// même que ce `Text` demande explicitement ici.
+    /// Reproduit la police des grands en-têtes de bloc de la SIDEBAR iOS —
+    /// LA RÉFÉRENCE (« Ventes et dons », « Réserve », « Labo »,
+    /// `boutonEnTeteBloc` dans `ContentView.swift`), qui reste INCHANGÉE :
+    /// son `Text` ne porte AUCUN `.font()` explicite, et hérite tel quel du
+    /// style natif qu'applique `List(.insetGrouped)` au `header:` d'une
+    /// `Section` — `.footnote`, sans graisse imposée.
     ///
-    /// Un seul token, utilisé LITTÉRALEMENT aux deux endroits — sur
-    /// `boutonEnTeteBloc` lui-même ET sur les en-têtes de réglage des vues
-    /// Affinités (`blocReglage`, hors de tout `List`, qui ne peuvent pas
-    /// hériter ce style automatiquement) — pour qu'un écart entre les deux
-    /// soit structurellement impossible plutôt que rapproché à l'estime.
+    /// Ce token existe pour les en-têtes de réglage des vues Affinités
+    /// (`blocReglage`), qui vivent hors de tout `List` et ne peuvent donc
+    /// pas hériter ce style automatiquement : c'est LA SEULE utilisation de
+    /// ce token, pour se rapprocher de la sidebar sans jamais la modifier.
     static let enTeteBlocSidebar: Font = .footnote
 }

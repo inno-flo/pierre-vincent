@@ -1351,13 +1351,7 @@ struct ContentView: View {
             withAnimation { ouvert.wrappedValue.toggle() }
         } label: {
             HStack {
-                // Police posée EXPLICITEMENT, au lieu de compter sur le
-                // style natif qu'un `header:` de `List` fournit tout seul :
-                // c'est ce même token (`Font.enTeteBlocSidebar`) que
-                // reprennent les en-têtes de réglage des vues Affinités,
-                // pour un rendu identique garanti par le code, pas par
-                // approximation.
-                Text(titre).font(.enTeteBlocSidebar)
+                Text(titre)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .rotationEffect(.degrees(ouvert.wrappedValue ? 90 : 0))
