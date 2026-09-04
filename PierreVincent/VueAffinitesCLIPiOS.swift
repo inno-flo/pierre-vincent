@@ -80,7 +80,7 @@ struct VueAffinitesCLIPiOS: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle(titreCourant)
+        .navigationTitle("Affinités CLIP")
         .toolbar { contenuBarreOutils }
         .task(id: cleLot) { await preparerLot() }
         .alert("Analyse des affinités (CLIP)", isPresented: Binding(
@@ -96,6 +96,12 @@ struct VueAffinitesCLIPiOS: View {
                + "Celles d'« Affinités » ne sont pas concernées.")
         }
         .overlay { visionneuse }
+        // « Œuvres proches (CLIP) » est un ENFANT poussé de cette vue — voir
+        // `VueAffinitesiOS.body`, même raison : le bouton de retour natif
+        // ramène ainsi dans « Affinités CLIP », pas dans la sidebar.
+        .navigationDestination(item: $procheDe) { source in
+            vueOeuvresProches(de: source)
+        }
     }
 
     // MARK: Contenu défilant
@@ -105,17 +111,9 @@ struct VueAffinitesCLIPiOS: View {
             ScrollView {
                 Color.clear.frame(height: 0).id(ancreHaut)
                 VStack(alignment: .leading, spacing: 20) {
-                    // Aucun réglage n'a de sens pour « Oeuvres proches
-                    // (CLIP) » : CLIP n'a qu'une seule distance, sans
-                    // curseur à ajuster une fois qu'on regarde les
-                    // œuvres proches d'une seule œuvre.
-                    if procheDe == nil { reglages }
+                    reglages
                     if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
-                    if let source = procheDe {
-                        sectionProches(de: source)
-                    } else {
-                        sectionsFamilles
-                    }
+                    sectionsFamilles
                 }
                 .padding(16)
             }
@@ -123,6 +121,21 @@ struct VueAffinitesCLIPiOS: View {
                 withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
         }
+    }
+
+    // MARK: « Œuvres proches (CLIP) » — écran enfant, poussé par `.navigationDestination`
+
+    /// Aucun réglage : CLIP n'a qu'une seule distance, sans curseur à
+    /// ajuster une fois qu'on regarde les œuvres proches d'une seule
+    /// œuvre. Le retour se fait par le bouton natif de navigation.
+    private func vueOeuvresProches(de source: Oeuvre) -> some View {
+        ScrollView {
+            sectionProches(de: source)
+                .padding(16)
+        }
+        .background(Color.cremeFond)
+        .navigationTitle("Œuvres proches (CLIP)")
+        .overlay { visionneuse }
     }
 
     // MARK: Les familles
@@ -162,19 +175,11 @@ struct VueAffinitesCLIPiOS: View {
     @ViewBuilder
     private func sectionProches(de source: Oeuvre) -> some View {
         let index = lot.firstIndex { $0.id == source.id }
-        VStack(alignment: .leading, spacing: 14) {
-            Button {
-                procheDe = nil
-            } label: {
-                Label("Revenir aux familles", systemImage: "arrow.left.circle.fill")
-                    .font(.subheadline)
-            }
-            .padding(.bottom, 10)
-
-            if let index, let matrice {
-                let proches = RegroupementCLIP.proches(de: index, parmi: lot,
-                                                       matrice: matrice,
-                                                       combien: nbProches)
+        if let index, let matrice {
+            let proches = RegroupementCLIP.proches(de: index, parmi: lot,
+                                                   matrice: matrice,
+                                                   combien: nbProches)
+            VStack(alignment: .leading, spacing: 14) {
                 section(titre: "Point de départ", sousTitre: nil, oeuvres: [source])
                 section(titre: "Les plus proches (CLIP)",
                         sousTitre: "\(proches.count) œuvres, de la plus "
@@ -309,9 +314,9 @@ struct VueAffinitesCLIPiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Même taille que les grands en-têtes de bloc de la sidebar —
-            // voir `VueAffinitesiOS.blocReglage`.
-            Text(titre).font(.footnote).foregroundStyle(.secondary)
+            // .footnote + 2 pt = .subheadline, gras — voir
+            // `VueAffinitesiOS.blocReglage`.
+            Text(titre).font(.subheadline.weight(.bold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -479,10 +484,6 @@ struct VueAffinitesCLIPiOS: View {
                 onNaviguer: { o in indexVisionneuse = lot.firstIndex { $0.id == o.id } },
                 onFermer: { indexVisionneuse = nil })
         }
-    }
-
-    private var titreCourant: String {
-        procheDe == nil ? "Affinités CLIP" : "Œuvres proches (CLIP)"
     }
 }
 #endif

@@ -103,7 +103,7 @@ struct VueAffinitesiOS: View {
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle(titreCourant)
+        .navigationTitle("Affinités")
         .toolbar { contenuBarreOutils }
         .task(id: cleLot) { await preparerLot() }
         .alert("Analyse des affinités", isPresented: Binding(
@@ -120,6 +120,15 @@ struct VueAffinitesiOS: View {
                + "photos —, mais l'opération reprend depuis le début.")
         }
         .overlay { visionneuse }
+        // « Œuvres proches » est un ENFANT poussé de cette vue, pas un
+        // simple changement de contenu piloté par un `@State` local : le
+        // bouton de retour natif de la barre de navigation ramène ainsi
+        // dans « Affinités », et non dans la sidebar — ce que le va-et-vient
+        // interne d'avant ne pouvait pas offrir (le bouton natif ignorait
+        // `procheDe`, il quittait toujours Affinités entièrement).
+        .navigationDestination(item: $procheDe) { source in
+            vueOeuvresProches(de: source)
+        }
     }
 
     // MARK: Contenu défilant — réglages, bandeaux, familles
@@ -129,20 +138,9 @@ struct VueAffinitesiOS: View {
             ScrollView {
                 Color.clear.frame(height: 0).id(ancreHaut)
                 VStack(alignment: .leading, spacing: 20) {
-                    // Retour à la vue par familles — AVANT le bloc de
-                    // réglages, pour rester la toute première chose vue en
-                    // entrant dans « Œuvres proches ». Bouton standard : ni
-                    // icône ni police imposée, juste un `Button` nu.
-                    if procheDe != nil {
-                        Button("Familles") { procheDe = nil }
-                    }
                     reglages
                     if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
-                    if let source = procheDe {
-                        sectionProches(de: source)
-                    } else {
-                        sectionsFamilles
-                    }
+                    sectionsFamilles
                 }
                 .padding(16)
             }
@@ -150,6 +148,29 @@ struct VueAffinitesiOS: View {
                 withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
         }
+    }
+
+    // MARK: « Œuvres proches » — écran enfant, poussé par `.navigationDestination`
+
+    /// Reprend uniquement « Correspondances » (le curseur influence le
+    /// classement de `Regroupement.proches`) — ni « Familles » ni « Genre »,
+    /// sans objet une fois qu'on regarde les œuvres proches d'une seule
+    /// œuvre. Le retour se fait par le bouton natif de navigation, plus
+    /// besoin d'un bouton « Familles » posé dans le contenu.
+    private func vueOeuvresProches(de source: Oeuvre) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                blocReglage(titre: "Correspondances") {
+                    curseur(finGauche: "Couleurs", finDroite: "Style",
+                            valeur: $poidsCouleur, plage: 0...1)
+                }
+                sectionProches(de: source)
+            }
+            .padding(16)
+        }
+        .background(Color.cremeFond)
+        .navigationTitle("Œuvres proches")
+        .overlay { visionneuse }
     }
 
     // MARK: Les familles
@@ -341,27 +362,26 @@ struct VueAffinitesiOS: View {
     /// propre cellule (carte `fondLegende`) — plus un seul grand bloc
     /// englobant les trois réglages.
     private var reglages: some View {
+        // Cette vue (contenuDefilant) est désormais la racine « Affinités »
+        // uniquement — « Œuvres proches » est un écran enfant séparé
+        // (`vueOeuvresProches`) — donc plus besoin de masquer Familles/Genre
+        // ici : on n'y arrive jamais avec `procheDe` non nul.
         VStack(alignment: .leading, spacing: 16) {
             blocReglage(titre: "Correspondances") {
                 curseur(finGauche: "Couleurs", finDroite: "Style",
                         valeur: $poidsCouleur, plage: 0...1)
             }
-            // « Familles » et « Genre » n'ont de sens que pour le classement
-            // par famille — sans objet une fois qu'on regarde les œuvres
-            // proches d'une seule œuvre.
-            if procheDe == nil {
-                blocReglage(titre: "Familles") {
-                    curseur(finGauche: "Larges", finDroite: "Serrées",
-                            valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
-                            plage: 0...0.42)
-                }
-                // Pas d'en-tête ici : contrairement aux deux curseurs, le
-                // libellé du bascule dit déjà lui-même ce qu'il règle.
-                Toggle("Genre", isOn: $memeGenre)
-                    .font(.subheadline)
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+            blocReglage(titre: "Familles") {
+                curseur(finGauche: "Larges", finDroite: "Serrées",
+                        valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
+                        plage: 0...0.42)
             }
+            // Pas d'en-tête ici : contrairement aux deux curseurs, le
+            // libellé du bascule dit déjà lui-même ce qu'il règle.
+            Toggle("Genre", isOn: $memeGenre)
+                .font(.subheadline)
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
         }
     }
 
@@ -371,16 +391,10 @@ struct VueAffinitesiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Même TAILLE que les grands en-têtes de bloc de la sidebar
-            // (« Réserve », « Labo »). Leur code (`boutonEnTeteBloc`) n'impose
-            // ni police ni graisse — mais posé dans le `header:` d'une
-            // `List(.insetGrouped)`, il hérite du style natif d'un en-tête
-            // de section, qui vaut `.footnote` (13 pt, voir le barème
-            // typographique de CLAUDE.md) — pas `.subheadline` (15 pt), un
-            // écart mesuré et corrigé. Ce `Text`-ci, hors de tout `List`, ne
-            // reçoit rien automatiquement : il faut fixer `.footnote` à la
-            // main, sans graisse imposée non plus, pour rester identique.
-            Text(titre).font(.footnote).foregroundStyle(.secondary)
+            // .footnote (13 pt) + 2 pt = .subheadline (15 pt) au barème iOS
+            // — passer au style sémantique suivant plutôt qu'une taille
+            // figée, pour rester compatible Dynamic Type. Gras à la demande.
+            Text(titre).font(.subheadline.weight(.bold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -549,10 +563,6 @@ struct VueAffinitesiOS: View {
                 onNaviguer: { o in indexVisionneuse = lot.firstIndex { $0.id == o.id } },
                 onFermer: { indexVisionneuse = nil })
         }
-    }
-
-    private var titreCourant: String {
-        procheDe == nil ? "Affinités" : "Œuvres proches"
     }
 }
 #endif
