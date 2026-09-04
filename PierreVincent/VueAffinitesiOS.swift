@@ -128,18 +128,18 @@ struct VueAffinitesiOS: View {
     private var contenuDefilant: some View {
         ScrollViewReader { proxy in
             List {
-                // L'ancre vit DANS la première `Section`, pas avant elle :
-                // posée comme ligne à part, `List` la traite comme sa propre
-                // section vide et ajoute l'espace INTER-sections en plus du
-                // grand espace sous le titre — d'où un vide anormalement
-                // grand au-dessus de « Correspondances ».
+                // L'ancre est l'IDENTITÉ de la `Section` elle-même, pas
+                // celle d'une ligne à part : postée comme ligne AVANT la
+                // première `Section`, `List` la traitait comme sa propre
+                // section vide (espace inter-sections en plus du grand
+                // espace sous le titre — vide anormal) ; postée comme
+                // PREMIÈRE ligne DANS la `Section`, elle cassait le rendu de
+                // sa carte (coin supérieur tronqué, capture du 4 sept. 2026).
                 Section("Correspondances") {
-                    Color.clear.frame(width: 0, height: 0)
-                        .listRowInsets(EdgeInsets())
-                        .id(ancreHaut)
                     curseur(finGauche: "Couleurs", finDroite: "Style",
                             valeur: $poidsCouleur, plage: 0...1)
                 }
+                .id(ancreHaut)
                 // « Familles » et « Genre » n'ont de sens que pour le
                 // classement par famille — sans objet une fois qu'on
                 // regarde les œuvres proches d'une seule œuvre.
@@ -349,13 +349,17 @@ struct VueAffinitesiOS: View {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
             .background(Color.fondLegende)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.filetVignette, lineWidth: 1))
-        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+        // Mêmes valeurs que `VueGalerie.carte` (Catalogue) : coin arrondi,
+        // marge interne et ombre identiques — seul le contenu de la légende
+        // diffère (une ligne ici, deux dans le Catalogue).
+        .background(Color.fondLegende)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
+        .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o) }
         .contextMenu {

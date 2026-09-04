@@ -108,21 +108,19 @@ struct VueAffinitesCLIPiOS: View {
                 // CLIP n'a qu'une seule distance, sans curseur à ajuster une
                 // fois qu'on regarde les œuvres proches d'une seule œuvre.
                 //
-                // L'ancre vit DANS la première `Section` quand elle existe
-                // (posée comme ligne à part, `List` la traiterait comme sa
-                // propre section vide et ajouterait l'espace INTER-sections
-                // en plus du grand espace sous le titre) ; sinon elle reste
-                // une simple ligne, rien d'autre ne suit immédiatement avec
-                // une frontière de section.
+                // L'ancre est l'IDENTITÉ de la `Section` elle-même quand
+                // elle existe (voir `VueAffinitesiOS.contenuDefilant` : ni
+                // ligne à part avant elle, ni première ligne dedans, les
+                // deux cassant le rendu) ; sinon une simple ligne, rien
+                // d'autre ne suit immédiatement avec une frontière de
+                // section.
                 if procheDe == nil {
                     Section("Familles") {
-                        Color.clear.frame(width: 0, height: 0)
-                            .listRowInsets(EdgeInsets())
-                            .id(ancreHaut)
                         curseur(finGauche: "Larges", finDroite: "Serrées",
                                 valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
                                 plage: 0...0.35)
                     }
+                    .id(ancreHaut)
                     Section {
                         Toggle("Genre", isOn: $memeGenre)
                     }
@@ -294,13 +292,16 @@ struct VueAffinitesCLIPiOS: View {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
             .background(Color.fondLegende)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.filetVignette, lineWidth: 1))
-        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+        // Mêmes valeurs que `VueGalerie.carte` (Catalogue) — voir
+        // `VueAffinitesiOS.carte`.
+        .background(Color.fondLegende)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
+        .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o) }
         .contextMenu {
