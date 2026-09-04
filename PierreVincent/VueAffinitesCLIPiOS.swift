@@ -97,25 +97,50 @@ struct VueAffinitesCLIPiOS: View {
 
     // MARK: Contenu défilant
 
+    /// **Un vrai `List(.insetGrouped)`** — voir `VueAffinitesiOS.contenuDefilant`,
+    /// même migration et mêmes raisons : l'en-tête « Familles » devient un
+    /// vrai `Section(titre)`, le même composant système que les en-têtes de
+    /// bloc de la sidebar.
     private var contenuDefilant: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                Color.clear.frame(height: 0).id(ancreHaut)
-                VStack(alignment: .leading, spacing: 20) {
-                    // Aucun réglage n'a de sens pour « Oeuvres proches
-                    // (CLIP) » : CLIP n'a qu'une seule distance, sans
-                    // curseur à ajuster une fois qu'on regarde les
-                    // œuvres proches d'une seule œuvre.
-                    if procheDe == nil { reglages }
-                    if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
-                    if let source = procheDe {
-                        sectionProches(de: source)
-                    } else {
-                        sectionsFamilles
+            List {
+                Color.clear.frame(height: 0)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .id(ancreHaut)
+
+                // Aucun réglage n'a de sens pour « Oeuvres proches (CLIP) » :
+                // CLIP n'a qu'une seule distance, sans curseur à ajuster une
+                // fois qu'on regarde les œuvres proches d'une seule œuvre.
+                if procheDe == nil {
+                    Section("Familles") {
+                        curseur(finGauche: "Larges", finDroite: "Serrées",
+                                valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
+                                plage: 0...0.35)
                     }
+                    Section {
+                        Toggle("Genre", isOn: $memeGenre)
+                    }
+                    Text("Moteur : MobileCLIP-S0 (Apple, Core ML)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
-                .padding(16)
+
+                if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
+
+                if let source = procheDe {
+                    sectionProches(de: source)
+                } else {
+                    sectionsFamilles
+                }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color.cremeFond)
             .retourEnHaut(visible: $boutonHautVisible) {
                 withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
@@ -138,6 +163,7 @@ struct VueAffinitesCLIPiOS: View {
                 Text("Aucune famille à ce réglage. Élargissez le curseur « Familles ».")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .ligneTransparente()
             }
             ForEach(Array(r.groupes.enumerated()), id: \.element.id) { rang, groupe in
                 sectionFamille(id: groupe.id, titre: "Famille \(rang + 1)",
@@ -159,25 +185,25 @@ struct VueAffinitesCLIPiOS: View {
     @ViewBuilder
     private func sectionProches(de source: Oeuvre) -> some View {
         let index = lot.firstIndex { $0.id == source.id }
-        VStack(alignment: .leading, spacing: 14) {
-            Button {
-                procheDe = nil
-            } label: {
-                Label("Revenir aux familles", systemImage: "arrow.left.circle.fill")
-                    .font(.subheadline)
-            }
-            .padding(.bottom, 10)
+        Button {
+            procheDe = nil
+        } label: {
+            Label("Revenir aux familles", systemImage: "arrow.left.circle.fill")
+                .font(.subheadline)
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 20, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
 
-            if let index, let matrice {
-                let proches = RegroupementCLIP.proches(de: index, parmi: lot,
-                                                       matrice: matrice,
-                                                       combien: nbProches)
-                section(titre: "Point de départ", sousTitre: nil, oeuvres: [source])
-                section(titre: "Les plus proches (CLIP)",
-                        sousTitre: "\(proches.count) œuvres, de la plus "
-                                 + "ressemblante à la moins",
-                        oeuvres: proches.map(\.oeuvre))
-            }
+        if let index, let matrice {
+            let proches = RegroupementCLIP.proches(de: index, parmi: lot,
+                                                   matrice: matrice,
+                                                   combien: nbProches)
+            section(titre: "Point de départ", sousTitre: nil, oeuvres: [source])
+            section(titre: "Les plus proches (CLIP)",
+                    sousTitre: "\(proches.count) œuvres, de la plus "
+                             + "ressemblante à la moins",
+                    oeuvres: proches.map(\.oeuvre))
         }
     }
 
@@ -197,6 +223,7 @@ struct VueAffinitesCLIPiOS: View {
                 ForEach(oeuvres) { o in carte(o) }
             }
         }
+        .ligneTransparente()
     }
 
     /// Variante COLLAPSABLE de `section`, réservée au classement par
@@ -223,6 +250,7 @@ struct VueAffinitesCLIPiOS: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .ligneTransparente()
     }
 
     // MARK: Une vignette — même choix que la version « Affinités » : tap
@@ -265,45 +293,10 @@ struct VueAffinitesCLIPiOS: View {
 
     // MARK: Réglages — un seul curseur : CLIP n'a qu'une distance
 
-    /// Deux blocs DISTINCTS (Familles, Genre), même patron que la version
-    /// « Affinités » — voir `VueAffinitesiOS.reglages`. Pas de bloc
-    /// « Correspondances » ici : CLIP n'a qu'une seule distance.
-    private var reglages: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            blocReglage(titre: "Familles") {
-                curseur(finGauche: "Larges", finDroite: "Serrées",
-                        valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
-                        plage: 0...0.35)
-            }
-            // Pas d'en-tête ici : contrairement au curseur, le libellé du
-            // bascule dit déjà lui-même ce qu'il règle.
-            Toggle("Genre", isOn: $memeGenre)
-                .font(.subheadline)
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
-            Text("Moteur : MobileCLIP-S0 (Apple, Core ML)")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    /// Un bloc de réglage : en-tête simple au-dessus, cellule `fondLegende`
-    /// en dessous — voir `VueAffinitesiOS.blocReglage`.
-    private func blocReglage<Contenu: View>(titre: String,
-                                            @ViewBuilder contenu: () -> Contenu) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Le même token que `boutonEnTeteBloc` — voir
-            // `VueAffinitesiOS.blocReglage`.
-            Text(titre).font(.enTeteBlocSidebar).foregroundStyle(.secondary)
-            contenu()
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
-        }
-    }
-
-    /// Taille de texte alignée sur celle des vignettes de Catalogue
-    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS). Le titre du
-    /// réglage n'est plus ICI — c'est désormais l'en-tête de `blocReglage`.
+    /// Le curseur seul — posé DIRECTEMENT comme contenu d'un `Section` de
+    /// `List` (voir `contenuDefilant`) : l'en-tête n'est plus ici, c'est
+    /// désormais le titre natif du `Section`, exactement le même composant
+    /// système que les en-têtes de bloc de la sidebar.
     private func curseur(finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
@@ -337,6 +330,7 @@ struct VueAffinitesCLIPiOS: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.fondLegende))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(0.5), lineWidth: 1))
+        .ligneTransparente()
     }
 
     /// Écran de progression, plein écran — voir `VueAffinitesiOS`, même
@@ -466,6 +460,20 @@ struct VueAffinitesCLIPiOS: View {
 
     private var titreCourant: String {
         procheDe == nil ? "Affinités CLIP" : "Œuvres proches (CLIP)"
+    }
+}
+
+/// `private` (donc propre à ce fichier) — voir `VueAffinitesiOS.swift`,
+/// même duplication assumée, pour éviter une collision avec la copie de
+/// l'autre fichier.
+private extension View {
+    /// Ligne de `List` sans carte ni séparateur — pour tout ce qui doit
+    /// rester posé directement sur le fond crème, comme avant la migration
+    /// vers `List` (seuls les réglages ont une vraie carte système).
+    func ligneTransparente() -> some View {
+        listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 }
 #endif

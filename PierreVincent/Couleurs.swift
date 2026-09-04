@@ -347,25 +347,10 @@ extension EnvironmentValues {
     }
 }
 
-extension Font {
-    /// Se RAPPROCHE de la police des grands en-têtes de bloc de la SIDEBAR
-    /// iOS — LA RÉFÉRENCE (« Ventes et dons », « Réserve », « Labo »,
-    /// `boutonEnTeteBloc` dans `ContentView.swift`), qui reste INCHANGÉE :
-    /// son `Text` ne porte AUCUN `.font()` explicite, et hérite tel quel du
-    /// style natif qu'applique `List(.insetGrouped)` au `header:` d'une
-    /// `Section` — un style qui n'est écrit NULLE PART dans le code, donc
-    /// pas mesurable depuis ici avec certitude.
-    ///
-    /// **`.footnote` essayé en premier, comparé à l'écran (captures du
-    /// 4 septembre 2026) : trop petit, la sidebar rend nettement plus
-    /// grand.** `.subheadline` (15 pt) est l'échelon suivant du barème
-    /// iOS, plus proche de ce qu'on observe — à confirmer à l'écran, faute
-    /// de pouvoir mesurer le pixel exact sans simulateur ni accès aux
-    /// captures.
-    ///
-    /// Ce token existe pour les en-têtes de réglage des vues Affinités
-    /// (`blocReglage`), qui vivent hors de tout `List` et ne peuvent donc
-    /// pas hériter ce style automatiquement : c'est LA SEULE utilisation de
-    /// ce token, pour se rapprocher de la sidebar sans jamais la modifier.
-    static let enTeteBlocSidebar: Font = .subheadline
-}
+// `Font.enTeteBlocSidebar` a existé ici pour approcher à la main la police
+// des grands en-têtes de bloc de la sidebar (« Réserve », « Labo ») dans les
+// en-têtes de réglage des vues Affinités — sans jamais y arriver avec
+// certitude, faute de savoir ce que `List(.insetGrouped)` applique
+// réellement. SUPPRIMÉ : les deux vues Affinités utilisent maintenant de
+// vrais `Section(titre)` de `List`, donc le MÊME composant système que la
+// sidebar — plus besoin d'approximation.
