@@ -56,8 +56,13 @@ struct VueAffinitesCLIPiOS: View {
             if ProgressionImport.partagee.enCours {
                 progressionEnCours
             } else if chargementInitial {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("Préparation…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !modeleDisponible {
                 etatVide(symbole: "exclamationmark.triangle",
                          titre: "Modèle CLIP non installé",

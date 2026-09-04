@@ -111,8 +111,13 @@ struct VueAffinitesiOS: View {
                 // rapprocher » (pensé pour une Réserve réellement vide)
                 // s'affichait à CHAQUE ouverture le temps du chargement,
                 // un écran qui ne disait rien d'utile (capture fournie).
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("Préparation…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if lot.isEmpty {
                 etatVide(symbole: "photo.artframe",
                          titre: "Aucune œuvre à rapprocher",
