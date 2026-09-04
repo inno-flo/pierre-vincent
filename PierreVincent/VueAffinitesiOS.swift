@@ -128,13 +128,15 @@ struct VueAffinitesiOS: View {
     private var contenuDefilant: some View {
         ScrollViewReader { proxy in
             List {
-                Color.clear.frame(height: 0)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .id(ancreHaut)
-
+                // L'ancre vit DANS la première `Section`, pas avant elle :
+                // posée comme ligne à part, `List` la traite comme sa propre
+                // section vide et ajoute l'espace INTER-sections en plus du
+                // grand espace sous le titre — d'où un vide anormalement
+                // grand au-dessus de « Correspondances ».
                 Section("Correspondances") {
+                    Color.clear.frame(width: 0, height: 0)
+                        .listRowInsets(EdgeInsets())
+                        .id(ancreHaut)
                     curseur(finGauche: "Couleurs", finDroite: "Style",
                             valeur: $poidsCouleur, plage: 0...1)
                 }
@@ -168,6 +170,11 @@ struct VueAffinitesiOS: View {
             // 8 pt pour retrouver l'écart du Catalogue de « Ventes et dons »
             // (`BandeauTypes.padding(.top, 8)`), pris comme référence.
             .contentMargins(.top, 8, for: .scrollContent)
+            // Sans ceci, la ligne-ancre (hauteur 0 demandée) serait quand
+            // même portée à la hauteur minimale système d'une ligne de
+            // `List` (~44 pt), ajoutant un vide invisible au-dessus du
+            // premier curseur.
+            .environment(\.defaultMinListRowHeight, 0)
             .scrollContentBackground(.hidden)
             .background(Color.cremeFond)
             .retourEnHaut(visible: $boutonHautVisible) {
