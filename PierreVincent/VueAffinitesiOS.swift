@@ -37,6 +37,9 @@ import SwiftData
 /// œuvre, sans geste à distinguer ni menu à attendre.
 struct VueAffinitesiOS: View {
     @Environment(\.accentRubrique) private var accent
+    /// Pour `basculerFavori(_:contexte:)`, appelé depuis le menu contextuel
+    /// des vignettes d'« Œuvres proches ».
+    @Environment(\.modelContext) private var context
 
     let toutes: [Oeuvre]
 
@@ -93,27 +96,12 @@ struct VueAffinitesiOS: View {
 
     var body: some View {
         Group {
-            // **Priorité absolue** : tant qu'une analyse tourne, on ne montre
-            // QUE sa progression — jamais la grille ni un état vide en même
-            // temps. `ProgressionImport.partagee.enCours` est la source de
-            // vérité exacte (contrairement à `analyseEnCours`, vrai aussi
-            // pendant le bref aller-retour qui découvre qu'il n'y a rien à
-            // faire, cas où aucune boucle ne démarre réellement).
-            if ProgressionImport.partagee.enCours {
-                progressionEnCours
-            } else if chargementInitial {
-                // `lot` vaut `[]` avant même que `preparerLot()` ait tourné
-                // une seule fois — sans ce drapeau, l'état « Aucune œuvre à
-                // rapprocher » (pensé pour une Réserve réellement vide)
-                // s'affichait à CHAQUE ouverture le temps du chargement,
-                // un écran qui ne disait rien d'utile (capture fournie).
-                VStack(spacing: 10) {
-                    ProgressView()
-                    Text("Préparation…")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Le chargement initial et une analyse en cours ne sont PLUS
+            // rendus ici : voir le `.fullScreenCover` en bas de ce `body`.
+            // Cette branche ne sert donc plus qu'à ne rien montrer sous la
+            // couverture — jamais vue, elle disparaît en même temps.
+            if ProgressionImport.partagee.enCours || chargementInitial {
+                Color.clear
             } else if lot.isEmpty {
                 etatVide(symbole: "photo.artframe",
                          titre: "Aucune œuvre à rapprocher",
@@ -139,15 +127,39 @@ struct VueAffinitesiOS: View {
         .background(Color.cremeFond)
         .navigationTitle("Affinités")
         .toolbar { contenuBarreOutils }
-        // Pendant le chargement initial ou une analyse, la barre de
-        // navigation masque TOUT — y compris les boutons Importer/Prix de
-        // la sidebar qui restent affichés ET tapables le temps que cette
-        // vue prenne la main sur la barre système (transition d'entrée) :
-        // un `.toolbar` à nous, même vide, ne suffit pas à les effacer,
-        // puisqu'ils appartiennent à l'écran précédent, pas au nôtre.
-        .toolbar((chargementInitial || ProgressionImport.partagee.enCours)
-                 ? .hidden : .visible, for: .navigationBar)
         .task(id: cleLot) { await preparerLot() }
+        // Chargement initial et progression d'import : une VRAIE présentation
+        // à part, comme la feuille « Œuvres proches ». Le `.toolbar(.hidden,
+        // for: .navigationBar)` essayé avant ne suffisait pas : cette vue vit
+        // dans la colonne « detail » du `NavigationSplitView`, encore en
+        // transition depuis la sidebar « Inventaire » à ce moment précis —
+        // masquer NOTRE barre ne fait que révéler la SIENNE (même barre de
+        // navigation, un seul niveau), boutons Importer/Prix compris, restés
+        // visibles ET tapables (constaté à l'écran, titre « Inventaire »
+        // encore affiché). Un `.fullScreenCover` est un NIVEAU de
+        // présentation entièrement séparé : il masque tout ce qu'il y a
+        // dessous, quelle que soit la barre active à cet instant.
+        .fullScreenCover(isPresented: Binding(
+            get: { chargementInitial || ProgressionImport.partagee.enCours },
+            set: { _ in })) {
+            Group {
+                if ProgressionImport.partagee.enCours {
+                    progressionEnCours
+                } else {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                        // .body = 17 pt au barème iOS par défaut, demandé
+                        // explicitement — style sémantique plutôt qu'une
+                        // taille figée, pour rester compatible Dynamic Type.
+                        Text("Préparation…")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .background(Color.cremeFond)
+        }
         .alert("Analyse des affinités", isPresented: Binding(
             get: { messageAnalyse != nil },
             set: { if !$0 { messageAnalyse = nil } })) {
@@ -300,7 +312,10 @@ struct VueAffinitesiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                // `avecFavori` : seule cette section (« Œuvres proches »,
+                // feuille modale) propose la bascule des favoris — pas la
+                // grille de familles de l'écran racine, non demandée ici.
+                ForEach(oeuvres) { o in carte(o, avecFavori: true) }
             }
         }
     }
@@ -350,16 +365,21 @@ struct VueAffinitesiOS: View {
 
     // MARK: Une vignette
 
-    /// **Plus de visionneuse, plus de menu contextuel.** Après plusieurs
-    /// essais infructueux pour fiabiliser la poussée d'« Œuvres proches »
-    /// depuis un `.contextMenu` (délai avant mutation d'état,
-    /// `NavigationStack` propre, `.navigationDestination(item:)` puis
-    /// `(isPresented:)`…) — sans pouvoir vérifier sur un appareil réel —, la
-    /// fonction visionneuse est retirée des deux vues Affinités et le tap
-    /// simple sur une vignette ouvre directement « Œuvres proches » : plus
-    /// aucun geste à distinguer, plus aucune animation de menu à attendre.
-    private func carte(_ o: Oeuvre) -> some View {
-        VStack(spacing: 0) {
+    /// **Plus de visionneuse.** Après plusieurs essais infructueux pour
+    /// fiabiliser la poussée d'« Œuvres proches » depuis un `.contextMenu`
+    /// (délai avant mutation d'état, `NavigationStack` propre,
+    /// `.navigationDestination(item:)` puis `(isPresented:)`…) — sans
+    /// pouvoir vérifier sur un appareil réel —, la fonction visionneuse est
+    /// retirée des deux vues Affinités et le tap simple sur une vignette
+    /// ouvre directement « Œuvres proches ».
+    ///
+    /// **`avecFavori`** : seule la feuille « Œuvres proches » (voir
+    /// `section`) propose la bascule des favoris par appui prolongé — un
+    /// `.contextMenu` ordinaire, sans risque cette fois de fusion d'aperçu
+    /// entre vignettes (plus de `List`, retour à un simple `ScrollView`).
+    @ViewBuilder
+    private func carte(_ o: Oeuvre, avecFavori: Bool = false) -> some View {
+        let base = VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
                 VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320,
@@ -397,6 +417,21 @@ struct VueAffinitesiOS: View {
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { procheDe = o }
+        if avecFavori {
+            base.contextMenu {
+                // Libellé et icône recalculés à chaque ouverture du menu —
+                // même icône que `TransitionVisionneuse` (star/star.slash,
+                // pas star.fill) pour rester cohérent avec la Galerie.
+                Button {
+                    basculerFavori(o, contexte: context)
+                } label: {
+                    Label(o.favori ? "Retirer des favoris" : "Ajouter aux favoris",
+                          systemImage: o.favori ? "star.slash" : "star")
+                }
+            }
+        } else {
+            base
+        }
     }
 
     // MARK: Réglages

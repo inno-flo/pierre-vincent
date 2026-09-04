@@ -9,6 +9,9 @@ import SwiftData
 /// vignettes lors d'un appui prolongé).
 struct VueAffinitesCLIPiOS: View {
     @Environment(\.accentRubrique) private var accent
+    /// Pour `basculerFavori(_:contexte:)`, appelé depuis le menu contextuel
+    /// des vignettes d'« Œuvres proches (CLIP) ».
+    @Environment(\.modelContext) private var context
 
     let toutes: [Oeuvre]
 
@@ -48,18 +51,10 @@ struct VueAffinitesCLIPiOS: View {
 
     var body: some View {
         Group {
-            // Priorité absolue — voir `VueAffinitesiOS`, même règle : tant
-            // qu'une analyse tourne, l'écran ne montre QUE sa progression.
-            if ProgressionImport.partagee.enCours {
-                progressionEnCours
-            } else if chargementInitial {
-                VStack(spacing: 10) {
-                    ProgressView()
-                    Text("Préparation…")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Le chargement initial et une analyse en cours ne sont PLUS
+            // rendus ici : voir le `.fullScreenCover` en bas de ce `body`.
+            if ProgressionImport.partagee.enCours || chargementInitial {
+                Color.clear
             } else if !modeleDisponible {
                 etatVide(symbole: "exclamationmark.triangle",
                          titre: "Modèle CLIP non installé",
@@ -90,11 +85,30 @@ struct VueAffinitesCLIPiOS: View {
         .background(Color.cremeFond)
         .navigationTitle("Affinités CLIP")
         .toolbar { contenuBarreOutils }
-        // Pendant le chargement initial ou une analyse, la barre de
-        // navigation masque TOUT — voir `VueAffinitesiOS.body`.
-        .toolbar((chargementInitial || ProgressionImport.partagee.enCours)
-                 ? .hidden : .visible, for: .navigationBar)
         .task(id: cleLot) { await preparerLot() }
+        // Chargement initial et progression d'import en `.fullScreenCover` —
+        // voir `VueAffinitesiOS.body` pour le pourquoi (un `.toolbar(.hidden,
+        // for: .navigationBar)` ne suffisait pas, cette vue restant dans la
+        // colonne « detail » du `NavigationSplitView`, encore en transition
+        // depuis la sidebar à ce moment précis).
+        .fullScreenCover(isPresented: Binding(
+            get: { chargementInitial || ProgressionImport.partagee.enCours },
+            set: { _ in })) {
+            Group {
+                if ProgressionImport.partagee.enCours {
+                    progressionEnCours
+                } else {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                        Text("Préparation…")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .background(Color.cremeFond)
+        }
         .alert("Analyse des affinités (CLIP)", isPresented: Binding(
             get: { messageAnalyse != nil },
             set: { if !$0 { messageAnalyse = nil } })) {
@@ -218,7 +232,9 @@ struct VueAffinitesCLIPiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                // `avecFavori` : seule cette section (« Œuvres proches
+                // (CLIP) », feuille modale) propose la bascule des favoris.
+                ForEach(oeuvres) { o in carte(o, avecFavori: true) }
             }
         }
     }
@@ -253,8 +269,9 @@ struct VueAffinitesCLIPiOS: View {
     // visionneuse ni de menu contextuel, le tap simple ouvre directement
     // « Œuvres proches (CLIP) ».
 
-    private func carte(_ o: Oeuvre) -> some View {
-        VStack(spacing: 0) {
+    @ViewBuilder
+    private func carte(_ o: Oeuvre, avecFavori: Bool = false) -> some View {
+        let base = VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
                 VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320,
@@ -292,6 +309,18 @@ struct VueAffinitesCLIPiOS: View {
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { procheDe = o }
+        if avecFavori {
+            base.contextMenu {
+                Button {
+                    basculerFavori(o, contexte: context)
+                } label: {
+                    Label(o.favori ? "Retirer des favoris" : "Ajouter aux favoris",
+                          systemImage: o.favori ? "star.slash" : "star")
+                }
+            }
+        } else {
+            base
+        }
     }
 
     // MARK: Réglages — un seul curseur : CLIP n'a qu'une distance
