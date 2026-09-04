@@ -75,12 +75,8 @@ struct VueAffinitesiOS: View {
     /// comparaison des signatures réapparaissait au lieu de retrouver
     /// directement les familles déjà calculées (constaté à l'écran).
     @State private var dernierCleLotTraite: String?
+    /// Œuvre affichée par « Œuvres proches », `nil` sur « Affinités ».
     @State private var procheDe: Oeuvre?
-    /// Présentation d'« Œuvres proches », adossée à `procheDe`.
-    private var procheDePresente: Binding<Bool> {
-        Binding(get: { procheDe != nil },
-                set: { if !$0 { procheDe = nil } })
-    }
     /// Bouton flottant « Retour en haut », même mécanisme que toutes les
     /// vues Galerie/Liste de l'app (voir `BoutonRetourHaut.swift`).
     @State private var boutonHautVisible = false
@@ -137,12 +133,45 @@ struct VueAffinitesiOS: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                contenuDefilant
+                // « Œuvres proches » n'est PAS une présentation séparée
+                // (`.navigationDestination` a échoué sous trois formes sans
+                // jamais pouvoir être vérifié sur un appareil réel ;
+                // `.fullScreenCover` marchait mais imposait le glissement
+                // vertical du système, pas le glissement latéral demandé).
+                // Même écran, même `body` : un `ZStack` bascule entre les
+                // deux contenus avec une transition glissée — exactement le
+                // procédé déjà utilisé par `DetailiOS` pour changer d'œuvre.
+                // Le `ZStack` est INDISPENSABLE : sans lui, SwiftUI ne
+                // superpose pas l'ancien et le nouveau contenu pendant
+                // l'animation, et `.move(edge:)` ne se voit pas.
+                ZStack {
+                    if let source = procheDe {
+                        vueOeuvresProches(de: source)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .trailing),
+                                removal: .move(edge: .leading)))
+                    } else {
+                        contenuDefilant
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .leading),
+                                removal: .move(edge: .trailing)))
+                    }
+                }
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle("Affinités")
-        .toolbar { contenuBarreOutils }
+        .navigationTitle(procheDe == nil ? "Affinités" : "Œuvres proches")
+        // Le menu « Analyser » n'a de sens que sur « Affinités » ; « Œuvres
+        // proches » a son bouton de retour à la place.
+        .toolbar { if procheDe == nil { contenuBarreOutils } else { boutonRetour } }
+        // Pendant le chargement initial ou une analyse, la barre de
+        // navigation masque TOUT — y compris les boutons Importer/Prix de
+        // la sidebar qui restent affichés ET tapables le temps que cette
+        // vue prenne la main sur la barre système (transition d'entrée) :
+        // un `.toolbar` à nous, même vide, ne suffit pas à les effacer,
+        // puisqu'ils appartiennent à l'écran précédent, pas au nôtre.
+        .toolbar((chargementInitial || ProgressionImport.partagee.enCours)
+                 ? .hidden : .visible, for: .navigationBar)
         .task(id: cleLot) { await preparerLot() }
         .alert("Analyse des affinités", isPresented: Binding(
             get: { messageAnalyse != nil },
@@ -156,33 +185,6 @@ struct VueAffinitesiOS: View {
             Text("Les signatures déjà calculées seront effacées et refaites, "
                + "photo par photo. Rien n'est perdu — ni les œuvres, ni les "
                + "photos —, mais l'opération reprend depuis le début.")
-        }
-        // « Œuvres proches » — `.fullScreenCover`, PAS
-        // `.navigationDestination` : trois variantes de ce dernier
-        // (`item:`, `isPresented:` seul, `isPresented:` sous un
-        // `NavigationStack` propre à cette vue) ont toutes échoué à l'usage
-        // — poussée qui ne se déclenchait pas du tout, ou barre d'outils
-        // perdue — sans qu'aucun simulateur ne permette de vérifier en
-        // direct. `.fullScreenCover` est le seul mécanisme dont cette vue
-        // ait la preuve qu'il fonctionne (c'est lui qui présentait la
-        // visionneuse). Le `NavigationStack` interne à la couverture donne
-        // le bouton de retour, sans jamais toucher à celui de la colonne
-        // « detail » du `NavigationSplitView` parent.
-        .fullScreenCover(isPresented: procheDePresente) {
-            if let source = procheDe {
-                NavigationStack {
-                    vueOeuvresProches(de: source)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button {
-                                    procheDe = nil
-                                } label: {
-                                    Label("Affinités", systemImage: "chevron.left")
-                                }
-                            }
-                        }
-                }
-            }
         }
     }
 
@@ -224,8 +226,6 @@ struct VueAffinitesiOS: View {
             }
             .padding(16)
         }
-        .background(Color.cremeFond)
-        .navigationTitle("Œuvres proches")
     }
 
     // MARK: Les familles
@@ -400,7 +400,9 @@ struct VueAffinitesiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { procheDe = o }
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.25)) { procheDe = o }
+        }
     }
 
     // MARK: Réglages
@@ -409,10 +411,9 @@ struct VueAffinitesiOS: View {
     /// propre cellule (carte `fondLegende`) — plus un seul grand bloc
     /// englobant les trois réglages.
     private var reglages: some View {
-        // Cette vue (contenuDefilant) est désormais la racine « Affinités »
-        // uniquement — « Œuvres proches » est un écran enfant séparé
-        // (`vueOeuvresProches`) — donc plus besoin de masquer Familles/Genre
-        // ici : on n'y arrive jamais avec `procheDe` non nul.
+        // `contenuDefilant` n'est montré que dans la branche `procheDe ==
+        // nil` du `ZStack` de `body` : plus besoin de masquer Familles/Genre
+        // ici, on n'y arrive jamais avec `procheDe` non nul.
         VStack(alignment: .leading, spacing: 16) {
             blocReglage(titre: "Correspondances") {
                 curseur(finGauche: "Couleurs", finDroite: "Style",
@@ -441,8 +442,8 @@ struct VueAffinitesiOS: View {
             // .footnote (13) -> .subheadline (15) -> .body (17) : deux
             // paliers de +2 pt au barème iOS, en passant par le style
             // sémantique suivant à chaque fois plutôt qu'une taille figée,
-            // pour rester compatible Dynamic Type. Sans graisse imposée.
-            Text(titre).font(.body).foregroundStyle(.secondary)
+            // pour rester compatible Dynamic Type. Gras.
+            Text(titre).font(.body.weight(.bold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -520,6 +521,21 @@ struct VueAffinitesiOS: View {
     }
 
     // MARK: Barre d'outils
+
+    /// Retour à « Affinités » depuis « Œuvres proches » — la vue est un
+    /// simple `ZStack` glissé, pas un écran séparé, donc pas de bouton de
+    /// retour natif : celui-ci en tient lieu, avec la même animation que
+    /// l'ouverture.
+    @ToolbarContentBuilder
+    private var boutonRetour: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) { procheDe = nil }
+            } label: {
+                Label("Affinités", systemImage: "chevron.left")
+            }
+        }
+    }
 
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
