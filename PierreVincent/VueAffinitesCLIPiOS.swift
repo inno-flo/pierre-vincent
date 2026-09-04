@@ -288,9 +288,15 @@ struct VueAffinitesCLIPiOS: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 2) {
-                // Seul l'emplacement de stockage — pas le genre, qui n'a
-                // rien à faire sous une vignette de rapprochement par style
-                // et couleurs. Police alignée sur la légende du Catalogue.
+                // Intitulé puis valeur — même présentation que la vignette
+                // de Réserve du Catalogue (`VueGalerie.carte`) : le libellé
+                // du champ d'abord, en gris, sa valeur ensuite. Pas le
+                // genre, qui n'a rien à faire sous une vignette de
+                // rapprochement par style et couleurs.
+                Text(rangementVignette(o).intitule)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    .lineLimit(1)
                 Text(rangementVignette(o).valeur)
                     .font(.subheadline)
                     .foregroundStyle(Color.texteLegende)
