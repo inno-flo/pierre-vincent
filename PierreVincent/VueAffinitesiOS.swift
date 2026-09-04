@@ -56,6 +56,12 @@ struct VueAffinitesiOS: View {
 
     @State private var procheDe: Oeuvre?
     @State private var indexVisionneuse: Int?
+    /// La liste dans laquelle circulent les flèches Précédent/Suivant —
+    /// celle affichée à l'écran quand on ouvre la vignette (une famille, la
+    /// liste « Point de départ »/« Les plus proches »…), PAS `lot` en
+    /// entier : sans elle, les flèches parcouraient tout le lot analysé,
+    /// dans son ordre d'origine, sans rapport avec l'ordre affiché.
+    @State private var oeuvresVisionneuse: [Oeuvre] = []
     /// Bouton flottant « Retour en haut », même mécanisme que toutes les
     /// vues Galerie/Liste de l'app (voir `BoutonRetourHaut.swift`).
     @State private var boutonHautVisible = false
@@ -249,7 +255,7 @@ struct VueAffinitesiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
             }
         }
     }
@@ -267,7 +273,7 @@ struct VueAffinitesiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
             }
             .padding(.top, 8)
         } label: {
@@ -309,7 +315,7 @@ struct VueAffinitesiOS: View {
     /// attribuer l'aperçu d'une zone plus large que la sienne (constaté à
     /// l'écran). En fournissant nous-mêmes l'aperçu (juste cette vignette),
     /// plus rien à mal attribuer.
-    private func carte(_ o: Oeuvre) -> some View {
+    private func carte(_ o: Oeuvre, liste: [Oeuvre]) -> some View {
         VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
@@ -347,9 +353,17 @@ struct VueAffinitesiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { ouvrirVisionneuse(sur: o) }
+        .onTapGesture { ouvrirVisionneuse(sur: o, dans: liste) }
         .contextMenu {
-            Button("Œuvres proches") { procheDe = o }
+            // Déclencher la navigation DIRECTEMENT depuis l'action d'un
+            // `.contextMenu` est peu fiable sur iOS : le changement d'état
+            // entre en conflit avec l'animation de fermeture du menu, et le
+            // `.navigationDestination` ne se déclenche pas (tap sans effet,
+            // constaté à l'écran). Reporter d'un tour de boucle laisse le
+            // menu se refermer avant que `procheDe` ne change.
+            Button("Œuvres proches") {
+                DispatchQueue.main.async { procheDe = o }
+            }
         } preview: {
             VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
                 .frame(width: 320, height: 420)
@@ -391,10 +405,11 @@ struct VueAffinitesiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // .footnote (13 pt) + 2 pt = .subheadline (15 pt) au barème iOS
-            // — passer au style sémantique suivant plutôt qu'une taille
-            // figée, pour rester compatible Dynamic Type. Gras à la demande.
-            Text(titre).font(.subheadline.weight(.bold)).foregroundStyle(.secondary)
+            // .footnote (13) -> .subheadline (15) -> .body (17) : deux
+            // paliers de +2 pt au barème iOS, en passant par le style
+            // sémantique suivant à chaque fois plutôt qu'une taille figée,
+            // pour rester compatible Dynamic Type. Gras à la demande.
+            Text(titre).font(.body.weight(.bold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -550,17 +565,18 @@ struct VueAffinitesiOS: View {
         }
     }
 
-    private func ouvrirVisionneuse(sur o: Oeuvre) {
-        indexVisionneuse = lot.firstIndex { $0.id == o.id }
+    private func ouvrirVisionneuse(sur o: Oeuvre, dans liste: [Oeuvre]) {
+        oeuvresVisionneuse = liste
+        indexVisionneuse = liste.firstIndex { $0.id == o.id }
     }
 
     @ViewBuilder
     private var visionneuse: some View {
-        if let i = indexVisionneuse, !lot.isEmpty {
+        if let i = indexVisionneuse, !oeuvresVisionneuse.isEmpty {
             VisionneuseOeuvres(
-                oeuvres: lot,
-                index: min(i, lot.count - 1),
-                onNaviguer: { o in indexVisionneuse = lot.firstIndex { $0.id == o.id } },
+                oeuvres: oeuvresVisionneuse,
+                index: min(i, oeuvresVisionneuse.count - 1),
+                onNaviguer: { o in indexVisionneuse = oeuvresVisionneuse.firstIndex { $0.id == o.id } },
                 onFermer: { indexVisionneuse = nil })
         }
     }

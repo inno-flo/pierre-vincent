@@ -31,6 +31,9 @@ struct VueAffinitesCLIPiOS: View {
 
     @State private var procheDe: Oeuvre?
     @State private var indexVisionneuse: Int?
+    /// Voir `VueAffinitesiOS.oeuvresVisionneuse` : la liste dans laquelle
+    /// circulent les flèches Précédent/Suivant, pas `lot` en entier.
+    @State private var oeuvresVisionneuse: [Oeuvre] = []
     @State private var boutonHautVisible = false
     private let ancreHaut = "ancre-haut-affinites-clip"
 
@@ -202,7 +205,7 @@ struct VueAffinitesCLIPiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
             }
         }
     }
@@ -220,7 +223,7 @@ struct VueAffinitesCLIPiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
             }
             .padding(.top, 8)
         } label: {
@@ -238,7 +241,7 @@ struct VueAffinitesCLIPiOS: View {
     // `.contextMenu(menuItems:preview:)` avec aperçu explicite — voir
     // `VueAffinitesiOS.carte`.
 
-    private func carte(_ o: Oeuvre) -> some View {
+    private func carte(_ o: Oeuvre, liste: [Oeuvre]) -> some View {
         VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
@@ -276,9 +279,15 @@ struct VueAffinitesCLIPiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { ouvrirVisionneuse(sur: o) }
+        .onTapGesture { ouvrirVisionneuse(sur: o, dans: liste) }
         .contextMenu {
-            Button("Œuvres proches (CLIP)") { procheDe = o }
+            // Voir `VueAffinitesiOS.carte` : déclencher la navigation
+            // directement depuis un `.contextMenu` est peu fiable sur iOS,
+            // reporter d'un tour de boucle laisse le menu se refermer
+            // avant que `procheDe` ne change.
+            Button("Œuvres proches (CLIP)") {
+                DispatchQueue.main.async { procheDe = o }
+            }
         } preview: {
             VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
                 .frame(width: 320, height: 420)
@@ -314,9 +323,9 @@ struct VueAffinitesCLIPiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // .footnote + 2 pt = .subheadline, gras — voir
+            // .footnote -> .subheadline -> .body, gras — voir
             // `VueAffinitesiOS.blocReglage`.
-            Text(titre).font(.subheadline.weight(.bold)).foregroundStyle(.secondary)
+            Text(titre).font(.body.weight(.bold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -471,17 +480,18 @@ struct VueAffinitesCLIPiOS: View {
         }
     }
 
-    private func ouvrirVisionneuse(sur o: Oeuvre) {
-        indexVisionneuse = lot.firstIndex { $0.id == o.id }
+    private func ouvrirVisionneuse(sur o: Oeuvre, dans liste: [Oeuvre]) {
+        oeuvresVisionneuse = liste
+        indexVisionneuse = liste.firstIndex { $0.id == o.id }
     }
 
     @ViewBuilder
     private var visionneuse: some View {
-        if let i = indexVisionneuse, !lot.isEmpty {
+        if let i = indexVisionneuse, !oeuvresVisionneuse.isEmpty {
             VisionneuseOeuvres(
-                oeuvres: lot,
-                index: min(i, lot.count - 1),
-                onNaviguer: { o in indexVisionneuse = lot.firstIndex { $0.id == o.id } },
+                oeuvres: oeuvresVisionneuse,
+                index: min(i, oeuvresVisionneuse.count - 1),
+                onNaviguer: { o in indexVisionneuse = oeuvresVisionneuse.firstIndex { $0.id == o.id } },
                 onFermer: { indexVisionneuse = nil })
         }
     }

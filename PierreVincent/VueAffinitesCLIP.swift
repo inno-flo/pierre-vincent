@@ -236,7 +236,7 @@ struct VueAffinitesCLIP: View {
         .onTapGesture(count: 2) { ouvrirVisionneuse(sur: o) }
         .onTapGesture { selection = [o.id] }
         .contextMenu {
-            Button("Œuvres proches (CLIP)…") {
+            Button("Œuvres proches (CLIP)") {
                 selection = [o.id]
                 procheDe = o
             }
