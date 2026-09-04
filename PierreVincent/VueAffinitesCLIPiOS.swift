@@ -47,6 +47,10 @@ struct VueAffinitesCLIPiOS: View {
     private let nbProches = 24
 
     var body: some View {
+        // `NavigationStack` explicite — voir `VueAffinitesiOS.body`, même
+        // raison : sans lui, `.navigationDestination` ne poussait pas de
+        // façon fiable depuis le menu contextuel.
+        NavigationStack {
         Group {
             // Priorité absolue — voir `VueAffinitesiOS`, même règle : tant
             // qu'une analyse tourne, l'écran ne montre QUE sa progression.
@@ -106,6 +110,7 @@ struct VueAffinitesCLIPiOS: View {
         // ramène ainsi dans « Affinités CLIP », pas dans la sidebar.
         .navigationDestination(item: $procheDe) { source in
             vueOeuvresProches(de: source)
+        }
         }
     }
 
@@ -441,6 +446,10 @@ struct VueAffinitesCLIPiOS: View {
     @MainActor
     private func preparerLot() async {
         defer { chargementInitial = false }
+        // Voir `VueAffinitesiOS.preparerLot` : laisse d'abord le fil
+        // principal terminer la transition d'entrée (bascule de barre
+        // d'outils sidebar -> Affinités CLIP) avant le travail qui suit.
+        await Task.yield()
         modeleDisponible = await MoteurCLIP.shared.disponible()
         guard modeleDisponible else { return }
 

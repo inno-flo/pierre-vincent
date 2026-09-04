@@ -61,6 +61,12 @@ struct VisionneuseOeuvres: View {
     /// Vrai une fois l'ouverture jouée : l'image occupe alors tout l'écran.
     /// Faux au premier rendu, où elle épouse encore le cadre de la vignette.
     @State private var ouverte = false
+    /// Taille de l'écran, captée UNE FOIS (voir `body`) — pas via un
+    /// `GeometryReader` enveloppant le contenu interactif : ce dernier
+    /// relance une passe de layout à CHAQUE frame du glissement de
+    /// fermeture, d'où la saccade constatée (absente de
+    /// `VisionneuseImagePleinEcran`, qui n'a pas ce `GeometryReader`).
+    @State private var ecranTaille: CGSize = .zero
 
     private var oeuvreCourante: Oeuvre? {
         oeuvres.indices.contains(index) ? oeuvres[index] : nil
@@ -102,13 +108,24 @@ struct VisionneuseOeuvres: View {
         // — il doit couvrir l'encoche — tandis que les commandes restent
         // mesurées depuis elle. Les deux visionneuses plein écran se
         // manipulent ainsi de façon identique, ce qui était l'intention.
-        GeometryReader { geo in
-            corps(ecran: geo.size)
-        }
+        //
+        // Le `GeometryReader` est relégué à un `.background` : il ne sert
+        // qu'à connaître la taille de l'écran pour le ressort d'OUVERTURE
+        // (une seule fois, voire à chaque rotation), sans jamais envelopper
+        // le contenu interactif — c'est cette dernière disposition qui
+        // imposait une passe de layout à chaque frame du glissement.
+        corps
+            .background {
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { ecranTaille = geo.size }
+                        .onChange(of: geo.size) { _, nouvelle in ecranTaille = nouvelle }
+                }
+            }
     }
 
-    private func corps(ecran: CGSize) -> some View {
-        let (facteur, decalageOuverture) = ouvertureDepuisVignette(ecran)
+    private var corps: some View {
+        let (facteur, decalageOuverture) = ouvertureDepuisVignette(ecranTaille)
         return ZStack {
             // Plein écran, encoche et barres système comprises : c'est ce qui
             // fait tenir la vue en paysage comme en portrait.

@@ -77,6 +77,15 @@ struct VueAffinitesiOS: View {
     private let nbProches = 24
 
     var body: some View {
+        // `NavigationStack` EXPLICITE, imbriqué dans la colonne « detail »
+        // du `NavigationSplitView` de `ContentView` : première utilisation
+        // de `.navigationDestination` dans ce projet, et posé directement
+        // sur le contenu de cette colonne (sans lui), la poussée vers
+        // « Œuvres proches » ne se déclenchait pas de façon fiable (tap sans
+        // effet sur le menu contextuel, constaté à l'écran, y compris avec
+        // un délai avant la mutation d'état). Un `NavigationStack` propre à
+        // cette vue lui donne un contexte de navigation sans ambiguïté.
+        NavigationStack {
         Group {
             // **Priorité absolue** : tant qu'une analyse tourne, on ne montre
             // QUE sa progression — jamais la grille ni un état vide en même
@@ -140,6 +149,7 @@ struct VueAffinitesiOS: View {
         // `procheDe`, il quittait toujours Affinités entièrement).
         .navigationDestination(item: $procheDe) { source in
             vueOeuvresProches(de: source)
+        }
         }
     }
 
@@ -538,6 +548,13 @@ struct VueAffinitesiOS: View {
 
     @MainActor
     private func preparerLot() async {
+        // Laisse d'abord le fil principal terminer l'affichage de l'écran
+        // (la bascule de barre d'outils sidebar -> Affinités, notamment) :
+        // sans ce point de reprise, le chargement du disque qui suit
+        // s'exécute dans la MÊME passe que la transition d'entrée et peut la
+        // faire traîner — les boutons Importer/Prix de la sidebar restant
+        // visibles un instant de trop pendant qu'elle patine.
+        await Task.yield()
         let banque = BanqueSignatures.partagee
         banque.charger()
 
