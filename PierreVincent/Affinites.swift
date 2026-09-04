@@ -298,6 +298,43 @@ struct MatricesAffinites: Sendable {
     }
 }
 
+/// Cache en mémoire process de la dernière matrice de distances calculée,
+/// clé par `cleLot` (nombre d'œuvres du lot + version de banque de signatures
+/// + hachage des noms de photo, voir `VueAffinites`/`VueAffinitesiOS`).
+///
+/// Sans lui, quitter la rubrique puis y revenir — ce qui détruit et recrée
+/// la vue SwiftUI et son `@State` — refaisait TOUJOURS ce calcul depuis
+/// zéro, même quand rien n'avait changé dans les signatures ni dans le lot :
+/// `.task(id:)` ne se souvient pas qu'une instance PRÉCÉDENTE de la vue a
+/// déjà traité cette clé, seulement que CELLE-CI ne l'a pas encore fait.
+/// Ce cache, lui, survit à la vue — mais pas au relancement de l'app (mémoire
+/// seulement), ce qui reste cohérent avec les signatures elles-mêmes,
+/// rechargées depuis le disque à chaque lancement.
+///
+/// Partagé par les DEUX plateformes (`VueAffinites` et `VueAffinitesiOS`
+/// utilisent le même `cleLot`) : ouvrir la vue sur Mac puis sur iPhone reste
+/// deux process séparés, donc deux caches — le partage ne joue qu'entre
+/// ouvertures successives d'une même vue, sur un même appareil.
+@MainActor
+final class CacheMatricesAffinites {
+    static let partagee = CacheMatricesAffinites()
+    private init() {}
+
+    private var cle: String?
+    private var matrices: MatricesAffinites?
+
+    /// `nil` si la clé ne correspond pas à ce qui est en cache — il faut
+    /// alors recalculer.
+    func pour(_ cle: String) -> MatricesAffinites? {
+        self.cle == cle ? matrices : nil
+    }
+
+    func enregistrer(_ matrices: MatricesAffinites, pour cle: String) {
+        self.cle = cle
+        self.matrices = matrices
+    }
+}
+
 // MARK: - Regroupement
 
 /// Une famille d'œuvres qui se ressemblent.

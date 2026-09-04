@@ -414,6 +414,13 @@ struct VueAffinites: View {
     /// coûteuse de la vue (des centaines de milliers de paires à comparer sur
     /// des vecteurs de 768 nombres). La laisser sur le fil principal figerait
     /// l'affichage à chaque ouverture de la rubrique.
+    ///
+    /// **Passe d'abord par `CacheMatricesAffinites`** : la base d'images ne
+    /// change pas entre deux ouvertures de la rubrique, mais `matrices` est
+    /// un simple `@State`, détruit avec la vue quand on la quitte — sans ce
+    /// cache, revenir sur « Affinités » refaisait ce calcul depuis zéro à
+    /// chaque fois, alors que rien n'avait changé. Voir la documentation du
+    /// cache dans `Affinites.swift`.
     @MainActor
     private func preparerLot() async {
         let banque = BanqueSignatures.partagee
@@ -437,14 +444,23 @@ struct VueAffinites: View {
         lot = retenues
         signatures = sigs
         genres = retenues.map { Set(themesDeOeuvre($0).map { $0.lowercased() }) }
-        matrices = nil
         procheDe = nil
 
-        guard sigs.count > 1 else { return }
+        guard sigs.count > 1 else { matrices = nil; return }
+
+        let cle = cleLot
+        if let enCache = CacheMatricesAffinites.partagee.pour(cle) {
+            matrices = enCache
+            return
+        }
+
+        matrices = nil
         preparation = true
-        matrices = await Task.detached(priority: .userInitiated) {
+        let calculee = await Task.detached(priority: .userInitiated) {
             MatricesAffinites.preparer(noms: noms, signatures: sigs)
         }.value
+        CacheMatricesAffinites.partagee.enregistrer(calculee, pour: cle)
+        matrices = calculee
         preparation = false
     }
 

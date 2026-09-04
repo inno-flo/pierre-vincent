@@ -623,15 +623,30 @@ struct VueAffinitesiOS: View {
         lot = retenues
         signatures = sigs
         genres = retenues.map { Set(themesDeOeuvre($0).map { $0.lowercased() }) }
-        matrices = nil
         procheDe = nil
-        dernierCleLotTraite = cleLot
+        let cle = cleLot
+        dernierCleLotTraite = cle
 
-        guard sigs.count > 1 else { return }
+        guard sigs.count > 1 else { matrices = nil; return }
+
+        // `dernierCleLotTraite` évite de refaire ce calcul dans la MÊME
+        // instance de vue (retour d'« Œuvres proches ») ; ce cache-ci évite
+        // de le refaire quand la vue elle-même a été détruite et recréée
+        // (quitter la rubrique puis y revenir) — la base d'images ne change
+        // pas entre deux ouvertures, mais `matrices` est un simple `@State`,
+        // reperdu à chaque fois sans lui. Voir `CacheMatricesAffinites`.
+        if let enCache = CacheMatricesAffinites.partagee.pour(cle) {
+            matrices = enCache
+            return
+        }
+
+        matrices = nil
         preparation = true
-        matrices = await Task.detached(priority: .userInitiated) {
+        let calculee = await Task.detached(priority: .userInitiated) {
             MatricesAffinites.preparer(noms: noms, signatures: sigs)
         }.value
+        CacheMatricesAffinites.partagee.enregistrer(calculee, pour: cle)
+        matrices = calculee
         preparation = false
     }
 

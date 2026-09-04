@@ -374,14 +374,27 @@ struct VueAffinitesCLIP: View {
         lot = retenues
         signatures = sigs
         genres = retenues.map { Set(themesDeOeuvre($0).map { $0.lowercased() }) }
-        matrice = nil
         procheDe = nil
 
-        guard sigs.count > 1 else { return }
+        guard sigs.count > 1 else { matrice = nil; return }
+
+        // Voir `CacheMatriceCLIP` (`AffinitesCLIP.swift`) : la base d'images
+        // ne change pas entre deux ouvertures de la rubrique, mais `matrice`
+        // est un simple `@State`, reperdu à chaque fois qu'on quitte puis
+        // revient sans ce cache.
+        let cle = cleLot
+        if let enCache = CacheMatriceCLIP.partagee.pour(cle) {
+            matrice = enCache
+            return
+        }
+
+        matrice = nil
         preparation = true
-        matrice = await Task.detached(priority: .userInitiated) {
+        let calculee = await Task.detached(priority: .userInitiated) {
             MatriceCLIP.preparer(signatures: sigs)
         }.value
+        CacheMatriceCLIP.partagee.enregistrer(calculee, pour: cle)
+        matrice = calculee
         preparation = false
     }
 

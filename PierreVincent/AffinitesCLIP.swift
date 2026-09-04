@@ -331,6 +331,29 @@ struct MatriceCLIP: Sendable {
     }
 }
 
+/// Cache en mémoire process de la dernière matrice CLIP calculée, même rôle
+/// et même clé (`cleLot`) que `CacheMatricesAffinites` — voir sa
+/// documentation dans `Affinites.swift`. Un cache SÉPARÉ, pas partagé avec
+/// l'autre moteur : les deux distances n'ont rien de comparable terme à
+/// terme, et les mélanger effacerait l'un des deux sans prévenir.
+@MainActor
+final class CacheMatriceCLIP {
+    static let partagee = CacheMatriceCLIP()
+    private init() {}
+
+    private var cle: String?
+    private var matrice: MatriceCLIP?
+
+    func pour(_ cle: String) -> MatriceCLIP? {
+        self.cle == cle ? matrice : nil
+    }
+
+    func enregistrer(_ matrice: MatriceCLIP, pour cle: String) {
+        self.cle = cle
+        self.matrice = matrice
+    }
+}
+
 /// Une famille CLIP. Pas de palette ni de caractérisation en mots : CLIP ne
 /// nous donne qu'un vecteur, sans les mesures interprétables que
 /// `SignatureOeuvre` calcule à côté (clarté, chroma…). `cohesion` reste le
