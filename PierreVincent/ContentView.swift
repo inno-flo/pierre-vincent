@@ -474,6 +474,18 @@ enum Categorie: Hashable, Identifiable {
         }
     }
 
+    /// Propose la commande « Œuvres proches » (CLIP) au menu contextuel des
+    /// vignettes — Réserve et ses sous-rubriques, Favoris comprise (même
+    /// périmètre que l'accent bleu ardoise ci-dessus) ; jamais « Ventes et
+    /// dons » ni « Labo ».
+    var offreOeuvresProchesCLIP: Bool {
+        switch self {
+        case .reserveInventaire, .reserveDessins, .reserveTableaux,
+             .reserveTheme, .reserveCollection, .favoris: return true
+        default: return false
+        }
+    }
+
     /// Vrai pour la vue tableau de bord (affichage spécifique).
     var estSynthese: Bool { self == .synthese }
 }
@@ -871,11 +883,9 @@ struct ContentView: View {
                                typesFiltre: cat.typesFiltre,
                                visionneuseIntegree: cat.visionneuseIntegree,
                                // Commande « Œuvres proches » du menu
-                               // contextuel : Catalogue de la Réserve
-                               // seulement, pas ses rubriques voisines
-                               // (Collection personnelle, Favoris, Genres,
-                               // Supports) que sert cette même vue.
-                               offreOeuvresProchesCLIP: cat == .reserveInventaire)
+                               // contextuel : toute la Réserve et ses
+                               // sous-rubriques, Favoris comprise.
+                               offreOeuvresProchesCLIP: cat.offreOeuvresProchesCLIP)
                             .id(cat)
                     }
                     #endif

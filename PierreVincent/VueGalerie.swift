@@ -27,7 +27,7 @@ struct VueGalerie: View {
     /// visionneuse intégrée.
     var onAppuiLong: ((Oeuvre) -> Void)? = nil
     /// Second item du menu contextuel, « Œuvres proches » (CLIP) — nul
-    /// partout sauf sur le Catalogue de la Réserve (`VueiOS`).
+    /// partout sauf sur la Réserve et ses sous-rubriques (`VueiOS`).
     var onOeuvreProcheCLIP: ((Oeuvre) -> Void)? = nil
     /// Espace de transition partagé avec la vue qui présente la visionneuse.
     /// Nul = pas de transition de zoom (macOS, ou rubrique sans visionneuse).
@@ -423,7 +423,7 @@ struct MenuApercuSiDemande: View {
     /// contextuel n'aurait alors rien à montrer.
     let onAfficher: ((Oeuvre) -> Void)?
     /// Commande « Œuvres proches » (CLIP), en second dans le menu — nul
-    /// partout sauf sur le Catalogue de la Réserve.
+    /// partout sauf sur la Réserve et ses sous-rubriques.
     var onOeuvreProche: ((Oeuvre) -> Void)? = nil
 
     var body: some View {

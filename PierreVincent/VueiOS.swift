@@ -25,9 +25,9 @@ struct VueiOS: View {
 
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
     /// Second item du menu contextuel, « Œuvres proches » (CLIP), ouvrant
-    /// `FeuilleOeuvresProchesCLIP` — vrai UNIQUEMENT pour le Catalogue de la
-    /// Réserve (voir `ContentView`), pas pour les autres rubriques que sert
-    /// cette même vue (Collection personnelle, Favoris, Genres, Supports).
+    /// `FeuilleOeuvresProchesCLIP` — vrai pour la Réserve et toutes ses
+    /// sous-rubriques, Favoris comprise (`Categorie.offreOeuvresProchesCLIP`
+    /// dans `ContentView`) ; posé en Galerie ET en Liste, voir `liste`.
     let offreOeuvresProchesCLIP: Bool
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
@@ -587,7 +587,10 @@ struct VueiOS: View {
                                                          selection = [o.id]
                                                          detail = o
                                                      },
-                                                     onAfficher: appuiLongGalerie))
+                                                     onAfficher: appuiLongGalerie,
+                                                     onOeuvreProche: offreOeuvresProchesCLIP
+                                                                   ? { o in procheDeCLIP = o }
+                                                                   : nil))
                         .id(o.id)
                     }
                 }

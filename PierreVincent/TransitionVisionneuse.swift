@@ -96,7 +96,7 @@ struct InteractionApercu: UIViewRepresentable {
     /// Tap sur l'aperçu du menu — ouvre la visionneuse.
     let onAfficher: () -> Void
     /// Commande « Œuvres proches » (CLIP), en second — nul partout sauf sur
-    /// le Catalogue de la Réserve (voir `VueiOS.offreOeuvresProchesCLIP`).
+    /// la Réserve et ses sous-rubriques (voir `VueiOS.offreOeuvresProchesCLIP`).
     var onOeuvreProche: (() -> Void)? = nil
 
     func makeUIView(context: Context) -> UIView {
@@ -168,7 +168,7 @@ struct InteractionApercu: UIViewRepresentable {
                     basculerFavori(self.oeuvre, contexte: self.contexteModele)
                 }
                 // Second item, seulement là où `onOeuvreProche` est fourni
-                // (Catalogue de la Réserve) : ouvre la même feuille
+                // (Réserve et ses sous-rubriques) : ouvre la même feuille
                 // « Œuvres proches (CLIP) » que la rubrique Affinités CLIP.
                 guard let onOeuvreProche = self?.onOeuvreProche else {
                     return UIMenu(children: [bascule])
