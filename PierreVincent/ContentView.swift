@@ -869,7 +869,13 @@ struct ContentView: View {
                                collectionSeule: cat.collectionSeule,
                                favoriSeul: cat.favoriSeul,
                                typesFiltre: cat.typesFiltre,
-                               visionneuseIntegree: cat.visionneuseIntegree)
+                               visionneuseIntegree: cat.visionneuseIntegree,
+                               // Commande « Œuvres proches » du menu
+                               // contextuel : Catalogue de la Réserve
+                               // seulement, pas ses rubriques voisines
+                               // (Collection personnelle, Favoris, Genres,
+                               // Supports) que sert cette même vue.
+                               offreOeuvresProchesCLIP: cat == .reserveInventaire)
                             .id(cat)
                     }
                     #endif

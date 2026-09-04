@@ -95,6 +95,9 @@ struct InteractionApercu: UIViewRepresentable {
     let onTap: () -> Void
     /// Tap sur l'aperçu du menu — ouvre la visionneuse.
     let onAfficher: () -> Void
+    /// Commande « Œuvres proches » (CLIP), en second — nul partout sauf sur
+    /// le Catalogue de la Réserve (voir `VueiOS.offreOeuvresProchesCLIP`).
+    var onOeuvreProche: (() -> Void)? = nil
 
     func makeUIView(context: Context) -> UIView {
         let vue = UIView()
@@ -111,24 +114,28 @@ struct InteractionApercu: UIViewRepresentable {
         context.coordinator.oeuvre = oeuvre
         context.coordinator.onTap = onTap
         context.coordinator.onAfficher = onAfficher
+        context.coordinator.onOeuvreProche = onOeuvreProche
         context.coordinator.contexteModele = context.environment.modelContext
     }
 
     func makeCoordinator() -> Coordinateur {
-        Coordinateur(oeuvre: oeuvre, onTap: onTap, onAfficher: onAfficher)
+        Coordinateur(oeuvre: oeuvre, onTap: onTap, onAfficher: onAfficher,
+                    onOeuvreProche: onOeuvreProche)
     }
 
     final class Coordinateur: NSObject, UIContextMenuInteractionDelegate {
         var oeuvre: Oeuvre
         var onTap: () -> Void
         var onAfficher: () -> Void
+        var onOeuvreProche: (() -> Void)?
         /// Pour enregistrer la bascule de `favori` — captée depuis
         /// l'environnement SwiftUI, `Oeuvre` n'exposant pas son contexte.
         var contexteModele: ModelContext?
 
         init(oeuvre: Oeuvre, onTap: @escaping () -> Void,
-             onAfficher: @escaping () -> Void) {
+             onAfficher: @escaping () -> Void, onOeuvreProche: (() -> Void)? = nil) {
             self.oeuvre = oeuvre
+            self.onOeuvreProche = onOeuvreProche
             self.onTap = onTap
             self.onAfficher = onAfficher
         }
@@ -160,7 +167,17 @@ struct InteractionApercu: UIViewRepresentable {
                     // de déplacement.
                     basculerFavori(self.oeuvre, contexte: self.contexteModele)
                 }
-                return UIMenu(children: [bascule])
+                // Second item, seulement là où `onOeuvreProche` est fourni
+                // (Catalogue de la Réserve) : ouvre la même feuille
+                // « Œuvres proches (CLIP) » que la rubrique Affinités CLIP.
+                guard let onOeuvreProche = self?.onOeuvreProche else {
+                    return UIMenu(children: [bascule])
+                }
+                let proches = UIAction(
+                    title: "Œuvres proches",
+                    image: UIImage(systemName: "wand.and.rays")
+                ) { _ in onOeuvreProche() }
+                return UIMenu(children: [bascule, proches])
             }
         }
 

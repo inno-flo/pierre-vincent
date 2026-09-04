@@ -549,4 +549,183 @@ private struct CurseurReglage: View {
         .onChange(of: valeur) { _, nouvelle in valeurAffichee = nouvelle }
     }
 }
+
+/// Feuille « Œuvres proches (CLIP) », réutilisable HORS d'Affinités CLIP —
+/// c'est elle que le menu contextuel du Catalogue de la Réserve (`VueiOS`,
+/// commande « Œuvres proches ») ouvre aussi, pour ne jamais en tenir une
+/// copie divergente. Contrairement à celle intégrée à `VueAffinitesCLIPiOS`,
+/// elle recalcule son propre lot et sa propre matrice à chaque ouverture —
+/// un coût acceptable, `MatriceCLIP.preparer` n'étant que de l'arithmétique
+/// sur des signatures déjà calculées, pas une nouvelle inférence.
+///
+/// Ne dépend PAS de la disponibilité du modèle CLIP : elle ne fait tourner
+/// aucune inférence, seulement la comparaison de signatures déjà calculées
+/// (via l'analyse lancée depuis Affinités CLIP) — d'où le message dédié si
+/// cette œuvre précise n'a encore aucune signature.
+struct FeuilleOeuvresProchesCLIP: View {
+    let oeuvre: Oeuvre
+    let toutes: [Oeuvre]
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    @Environment(\.accentRubrique) private var accent
+
+    @State private var lot: [Oeuvre] = []
+    @State private var matrice: MatriceCLIP?
+    @State private var chargement = true
+    /// Permet de « rebondir » d'œuvre en œuvre : cette feuille se
+    /// re-présente elle-même pour la nouvelle source, exactement comme
+    /// `VueAffinitesCLIPiOS` le fait pour sa propre feuille.
+    @State private var procheDe: Oeuvre?
+
+    private let nbProches = 24
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if chargement {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                        Text("Préparation…")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        contenu
+                            .padding(16)
+                    }
+                }
+            }
+            .background(Color.cremeFond)
+            .navigationTitle("Œuvres proches (CLIP)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fermer") { dismiss() }
+                }
+            }
+        }
+        .task { await preparer() }
+        .sheet(item: $procheDe) { source in
+            FeuilleOeuvresProchesCLIP(oeuvre: source, toutes: toutes)
+        }
+    }
+
+    @ViewBuilder
+    private var contenu: some View {
+        let index = lot.firstIndex { $0.id == oeuvre.id }
+        if let index, let matrice {
+            let proches = RegroupementCLIP.proches(de: index, parmi: lot,
+                                                   matrice: matrice, combien: nbProches)
+            VStack(alignment: .leading, spacing: 14) {
+                section(titre: "Référence", oeuvres: [oeuvre])
+                section(titre: "Les plus proches (CLIP)",
+                        sousTitre: "\(proches.count) œuvres, de la plus "
+                                 + "ressemblante à la moins",
+                        oeuvres: proches.map(\.oeuvre))
+            }
+        } else {
+            VStack(spacing: 10) {
+                Image(systemName: "wand.and.rays")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text("Cette œuvre n'a pas encore été analysée")
+                    .font(.headline)
+                Text("Lancez l'analyse depuis la rubrique « Affinités CLIP », "
+                   + "dans le bloc Labo, puis réessayez.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func section(titre: String, sousTitre: String? = nil, oeuvres: [Oeuvre]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(titre).font(.headline)
+            if let sousTitre {
+                Text(sousTitre)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)],
+                      spacing: 16) {
+                ForEach(oeuvres) { o in carte(o) }
+            }
+        }
+    }
+
+    /// Même style que `VueAffinitesCLIPiOS.carte`, avec le même menu
+    /// « Ajouter aux favoris »/« Retirer des favoris ».
+    private func carte(_ o: Oeuvre) -> some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Color.gray.opacity(0.12)
+                VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320,
+                                       preserverRatio: true)
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(3.0 / 4.0, contentMode: .fit)
+            .clipped()
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(rangementVignette(o).intitule)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    .lineLimit(1)
+                Text(rangementVignette(o).valeur)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.texteLegende)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(Color.fondLegende)
+        }
+        .background(Color.fondLegende)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
+        .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
+        .contentShape(Rectangle())
+        .onTapGesture { procheDe = o }
+        .contextMenu {
+            Button {
+                basculerFavori(o, contexte: context)
+            } label: {
+                Label(o.favori ? "Retirer des favoris" : "Ajouter aux favoris",
+                      systemImage: o.favori ? "star.slash" : "star")
+            }
+        }
+    }
+
+    @MainActor
+    private func preparer() async {
+        await Task.yield()
+        let banque = BanqueSignaturesCLIP.partagee
+        banque.charger()
+
+        let complet = AnalyseAffinites.lotReserve(toutes)
+        var retenues: [Oeuvre] = []
+        var sigs: [SignatureCLIP] = []
+        for o in complet {
+            guard let s = banque.signatures[o.photoNom] else { continue }
+            retenues.append(o)
+            sigs.append(s)
+        }
+        lot = retenues
+
+        guard sigs.count > 1 else { chargement = false; return }
+        matrice = await Task.detached(priority: .userInitiated) {
+            MatriceCLIP.preparer(signatures: sigs)
+        }.value
+        chargement = false
+    }
+}
 #endif

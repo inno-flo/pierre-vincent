@@ -24,6 +24,11 @@ struct VueiOS: View {
     let typesFiltre: [String]
 
     let visionneuseIntegree: Bool  // appui prolongé : visionneuse plein écran
+    /// Second item du menu contextuel, « Œuvres proches » (CLIP), ouvrant
+    /// `FeuilleOeuvresProchesCLIP` — vrai UNIQUEMENT pour le Catalogue de la
+    /// Réserve (voir `ContentView`), pas pour les autres rubriques que sert
+    /// cette même vue (Collection personnelle, Favoris, Genres, Supports).
+    let offreOeuvresProchesCLIP: Bool
 
     init(feuille: Feuille?, titre: String, modesVente: [String] = [],
          statuts: [String] = Array(statutsVentesEtDons),
@@ -32,7 +37,8 @@ struct VueiOS: View {
          collectionSeule: Bool = false,
          favoriSeul: Bool = false,
          typesFiltre: [String] = [],
-         visionneuseIntegree: Bool = false) {
+         visionneuseIntegree: Bool = false,
+         offreOeuvresProchesCLIP: Bool = false) {
         self.feuille = feuille
         self.titre = titre
         self.modesVente = modesVente
@@ -43,7 +49,11 @@ struct VueiOS: View {
         self.favoriSeul = favoriSeul
         self.typesFiltre = typesFiltre
         self.visionneuseIntegree = visionneuseIntegree
+        self.offreOeuvresProchesCLIP = offreOeuvresProchesCLIP
     }
+
+    /// Œuvre visée par la commande « Œuvres proches », `nil` = feuille fermée.
+    @State private var procheDeCLIP: Oeuvre?
 
     @Query private var toutes: [Oeuvre]
     @Environment(\.modelContext) private var context
@@ -325,6 +335,7 @@ struct VueiOS: View {
                     selection: $selection,
                     onOuvrir: { o in selection = [o.id]; detail = o },
                     onAppuiLong: appuiLongGalerie,
+                    onOeuvreProcheCLIP: offreOeuvresProchesCLIP ? { o in procheDeCLIP = o } : nil,
                     espaceZoom: espaceZoom,
                     entete: entete,
                     positionDefilement: $idPositionDefilement
@@ -336,6 +347,12 @@ struct VueiOS: View {
         // Plein écran, barres système comprises : `.fullScreenCover` et non
         // `.sheet`, qui laisserait la fiche en carte avec ses coins arrondis.
         .fullScreenCover(isPresented: visionneuseOuverte) { contenuVisionneuse }
+        // Commande « Œuvres proches » du menu contextuel — Catalogue de la
+        // Réserve uniquement (`offreOeuvresProchesCLIP`). Même feuille que
+        // celle ouverte depuis Affinités CLIP, voir `FeuilleOeuvresProchesCLIP`.
+        .sheet(item: $procheDeCLIP) { o in
+            FeuilleOeuvresProchesCLIP(oeuvre: o, toutes: toutes)
+        }
         // Confirmation avant de retirer TOUS les favoris — une opération
         // large et sans retour simple, comme la suppression d'entrées.
         // `.alert` et non `.confirmationDialog` : ce dernier s'affiche en

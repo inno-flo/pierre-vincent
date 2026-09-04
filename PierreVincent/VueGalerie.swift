@@ -26,6 +26,9 @@ struct VueGalerie: View {
     /// ce qui est le cas de toutes les rubriques sauf celles qui déclarent la
     /// visionneuse intégrée.
     var onAppuiLong: ((Oeuvre) -> Void)? = nil
+    /// Second item du menu contextuel, « Œuvres proches » (CLIP) — nul
+    /// partout sauf sur le Catalogue de la Réserve (`VueiOS`).
+    var onOeuvreProcheCLIP: ((Oeuvre) -> Void)? = nil
     /// Espace de transition partagé avec la vue qui présente la visionneuse.
     /// Nul = pas de transition de zoom (macOS, ou rubrique sans visionneuse).
     var espaceZoom: Namespace.ID? = nil
@@ -349,7 +352,8 @@ struct VueGalerie: View {
         // Elle prend AUSSI le tap simple : sinon elle le confisquerait.
         .overlay(MenuApercuSiDemande(oeuvre: o,
                                      onTap: { onOuvrir(o) },
-                                     onAfficher: onAppuiLong))
+                                     onAfficher: onAppuiLong,
+                                     onOeuvreProche: onOeuvreProcheCLIP))
         #endif
     }
 
@@ -418,12 +422,16 @@ struct MenuApercuSiDemande: View {
     /// Nul quand la rubrique ne propose pas la visionneuse : le menu
     /// contextuel n'aurait alors rien à montrer.
     let onAfficher: ((Oeuvre) -> Void)?
+    /// Commande « Œuvres proches » (CLIP), en second dans le menu — nul
+    /// partout sauf sur le Catalogue de la Réserve.
+    var onOeuvreProche: ((Oeuvre) -> Void)? = nil
 
     var body: some View {
         if let onAfficher {
             InteractionApercu(oeuvre: oeuvre,
                               onTap: onTap,
-                              onAfficher: { onAfficher(oeuvre) })
+                              onAfficher: { onAfficher(oeuvre) },
+                              onOeuvreProche: onOeuvreProche.map { cl in { cl(oeuvre) } })
         } else {
             Color.clear.allowsHitTesting(false)
         }
