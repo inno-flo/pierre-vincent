@@ -17,6 +17,16 @@ import SwiftData
 ///   `VisionneusePanneau`.
 /// Un fichier commun aurait multiplié les branches `#if` sur des points où
 /// les deux plateformes ne se contentent pas de varier en apparence.
+///
+/// **Structure du contenu : `ScrollView` + `VStack`, PAS `List`.** Un essai
+/// de migration vers `List(.insetGrouped)` (pour que les en-têtes de réglage
+/// héritent nativement de la police des en-têtes de sidebar) a été REVERTÉ :
+/// nichée dans une seule ligne de `List`, une grille de plusieurs vignettes
+/// se voyait attribuer par UIKit un seul aperçu partagé lors d'un appui
+/// prolongé — toutes les vignettes d'une famille apparaissaient fusionnées
+/// en une seule image. Retour à la base du Catalogue (`VueGalerie`, qui
+/// n'a jamais eu ce problème) : les blocs de réglages sont ajoutés en tête
+/// du contenu défilant, comme `BandeauTypes` l'est pour les pastilles de tri.
 struct VueAffinitesiOS: View {
     @Environment(\.accentRubrique) private var accent
 
@@ -114,81 +124,28 @@ struct VueAffinitesiOS: View {
 
     // MARK: Contenu défilant — réglages, bandeaux, familles
 
-    /// **Un vrai `List(.insetGrouped)`**, et non plus un `ScrollView` +
-    /// `VStack` maison : les en-têtes « Correspondances »/« Familles »
-    /// deviennent alors de vrais `Section(titre)` de `List` — le MÊME
-    /// composant système que les grands en-têtes de bloc de la sidebar
-    /// (« Réserve », « Labo »), plutôt qu'une police approchée à la main.
-    /// Plus aucun écart possible entre les deux, par construction.
-    ///
-    /// Les familles et « Œuvres proches » restent, elles, de simples LIGNES
-    /// transparentes (`.listRowBackground(Color.clear)`,
-    /// `.listRowSeparator(.hidden)`) — comme avant, elles ne sont pas
-    /// présentées en carte, seuls les réglages le sont.
     private var contenuDefilant: some View {
         ScrollViewReader { proxy in
-            List {
-                // Retour à la vue par familles — AVANT « Correspondances »,
-                // pour rester la toute première chose vue en entrant dans
-                // « Œuvres proches ». Bouton standard : ni icône ni police
-                // imposée, juste un `Button` dans sa ligne, comme un bouton
-                // d'action classique des Réglages système.
-                if procheDe != nil {
-                    Section {
+            ScrollView {
+                Color.clear.frame(height: 0).id(ancreHaut)
+                VStack(alignment: .leading, spacing: 20) {
+                    // Retour à la vue par familles — AVANT le bloc de
+                    // réglages, pour rester la toute première chose vue en
+                    // entrant dans « Œuvres proches ». Bouton standard : ni
+                    // icône ni police imposée, juste un `Button` nu.
+                    if procheDe != nil {
                         Button("Familles") { procheDe = nil }
-                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    reglages
+                    if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
+                    if let source = procheDe {
+                        sectionProches(de: source)
+                    } else {
+                        sectionsFamilles
                     }
                 }
-
-                // L'ancre est l'IDENTITÉ de la `Section` elle-même, pas
-                // celle d'une ligne à part : postée comme ligne AVANT la
-                // première `Section`, `List` la traitait comme sa propre
-                // section vide (espace inter-sections en plus du grand
-                // espace sous le titre — vide anormal) ; postée comme
-                // PREMIÈRE ligne DANS la `Section`, elle cassait le rendu de
-                // sa carte (coin supérieur tronqué, capture du 4 sept. 2026).
-                Section("Correspondances") {
-                    curseur(finGauche: "Couleurs", finDroite: "Style",
-                            valeur: $poidsCouleur, plage: 0...1)
-                }
-                .id(ancreHaut)
-                // « Familles » et « Genre » n'ont de sens que pour le
-                // classement par famille — sans objet une fois qu'on
-                // regarde les œuvres proches d'une seule œuvre.
-                if procheDe == nil {
-                    Section("Familles") {
-                        curseur(finGauche: "Larges", finDroite: "Serrées",
-                                valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
-                                plage: 0...0.42)
-                    }
-                    // Pas d'en-tête : le libellé de la bascule dit déjà ce
-                    // qu'elle règle.
-                    Section {
-                        Toggle("Genre", isOn: $memeGenre)
-                    }
-                }
-
-                if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
-
-                if let source = procheDe {
-                    sectionProches(de: source)
-                } else {
-                    sectionsFamilles
-                }
+                .padding(16)
             }
-            .listStyle(.insetGrouped)
-            // Un `List(.insetGrouped)` réserve par défaut un grand espace
-            // sous le titre avant sa première `Section` (~35 pt). Réduit à
-            // 8 pt pour retrouver l'écart du Catalogue de « Ventes et dons »
-            // (`BandeauTypes.padding(.top, 8)`), pris comme référence.
-            .contentMargins(.top, 8, for: .scrollContent)
-            // Sans ceci, la ligne-ancre (hauteur 0 demandée) serait quand
-            // même portée à la hauteur minimale système d'une ligne de
-            // `List` (~44 pt), ajoutant un vide invisible au-dessus du
-            // premier curseur.
-            .environment(\.defaultMinListRowHeight, 0)
-            .scrollContentBackground(.hidden)
-            .background(Color.cremeFond)
             .retourEnHaut(visible: $boutonHautVisible) {
                 withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
             }
@@ -214,7 +171,6 @@ struct VueAffinitesiOS: View {
                 Text("Aucune famille à ce réglage. Élargissez le curseur « Familles ».")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .ligneTransparente()
             }
             ForEach(Array(r.groupes.enumerated()), id: \.element.id) { rang, groupe in
                 sectionFamille(id: groupe.id, titre: "Famille \(rang + 1)",
@@ -242,15 +198,17 @@ struct VueAffinitesiOS: View {
                                                matrices: matrices,
                                                poidsCouleur: Float(poidsCouleur),
                                                combien: nbProches)
-            section(titre: "Point de départ",
-                    sousTitre: Regroupement.caractere(de: signatures[index]),
-                    palette: signatures[index].palette,
-                    oeuvres: [source])
-            section(titre: "Les plus proches",
-                    sousTitre: "\(proches.count) œuvres, de la plus "
-                             + "ressemblante à la moins",
-                    palette: [],
-                    oeuvres: proches.map(\.oeuvre))
+            VStack(alignment: .leading, spacing: 14) {
+                section(titre: "Point de départ",
+                        sousTitre: Regroupement.caractere(de: signatures[index]),
+                        palette: signatures[index].palette,
+                        oeuvres: [source])
+                section(titre: "Les plus proches",
+                        sousTitre: "\(proches.count) œuvres, de la plus "
+                                 + "ressemblante à la moins",
+                        palette: [],
+                        oeuvres: proches.map(\.oeuvre))
+            }
         }
     }
 
@@ -273,7 +231,6 @@ struct VueAffinitesiOS: View {
                 ForEach(oeuvres) { o in carte(o) }
             }
         }
-        .ligneTransparente()
     }
 
     /// Variante COLLAPSABLE de `section`, réservée au classement par
@@ -304,7 +261,6 @@ struct VueAffinitesiOS: View {
                 if !palette.isEmpty { rubanPalette(palette) }
             }
         }
-        .ligneTransparente()
     }
 
     private func rubanPalette(_ palette: [TeinteDominante]) -> some View {
@@ -327,14 +283,11 @@ struct VueAffinitesiOS: View {
     /// dans l'app. Ce mécanisme existe surtout pour offrir la bascule des
     /// favoris depuis l'aperçu ; sans intérêt ici.
     ///
-    /// **`.contextMenu(menuItems:preview:)`, PAS la forme simple
-    /// `.contextMenu(menuItems:)`.** Chaque famille loge sa grille de
-    /// vignettes dans une SEULE ligne de `List` (voir `sectionFamille`/
-    /// `section`) : la forme simple laisse UIKit fabriquer l'aperçu à partir
-    /// du rendu ambiant, qui capturait alors TOUTE la ligne — toutes les
-    /// vignettes de la famille apparaissaient fusionnées en une seule image
-    /// au moment de l'appui (constaté à l'écran). En fournissant nous-mêmes
-    /// l'aperçu (juste cette vignette), UIKit n'a plus rien à mal attribuer.
+    /// **`.contextMenu(menuItems:preview:)`, avec aperçu explicite** : sans
+    /// lui, une vignette posée dans une grille dense pouvait voir UIKit lui
+    /// attribuer l'aperçu d'une zone plus large que la sienne (constaté à
+    /// l'écran). En fournissant nous-mêmes l'aperçu (juste cette vignette),
+    /// plus rien à mal attribuer.
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
             ZStack {
@@ -367,8 +320,7 @@ struct VueAffinitesiOS: View {
             .background(Color.fondLegende)
         }
         // Mêmes valeurs que `VueGalerie.carte` (Catalogue) : coin arrondi,
-        // marge interne et ombre identiques — seul le contenu de la légende
-        // diffère (une ligne ici, deux dans le Catalogue).
+        // marge interne et ombre identiques.
         .background(Color.fondLegende)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
@@ -385,10 +337,60 @@ struct VueAffinitesiOS: View {
 
     // MARK: Réglages
 
-    /// Le curseur seul — posé DIRECTEMENT comme contenu d'un `Section` de
-    /// `List` (voir `contenuDefilant`) : l'en-tête n'est plus ici, c'est
-    /// désormais le titre natif du `Section`, exactement le même composant
-    /// système que les en-têtes de bloc de la sidebar.
+    /// Trois blocs DISTINCTS, chacun son propre en-tête (hors carte) et sa
+    /// propre cellule (carte `fondLegende`) — plus un seul grand bloc
+    /// englobant les trois réglages.
+    private var reglages: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            blocReglage(titre: "Correspondances") {
+                curseur(finGauche: "Couleurs", finDroite: "Style",
+                        valeur: $poidsCouleur, plage: 0...1)
+            }
+            // « Familles » et « Genre » n'ont de sens que pour le classement
+            // par famille — sans objet une fois qu'on regarde les œuvres
+            // proches d'une seule œuvre.
+            if procheDe == nil {
+                blocReglage(titre: "Familles") {
+                    curseur(finGauche: "Larges", finDroite: "Serrées",
+                            valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
+                            plage: 0...0.42)
+                }
+                // Pas d'en-tête ici : contrairement aux deux curseurs, le
+                // libellé du bascule dit déjà lui-même ce qu'il règle.
+                Toggle("Genre", isOn: $memeGenre)
+                    .font(.subheadline)
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+            }
+        }
+    }
+
+    /// Un bloc de réglage : en-tête simple au-dessus, cellule `fondLegende`
+    /// en dessous — même patron que les en-têtes de sous-groupe de la
+    /// sidebar (« Genres », « Modes de vente »), pas un `Text` quelconque.
+    private func blocReglage<Contenu: View>(titre: String,
+                                            @ViewBuilder contenu: () -> Contenu) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Même TAILLE que les grands en-têtes de bloc de la sidebar
+            // (« Réserve », « Labo »). Leur code (`boutonEnTeteBloc`) n'impose
+            // ni police ni graisse — mais posé dans le `header:` d'une
+            // `List(.insetGrouped)`, il hérite du style natif d'un en-tête
+            // de section, qui vaut `.footnote` (13 pt, voir le barème
+            // typographique de CLAUDE.md) — pas `.subheadline` (15 pt), un
+            // écart mesuré et corrigé. Ce `Text`-ci, hors de tout `List`, ne
+            // reçoit rien automatiquement : il faut fixer `.footnote` à la
+            // main, sans graisse imposée non plus, pour rester identique.
+            Text(titre).font(.footnote).foregroundStyle(.secondary)
+            contenu()
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+        }
+    }
+
+    /// Taille de texte alignée sur celle des vignettes de Catalogue
+    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS). Le titre du
+    /// réglage n'est plus ICI — c'est désormais l'en-tête de `blocReglage` —
+    /// seul le curseur et ses deux extrémités restent, chacun sur sa ligne.
     private func curseur(finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
@@ -422,7 +424,6 @@ struct VueAffinitesiOS: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.fondLegende))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(0.5), lineWidth: 1))
-        .ligneTransparente()
     }
 
     /// Écran de progression, plein écran, pendant qu'une analyse tourne.
@@ -552,21 +553,6 @@ struct VueAffinitesiOS: View {
 
     private var titreCourant: String {
         procheDe == nil ? "Affinités" : "Œuvres proches"
-    }
-}
-
-/// `private` (donc propre à ce fichier) — même duplication assumée que
-/// `curseur`/`section` entre les deux vues Affinités, voir l'en-tête du
-/// fichier : deux copies indépendantes plutôt qu'un `extension View`
-/// interne qui entrerait en collision avec celle du fichier CLIP.
-private extension View {
-    /// Ligne de `List` sans carte ni séparateur — pour tout ce qui doit
-    /// rester posé directement sur le fond crème, comme avant la migration
-    /// vers `List` (seuls les réglages ont une vraie carte système).
-    func ligneTransparente() -> some View {
-        listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
     }
 }
 #endif
