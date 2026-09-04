@@ -32,16 +32,11 @@ struct VueAffinitesCLIPiOS: View {
     /// `cleLot` déjà traité — voir `VueAffinitesiOS.dernierCleLotTraite`.
     @State private var dernierCleLotTraite: String?
     @State private var procheDe: Oeuvre?
-    /// Présentation d'« Œuvres proches (CLIP) » — voir
-    /// `VueAffinitesiOS.procheDePresente`.
+    /// Présentation d'« Œuvres proches (CLIP) ».
     private var procheDePresente: Binding<Bool> {
         Binding(get: { procheDe != nil },
                 set: { if !$0 { procheDe = nil } })
     }
-    @State private var indexVisionneuse: Int?
-    /// Voir `VueAffinitesiOS.oeuvresVisionneuse` : la liste dans laquelle
-    /// circulent les flèches Précédent/Suivant, pas `lot` en entier.
-    @State private var oeuvresVisionneuse: [Oeuvre] = []
     @State private var boutonHautVisible = false
     private let ancreHaut = "ancre-haut-affinites-clip"
 
@@ -106,9 +101,6 @@ struct VueAffinitesCLIPiOS: View {
             Text("Les signatures CLIP déjà calculées seront effacées et refaites. "
                + "Celles d'« Affinités » ne sont pas concernées.")
         }
-        // Plein écran, barres système comprises : `.fullScreenCover`,
-        // pas `.overlay` — voir `VueAffinitesiOS.body`.
-        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
         // « Œuvres proches (CLIP) » est un ENFANT poussé de cette vue —
         // `isPresented:` + `Binding<Bool>`, pas `.navigationDestination(item:)`
         // — voir `VueAffinitesiOS.body` pour le pourquoi.
@@ -148,9 +140,6 @@ struct VueAffinitesCLIPiOS: View {
         }
         .background(Color.cremeFond)
         .navigationTitle("Œuvres proches (CLIP)")
-        // Plein écran, barres système comprises : `.fullScreenCover`,
-        // pas `.overlay` — voir `VueAffinitesiOS.body`.
-        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
     }
 
     // MARK: Les familles
@@ -217,7 +206,7 @@ struct VueAffinitesCLIPiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
+                ForEach(oeuvres) { o in carte(o) }
             }
         }
     }
@@ -235,7 +224,7 @@ struct VueAffinitesCLIPiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
+                ForEach(oeuvres) { o in carte(o) }
             }
             .padding(.top, 8)
         } label: {
@@ -248,12 +237,11 @@ struct VueAffinitesCLIPiOS: View {
         }
     }
 
-    // MARK: Une vignette — même choix que la version « Affinités » : tap
-    // simple pour ouvrir, appui prolongé pour « Œuvres proches (CLIP) ».
-    // `.contextMenu(menuItems:preview:)` avec aperçu explicite — voir
-    // `VueAffinitesiOS.carte`.
+    // MARK: Une vignette — voir `VueAffinitesiOS.carte` : plus de
+    // visionneuse ni de menu contextuel, le tap simple ouvre directement
+    // « Œuvres proches (CLIP) ».
 
-    private func carte(_ o: Oeuvre, liste: [Oeuvre]) -> some View {
+    private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
@@ -291,25 +279,7 @@ struct VueAffinitesCLIPiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { ouvrirVisionneuse(sur: o, dans: liste) }
-        .contextMenu {
-            // Voir `VueAffinitesiOS.carte` : un simple report d'un tour de
-            // boucle ne suffisait pas, il faut laisser l'animation de
-            // fermeture du menu se terminer complètement.
-            Button("Œuvres proches (CLIP)") {
-                let cible = o
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    procheDe = cible
-                }
-            }
-        } preview: {
-            // Aperçu réduit : iOS élargit le menu contextuel jusqu'à la
-            // largeur de cet aperçu (constaté à l'écran — un menu à un seul
-            // item bien plus large que son texte). Toujours plus large que
-            // « Œuvres proches » à cette taille, mais moins excessif.
-            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 240, preserverRatio: true)
-                .frame(width: 220, height: 293)
-        }
+        .onTapGesture { procheDe = o }
     }
 
     // MARK: Réglages — un seul curseur : CLIP n'a qu'une distance
@@ -508,27 +478,5 @@ struct VueAffinitesCLIPiOS: View {
         }
     }
 
-    private func ouvrirVisionneuse(sur o: Oeuvre, dans liste: [Oeuvre]) {
-        oeuvresVisionneuse = liste
-        indexVisionneuse = liste.firstIndex { $0.id == o.id }
-    }
-
-    /// Présentation de la visionneuse, adossée à `indexVisionneuse` — voir
-    /// `VueAffinitesiOS.visionneuseOuverte`.
-    private var visionneuseOuverte: Binding<Bool> {
-        Binding(get: { indexVisionneuse != nil },
-                set: { if !$0 { indexVisionneuse = nil } })
-    }
-
-    @ViewBuilder
-    private var visionneuse: some View {
-        if let i = indexVisionneuse, !oeuvresVisionneuse.isEmpty {
-            VisionneuseOeuvres(
-                oeuvres: oeuvresVisionneuse,
-                index: min(i, oeuvresVisionneuse.count - 1),
-                onNaviguer: { o in indexVisionneuse = oeuvresVisionneuse.firstIndex { $0.id == o.id } },
-                onFermer: { indexVisionneuse = nil })
-        }
-    }
 }
 #endif

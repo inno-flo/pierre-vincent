@@ -13,8 +13,8 @@ import SwiftData
 ///   piège déjà rencontré et documenté pour le récapitulatif de `VueiOS` ;
 /// - les tailles de police doivent rester sémantiques (Dynamic Type), jamais
 ///   figées en points comme sur Mac ;
-/// - l'ouverture d'une œuvre passe par `VisionneuseOeuvres`, pas
-///   `VisionneusePanneau`.
+/// - l'ouverture d'une œuvre passe par une navigation poussée vers « Œuvres
+///   proches », pas par une visionneuse — voir plus bas.
 /// Un fichier commun aurait multiplié les branches `#if` sur des points où
 /// les deux plateformes ne se contentent pas de varier en apparence.
 ///
@@ -27,6 +27,14 @@ import SwiftData
 /// en une seule image. Retour à la base du Catalogue (`VueGalerie`, qui
 /// n'a jamais eu ce problème) : les blocs de réglages sont ajoutés en tête
 /// du contenu défilant, comme `BandeauTypes` l'est pour les pastilles de tri.
+///
+/// **Plus de visionneuse plein écran, plus de menu contextuel.** Ces deux
+/// vues ouvraient autrefois une image en grand par appui prolongé (menu
+/// contextuel « Œuvres proches »). Après plusieurs essais infructueux pour
+/// fiabiliser cette poussée depuis un `.contextMenu` — sans simulateur ni
+/// appareil pour vérifier en direct —, la visionneuse est retirée : un tap
+/// simple sur une vignette ouvre directement « Œuvres proches » pour cette
+/// œuvre, sans geste à distinguer ni menu à attendre.
 struct VueAffinitesiOS: View {
     @Environment(\.accentRubrique) private var accent
 
@@ -68,19 +76,11 @@ struct VueAffinitesiOS: View {
     /// directement les familles déjà calculées (constaté à l'écran).
     @State private var dernierCleLotTraite: String?
     @State private var procheDe: Oeuvre?
-    /// Présentation d'« Œuvres proches », adossée à `procheDe` — même
-    /// patron que `visionneuseOuverte`.
+    /// Présentation d'« Œuvres proches », adossée à `procheDe`.
     private var procheDePresente: Binding<Bool> {
         Binding(get: { procheDe != nil },
                 set: { if !$0 { procheDe = nil } })
     }
-    @State private var indexVisionneuse: Int?
-    /// La liste dans laquelle circulent les flèches Précédent/Suivant —
-    /// celle affichée à l'écran quand on ouvre la vignette (une famille, la
-    /// liste « Point de départ »/« Les plus proches »…), PAS `lot` en
-    /// entier : sans elle, les flèches parcouraient tout le lot analysé,
-    /// dans son ordre d'origine, sans rapport avec l'ordre affiché.
-    @State private var oeuvresVisionneuse: [Oeuvre] = []
     /// Bouton flottant « Retour en haut », même mécanisme que toutes les
     /// vues Galerie/Liste de l'app (voir `BoutonRetourHaut.swift`).
     @State private var boutonHautVisible = false
@@ -152,24 +152,10 @@ struct VueAffinitesiOS: View {
                + "photo par photo. Rien n'est perdu — ni les œuvres, ni les "
                + "photos —, mais l'opération reprend depuis le début.")
         }
-        // Plein écran, barres système comprises : `.fullScreenCover`
-        // et non `.overlay`, qui laissait la barre de navigation (bouton
-        // retour, menu Analyser) visible ET tapable derrière la photo, et
-        // rendait le glissement de fermeture saccadé — même piège que
-        // documenté pour `VueiOS.fullScreenCover` (une `.sheet` aurait
-        // laissé la photo en carte à coins arrondis).
-        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
         // « Œuvres proches » est un ENFANT poussé de cette vue : le bouton
         // de retour natif ramène ainsi dans « Affinités », et non dans la
-        // sidebar. `isPresented:` + un `Binding<Bool>` dérivé de `procheDe`
-        // — PAS `.navigationDestination(item:)` — même mécanisme déjà
-        // éprouvé que `visionneuseOuverte` juste au-dessus : un essai avec
-        // `item:`, seul ou enveloppé dans un `NavigationStack` propre à
-        // cette vue, soit ne poussait pas depuis le menu contextuel, soit
-        // faisait perdre la barre d'outils (les boutons Importer/Prix de la
-        // sidebar restaient affichés à la place du menu Analyser — capture
-        // fournie). Ce mécanisme-ci est déjà utilisé sans souci ailleurs
-        // dans cette même vue.
+        // sidebar. `isPresented:` + un `Binding<Bool>` dérivé de `procheDe`,
+        // pas `.navigationDestination(item:)` (essayé, peu fiable ici).
         .navigationDestination(isPresented: procheDePresente) {
             if let source = procheDe { vueOeuvresProches(de: source) }
         }
@@ -214,13 +200,6 @@ struct VueAffinitesiOS: View {
         }
         .background(Color.cremeFond)
         .navigationTitle("Œuvres proches")
-        // Plein écran, barres système comprises : `.fullScreenCover`
-        // et non `.overlay`, qui laissait la barre de navigation (bouton
-        // retour, menu Analyser) visible ET tapable derrière la photo, et
-        // rendait le glissement de fermeture saccadé — même piège que
-        // documenté pour `VueiOS.fullScreenCover` (une `.sheet` aurait
-        // laissé la photo en carte à coins arrondis).
-        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
     }
 
     // MARK: Les familles
@@ -299,7 +278,7 @@ struct VueAffinitesiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
+                ForEach(oeuvres) { o in carte(o) }
             }
         }
     }
@@ -317,7 +296,7 @@ struct VueAffinitesiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o, liste: oeuvres) }
+                ForEach(oeuvres) { o in carte(o) }
             }
             .padding(.top, 8)
         } label: {
@@ -349,17 +328,15 @@ struct VueAffinitesiOS: View {
 
     // MARK: Une vignette
 
-    /// **Ouverture par simple tap**, pas par le menu contextuel à aperçu
-    /// (`InteractionApercu`) qu'utilisent les vignettes de Galerie ailleurs
-    /// dans l'app. Ce mécanisme existe surtout pour offrir la bascule des
-    /// favoris depuis l'aperçu ; sans intérêt ici.
-    ///
-    /// **`.contextMenu(menuItems:preview:)`, avec aperçu explicite** : sans
-    /// lui, une vignette posée dans une grille dense pouvait voir UIKit lui
-    /// attribuer l'aperçu d'une zone plus large que la sienne (constaté à
-    /// l'écran). En fournissant nous-mêmes l'aperçu (juste cette vignette),
-    /// plus rien à mal attribuer.
-    private func carte(_ o: Oeuvre, liste: [Oeuvre]) -> some View {
+    /// **Plus de visionneuse, plus de menu contextuel.** Après plusieurs
+    /// essais infructueux pour fiabiliser la poussée d'« Œuvres proches »
+    /// depuis un `.contextMenu` (délai avant mutation d'état,
+    /// `NavigationStack` propre, `.navigationDestination(item:)` puis
+    /// `(isPresented:)`…) — sans pouvoir vérifier sur un appareil réel —, la
+    /// fonction visionneuse est retirée des deux vues Affinités et le tap
+    /// simple sur une vignette ouvre directement « Œuvres proches » : plus
+    /// aucun geste à distinguer, plus aucune animation de menu à attendre.
+    private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
@@ -397,30 +374,7 @@ struct VueAffinitesiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { ouvrirVisionneuse(sur: o, dans: liste) }
-        .contextMenu {
-            // Déclencher un `.navigationDestination` DIRECTEMENT depuis
-            // l'action d'un `.contextMenu` est peu fiable sur iOS : la
-            // poussée entre en conflit avec l'animation de FERMETURE du
-            // menu, encore en cours, et ne se déclenche pas (tap sans
-            // effet, constaté à l'écran) — un simple report d'un tour de
-            // boucle (`DispatchQueue.main.async`) ne suffit pas, cette
-            // animation dure plus qu'un tick. Le délai ci-dessous lui
-            // laisse le temps de se terminer avant de pousser l'écran.
-            Button("Œuvres proches") {
-                let cible = o
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    procheDe = cible
-                }
-            }
-        } preview: {
-            // Aperçu réduit : iOS élargit le menu contextuel jusqu'à la
-            // largeur de cet aperçu (constaté à l'écran — un menu à un seul
-            // item bien plus large que son texte). Toujours plus large que
-            // « Œuvres proches » à cette taille, mais moins excessif.
-            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 240, preserverRatio: true)
-                .frame(width: 220, height: 293)
-        }
+        .onTapGesture { procheDe = o }
     }
 
     // MARK: Réglages
@@ -631,27 +585,5 @@ struct VueAffinitesiOS: View {
         }
     }
 
-    private func ouvrirVisionneuse(sur o: Oeuvre, dans liste: [Oeuvre]) {
-        oeuvresVisionneuse = liste
-        indexVisionneuse = liste.firstIndex { $0.id == o.id }
-    }
-
-    /// Présentation de la visionneuse, adossée à `indexVisionneuse` — même
-    /// patron que `VueiOS.visionneuseOuverte`.
-    private var visionneuseOuverte: Binding<Bool> {
-        Binding(get: { indexVisionneuse != nil },
-                set: { if !$0 { indexVisionneuse = nil } })
-    }
-
-    @ViewBuilder
-    private var visionneuse: some View {
-        if let i = indexVisionneuse, !oeuvresVisionneuse.isEmpty {
-            VisionneuseOeuvres(
-                oeuvres: oeuvresVisionneuse,
-                index: min(i, oeuvresVisionneuse.count - 1),
-                onNaviguer: { o in indexVisionneuse = oeuvresVisionneuse.firstIndex { $0.id == o.id } },
-                onFermer: { indexVisionneuse = nil })
-        }
-    }
 }
 #endif
