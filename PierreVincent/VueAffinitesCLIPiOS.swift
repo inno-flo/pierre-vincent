@@ -139,6 +139,9 @@ struct VueAffinitesCLIPiOS: View {
                 }
             }
             .listStyle(.insetGrouped)
+            // Voir `VueAffinitesiOS.contenuDefilant` : réduit l'écart par
+            // défaut sous le titre pour retrouver celui du Catalogue.
+            .contentMargins(.top, 8, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(Color.cremeFond)
             .retourEnHaut(visible: $boutonHautVisible) {

@@ -163,6 +163,11 @@ struct VueAffinitesiOS: View {
                 }
             }
             .listStyle(.insetGrouped)
+            // Un `List(.insetGrouped)` réserve par défaut un grand espace
+            // sous le titre avant sa première `Section` (~35 pt). Réduit à
+            // 8 pt pour retrouver l'écart du Catalogue de « Ventes et dons »
+            // (`BandeauTypes.padding(.top, 8)`), pris comme référence.
+            .contentMargins(.top, 8, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(Color.cremeFond)
             .retourEnHaut(visible: $boutonHautVisible) {
