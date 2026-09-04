@@ -13,8 +13,8 @@ import SwiftData
 ///   piège déjà rencontré et documenté pour le récapitulatif de `VueiOS` ;
 /// - les tailles de police doivent rester sémantiques (Dynamic Type), jamais
 ///   figées en points comme sur Mac ;
-/// - l'ouverture d'une œuvre passe par une navigation poussée vers « Œuvres
-///   proches », pas par une visionneuse — voir plus bas.
+/// - l'ouverture d'une œuvre passe par « Œuvres proches » en
+///   `.fullScreenCover`, pas par une visionneuse — voir plus bas.
 /// Un fichier commun aurait multiplié les branches `#if` sur des points où
 /// les deux plateformes ne se contentent pas de varier en apparence.
 ///
@@ -157,12 +157,32 @@ struct VueAffinitesiOS: View {
                + "photo par photo. Rien n'est perdu — ni les œuvres, ni les "
                + "photos —, mais l'opération reprend depuis le début.")
         }
-        // « Œuvres proches » est un ENFANT poussé de cette vue : le bouton
-        // de retour natif ramène ainsi dans « Affinités », et non dans la
-        // sidebar. `isPresented:` + un `Binding<Bool>` dérivé de `procheDe`,
-        // pas `.navigationDestination(item:)` (essayé, peu fiable ici).
-        .navigationDestination(isPresented: procheDePresente) {
-            if let source = procheDe { vueOeuvresProches(de: source) }
+        // « Œuvres proches » — `.fullScreenCover`, PAS
+        // `.navigationDestination` : trois variantes de ce dernier
+        // (`item:`, `isPresented:` seul, `isPresented:` sous un
+        // `NavigationStack` propre à cette vue) ont toutes échoué à l'usage
+        // — poussée qui ne se déclenchait pas du tout, ou barre d'outils
+        // perdue — sans qu'aucun simulateur ne permette de vérifier en
+        // direct. `.fullScreenCover` est le seul mécanisme dont cette vue
+        // ait la preuve qu'il fonctionne (c'est lui qui présentait la
+        // visionneuse). Le `NavigationStack` interne à la couverture donne
+        // le bouton de retour, sans jamais toucher à celui de la colonne
+        // « detail » du `NavigationSplitView` parent.
+        .fullScreenCover(isPresented: procheDePresente) {
+            if let source = procheDe {
+                NavigationStack {
+                    vueOeuvresProches(de: source)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button {
+                                    procheDe = nil
+                                } label: {
+                                    Label("Affinités", systemImage: "chevron.left")
+                                }
+                            }
+                        }
+                }
+            }
         }
     }
 
@@ -185,13 +205,14 @@ struct VueAffinitesiOS: View {
         }
     }
 
-    // MARK: « Œuvres proches » — écran enfant, poussé par `.navigationDestination`
+    // MARK: « Œuvres proches » — contenu présenté en `.fullScreenCover`
 
     /// Reprend uniquement « Correspondances » (le curseur influence le
     /// classement de `Regroupement.proches`) — ni « Familles » ni « Genre »,
     /// sans objet une fois qu'on regarde les œuvres proches d'une seule
-    /// œuvre. Le retour se fait par le bouton natif de navigation, plus
-    /// besoin d'un bouton « Familles » posé dans le contenu.
+    /// œuvre. Le retour se fait par le bouton « Affinités » posé par le
+    /// `body` sur le `NavigationStack` de la couverture, plus besoin d'un
+    /// bouton « Familles » posé dans le contenu.
     private func vueOeuvresProches(de source: Oeuvre) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -435,16 +456,8 @@ struct VueAffinitesiOS: View {
     private func curseur(finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Slider(value: valeur, in: plage)
-            // En noir, comme le libellé de la bascule « Genre » — pas en
-            // gris comme l'en-tête du bloc.
-            HStack {
-                Text(finGauche).font(.subheadline)
-                Spacer()
-                Text(finDroite).font(.subheadline)
-            }
-        }
+        CurseurReglage(finGauche: finGauche, finDroite: finDroite,
+                      valeur: valeur, plage: plage)
     }
 
     // MARK: Bandeaux d'information et état vide
@@ -590,5 +603,44 @@ struct VueAffinitesiOS: View {
         }
     }
 
+}
+
+/// Curseur d'un réglage — écrit en `View` distincte (et non en simple
+/// fonction) pour porter son propre `@State` : `valeurAffichee` suit le
+/// doigt image par image sans toucher `valeur`, le `Binding` réel qui pilote
+/// `Regroupement.grouper` — celui-ci n'est écrit qu'au RELÂCHEMENT
+/// (`onEditingChanged`). Sans cette séparation, chaque frame du glissement
+/// relançait le classement complet des familles sur tout le lot, d'où un
+/// curseur lent et saccadé au lieu de suivre le doigt.
+///
+/// `private` (propre à ce fichier) — même duplication assumée qu'ailleurs
+/// entre les deux vues Affinités.
+private struct CurseurReglage: View {
+    let finGauche: String
+    let finDroite: String
+    @Binding var valeur: Double
+    let plage: ClosedRange<Double>
+    @State private var valeurAffichee: Double = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Slider(value: $valeurAffichee, in: plage) { enCours in
+                if !enCours { valeur = valeurAffichee }
+            }
+            // En noir, comme le libellé de la bascule « Genre » — pas en
+            // gris comme l'en-tête du bloc.
+            HStack {
+                Text(finGauche).font(.subheadline)
+                Spacer()
+                Text(finDroite).font(.subheadline)
+            }
+        }
+        .onAppear { valeurAffichee = valeur }
+        // Le réglage peut changer hors de ce curseur (bouton « Tout
+        // recalculer », ou l'autre écran qui partage le même `Binding`) :
+        // resynchronise l'affichage, sans jamais écraser un glissement en
+        // cours (`valeurAffichee` reste la seule source pendant le geste).
+        .onChange(of: valeur) { _, nouvelle in valeurAffichee = nouvelle }
+    }
 }
 #endif

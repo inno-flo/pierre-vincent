@@ -106,11 +106,24 @@ struct VueAffinitesCLIPiOS: View {
             Text("Les signatures CLIP déjà calculées seront effacées et refaites. "
                + "Celles d'« Affinités » ne sont pas concernées.")
         }
-        // « Œuvres proches (CLIP) » est un ENFANT poussé de cette vue —
-        // `isPresented:` + `Binding<Bool>`, pas `.navigationDestination(item:)`
-        // — voir `VueAffinitesiOS.body` pour le pourquoi.
-        .navigationDestination(isPresented: procheDePresente) {
-            if let source = procheDe { vueOeuvresProches(de: source) }
+        // « Œuvres proches (CLIP) » — `.fullScreenCover`, pas
+        // `.navigationDestination` — voir `VueAffinitesiOS.body` pour le
+        // détail des trois essais échoués.
+        .fullScreenCover(isPresented: procheDePresente) {
+            if let source = procheDe {
+                NavigationStack {
+                    vueOeuvresProches(de: source)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button {
+                                    procheDe = nil
+                                } label: {
+                                    Label("Affinités CLIP", systemImage: "chevron.left")
+                                }
+                            }
+                        }
+                }
+            }
         }
     }
 
@@ -133,11 +146,12 @@ struct VueAffinitesCLIPiOS: View {
         }
     }
 
-    // MARK: « Œuvres proches (CLIP) » — écran enfant, poussé par `.navigationDestination`
+    // MARK: « Œuvres proches (CLIP) » — contenu présenté en `.fullScreenCover`
 
     /// Aucun réglage : CLIP n'a qu'une seule distance, sans curseur à
     /// ajuster une fois qu'on regarde les œuvres proches d'une seule
-    /// œuvre. Le retour se fait par le bouton natif de navigation.
+    /// œuvre. Le retour se fait par le bouton « Affinités CLIP » posé par
+    /// le `body` sur le `NavigationStack` de la couverture.
     private func vueOeuvresProches(de source: Oeuvre) -> some View {
         ScrollView {
             sectionProches(de: source)
@@ -331,16 +345,8 @@ struct VueAffinitesCLIPiOS: View {
     private func curseur(finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Slider(value: valeur, in: plage)
-            // En noir, comme le libellé de la bascule « Genre » — pas en
-            // gris comme l'en-tête du bloc.
-            HStack {
-                Text(finGauche).font(.subheadline)
-                Spacer()
-                Text(finDroite).font(.subheadline)
-            }
-        }
+        CurseurReglage(finGauche: finGauche, finDroite: finDroite,
+                      valeur: valeur, plage: plage)
     }
 
     // MARK: Bandeaux d'information et état vide
@@ -483,5 +489,30 @@ struct VueAffinitesCLIPiOS: View {
         }
     }
 
+}
+
+/// Curseur d'un réglage — voir `VueAffinitesiOS.CurseurReglage`, même
+/// raison et même duplication assumée entre les deux fichiers.
+private struct CurseurReglage: View {
+    let finGauche: String
+    let finDroite: String
+    @Binding var valeur: Double
+    let plage: ClosedRange<Double>
+    @State private var valeurAffichee: Double = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Slider(value: $valeurAffichee, in: plage) { enCours in
+                if !enCours { valeur = valeurAffichee }
+            }
+            HStack {
+                Text(finGauche).font(.subheadline)
+                Spacer()
+                Text(finDroite).font(.subheadline)
+            }
+        }
+        .onAppear { valeurAffichee = valeur }
+        .onChange(of: valeur) { _, nouvelle in valeurAffichee = nouvelle }
+    }
 }
 #endif
