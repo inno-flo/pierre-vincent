@@ -292,9 +292,9 @@ struct VueAffinitesCLIPiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Même taille que les grands en-têtes de bloc de la sidebar —
-            // voir `VueAffinitesiOS.blocReglage`.
-            Text(titre).font(.footnote).foregroundStyle(.secondary)
+            // Le même token que `boutonEnTeteBloc` — voir
+            // `VueAffinitesiOS.blocReglage`.
+            Text(titre).font(.enTeteBlocSidebar).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))

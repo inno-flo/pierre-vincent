@@ -346,16 +346,11 @@ struct VueAffinitesiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Même TAILLE que les grands en-têtes de bloc de la sidebar
-            // (« Réserve », « Labo »). Leur code (`boutonEnTeteBloc`) n'impose
-            // ni police ni graisse — mais posé dans le `header:` d'une
-            // `List(.insetGrouped)`, il hérite du style natif d'un en-tête
-            // de section, qui vaut `.footnote` (13 pt, voir le barème
-            // typographique de CLAUDE.md) — pas `.subheadline` (15 pt), un
-            // écart mesuré et corrigé. Ce `Text`-ci, hors de tout `List`, ne
-            // reçoit rien automatiquement : il faut fixer `.footnote` à la
-            // main, sans graisse imposée non plus, pour rester identique.
-            Text(titre).font(.footnote).foregroundStyle(.secondary)
+            // LE MÊME token que `boutonEnTeteBloc` (« Réserve », « Labo »)
+            // dans la sidebar — `Font.enTeteBlocSidebar`, `Couleurs.swift` —
+            // pas une valeur rapprochée à l'estime : un écart entre les deux
+            // en-têtes devient donc impossible.
+            Text(titre).font(.enTeteBlocSidebar).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
