@@ -245,6 +245,8 @@ struct VueAffinitesiOS: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(titre).font(.headline)
                     Text(sousTitre).font(.footnote).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Spacer()
                 if !palette.isEmpty { rubanPalette(palette) }
@@ -349,10 +351,10 @@ struct VueAffinitesiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Style natif d'un en-tête de section iOS (footnote, gris) —
-            // le même que fournit `listStyle(.insetGrouped)` pour « Genres »/
-            // « Modes de vente » dans la sidebar, voir CLAUDE.md.
-            Text(titre).font(.footnote).foregroundStyle(.secondary)
+            // Style du grand en-tête descriptif des Réglages système iOS
+            // (ex. « Données cellulaires ») — pas le petit en-tête gris de
+            // section qu'utilise la sidebar, jugé trop discret ici.
+            Text(titre).font(.title2).fontWeight(.semibold).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
