@@ -262,7 +262,7 @@ struct VueAffinitesiOS: View {
                 .foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
-                      spacing: 12) {
+                      spacing: 16) {
                 ForEach(oeuvres) { o in carte(o) }
             }
         }
@@ -281,7 +281,7 @@ struct VueAffinitesiOS: View {
             })) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
-                      spacing: 12) {
+                      spacing: 16) {
                 ForEach(oeuvres) { o in carte(o) }
             }
             .padding(.top, 8)
@@ -325,7 +325,7 @@ struct VueAffinitesiOS: View {
         VStack(spacing: 0) {
             ZStack {
                 Color.gray.opacity(0.12)
-                VignetteCacheeFlexible(nom: o.photoNom, coteSource: 240,
+                VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320,
                                        preserverRatio: true)
             }
             .frame(maxWidth: .infinity)
