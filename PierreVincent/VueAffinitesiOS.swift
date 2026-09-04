@@ -315,36 +315,53 @@ struct VueAffinitesiOS: View {
 
     // MARK: Réglages
 
+    /// Trois blocs DISTINCTS, chacun son propre en-tête (hors carte) et sa
+    /// propre cellule (carte `fondLegende`) — plus un seul grand bloc
+    /// englobant les trois réglages.
     private var reglages: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            curseur(titre: "Correspondance", finGauche: "Couleur", finDroite: "Style",
-                    valeur: $poidsCouleur, plage: 0...1)
-            // « Familles » et « Même genre » n'ont de sens que pour le
-            // classement par famille — sans objet une fois qu'on regarde
-            // les œuvres proches d'une seule œuvre.
+        VStack(alignment: .leading, spacing: 16) {
+            blocReglage(titre: "Correspondances") {
+                curseur(finGauche: "Couleurs", finDroite: "Style",
+                        valeur: $poidsCouleur, plage: 0...1)
+            }
+            // « Familles » et « Genre » n'ont de sens que pour le classement
+            // par famille — sans objet une fois qu'on regarde les œuvres
+            // proches d'une seule œuvre.
             if procheDe == nil {
-                curseur(titre: "Familles", finGauche: "Larges", finDroite: "Serrées",
-                        valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
-                        plage: 0...0.42)
-                Toggle("Même genre", isOn: $memeGenre)
-                    .font(.subheadline)
+                blocReglage(titre: "Familles") {
+                    curseur(finGauche: "Larges", finDroite: "Serrées",
+                            valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
+                            plage: 0...0.42)
+                }
+                blocReglage(titre: "Genre") {
+                    Toggle("Genre", isOn: $memeGenre)
+                        .font(.subheadline)
+                }
             }
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+    }
+
+    /// Un bloc de réglage : en-tête simple au-dessus, cellule `fondLegende`
+    /// en dessous — même patron que les en-têtes de sous-groupe de la
+    /// sidebar (« Genres », « Modes de vente »), pas un `Text` quelconque.
+    private func blocReglage<Contenu: View>(titre: String,
+                                            @ViewBuilder contenu: () -> Contenu) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(titre).font(.subheadline).foregroundStyle(.secondary)
+            contenu()
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+        }
     }
 
     /// Taille de texte alignée sur celle des vignettes de Catalogue
-    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS).
-    /// **Une ligne par élément** : le titre, puis le curseur seul (pleine
-    /// largeur, sans les libellés d'extrémité collés dessus — trop à l'étroit
-    /// une fois ce texte agrandi), puis les deux extrémités sur une troisième
-    /// ligne, alignées à gauche et à droite.
-    private func curseur(titre: String, finGauche: String, finDroite: String,
+    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS). Le titre du
+    /// réglage n'est plus ICI — c'est désormais l'en-tête de `blocReglage` —
+    /// seul le curseur et ses deux extrémités restent, chacun sur sa ligne.
+    private func curseur(finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(titre).font(.subheadline).foregroundStyle(.secondary)
             Slider(value: valeur, in: plage)
             HStack {
                 Text(finGauche).font(.subheadline).foregroundStyle(.secondary)

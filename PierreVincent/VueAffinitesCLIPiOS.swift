@@ -260,32 +260,45 @@ struct VueAffinitesCLIPiOS: View {
 
     // MARK: Réglages — un seul curseur : CLIP n'a qu'une distance
 
+    /// Deux blocs DISTINCTS (Familles, Genre), même patron que la version
+    /// « Affinités » — voir `VueAffinitesiOS.reglages`. Pas de bloc
+    /// « Correspondances » ici : CLIP n'a qu'une seule distance.
     private var reglages: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            curseur(titre: "Familles", finGauche: "Larges", finDroite: "Serrées",
-                    valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
-                    plage: 0...0.35)
-            Toggle("Même genre", isOn: $memeGenre)
-                .font(.subheadline)
+        VStack(alignment: .leading, spacing: 16) {
+            blocReglage(titre: "Familles") {
+                curseur(finGauche: "Larges", finDroite: "Serrées",
+                        valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
+                        plage: 0...0.35)
+            }
+            blocReglage(titre: "Genre") {
+                Toggle("Genre", isOn: $memeGenre)
+                    .font(.subheadline)
+            }
             Text("Moteur : MobileCLIP-S0 (Apple, Core ML)")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+    }
+
+    /// Un bloc de réglage : en-tête simple au-dessus, cellule `fondLegende`
+    /// en dessous — voir `VueAffinitesiOS.blocReglage`.
+    private func blocReglage<Contenu: View>(titre: String,
+                                            @ViewBuilder contenu: () -> Contenu) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(titre).font(.subheadline).foregroundStyle(.secondary)
+            contenu()
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
+        }
     }
 
     /// Taille de texte alignée sur celle des vignettes de Catalogue
-    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS).
-    /// **Une ligne par élément** : le titre, puis le curseur seul (pleine
-    /// largeur, sans les libellés d'extrémité collés dessus — trop à l'étroit
-    /// une fois ce texte agrandi), puis les deux extrémités sur une troisième
-    /// ligne, alignées à gauche et à droite.
-    private func curseur(titre: String, finGauche: String, finDroite: String,
+    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS). Le titre du
+    /// réglage n'est plus ICI — c'est désormais l'en-tête de `blocReglage`.
+    private func curseur(finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(titre).font(.subheadline).foregroundStyle(.secondary)
             Slider(value: valeur, in: plage)
             HStack {
                 Text(finGauche).font(.subheadline).foregroundStyle(.secondary)
