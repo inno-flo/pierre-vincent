@@ -60,7 +60,7 @@ struct VueAffinitesCLIPiOS: View {
                 VStack(spacing: 10) {
                     ProgressView()
                     Text("Comparaison des \(signatures.count) œuvres…")
-                        .font(.footnote)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
