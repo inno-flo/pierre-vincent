@@ -1,7 +1,6 @@
 #if os(iOS)
 import SwiftUI
 import SwiftData
-import UIKit
 
 /// Pendant iPhone de `VueAffinitesCLIP` (macOS) — mêmes raisons d'un fichier
 /// séparé que `VueAffinitesiOS`/`VueAffinites` : voir l'en-tête de ce dernier.
@@ -270,10 +269,12 @@ struct VueAffinitesCLIPiOS: View {
     }
 
     // MARK: Une vignette — même choix que la version « Affinités » : tap
-    // simple pour ouvrir, appui prolongé pour « Œuvres proches ». PAS de
-    // `.contextMenu` : nichées plusieurs par ligne de `List` (grille dans
-    // une seule ligne), UIKit attribuait l'aperçu de TOUTE la ligne à
-    // chaque vignette — voir `VueAffinitesiOS.carte`.
+    // simple pour ouvrir, appui prolongé pour « Œuvres proches (CLIP) ».
+    // `.contextMenu(menuItems:preview:)` — la forme AVEC aperçu explicite,
+    // pas la forme simple : nichées plusieurs par ligne de `List` (grille
+    // dans une seule ligne), la forme simple laissait UIKit attribuer
+    // l'aperçu de TOUTE la ligne à chaque vignette — voir
+    // `VueAffinitesiOS.carte`.
 
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
@@ -308,9 +309,11 @@ struct VueAffinitesCLIPiOS: View {
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o) }
-        .onLongPressGesture {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            procheDe = o
+        .contextMenu {
+            Button("Œuvres proches (CLIP)") { procheDe = o }
+        } preview: {
+            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
+                .frame(width: 320, height: 420)
         }
     }
 

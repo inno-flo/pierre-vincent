@@ -1,7 +1,6 @@
 #if os(iOS)
 import SwiftUI
 import SwiftData
-import UIKit
 
 /// Pendant iPhone de `VueAffinites` (macOS) : même moteur
 /// (`SignatureOeuvre`, `Affinites.swift`), présentation adaptée à l'écran et
@@ -129,6 +128,18 @@ struct VueAffinitesiOS: View {
     private var contenuDefilant: some View {
         ScrollViewReader { proxy in
             List {
+                // Retour à la vue par familles — AVANT « Correspondances »,
+                // pour rester la toute première chose vue en entrant dans
+                // « Œuvres proches ». Bouton standard : ni icône ni police
+                // imposée, juste un `Button` dans sa ligne, comme un bouton
+                // d'action classique des Réglages système.
+                if procheDe != nil {
+                    Section {
+                        Button("Familles") { procheDe = nil }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+
                 // L'ancre est l'IDENTITÉ de la `Section` elle-même, pas
                 // celle d'une ligne à part : postée comme ligne AVANT la
                 // première `Section`, `List` la traitait comme sa propre
@@ -226,18 +237,6 @@ struct VueAffinitesiOS: View {
     @ViewBuilder
     private func sectionProches(de source: Oeuvre) -> some View {
         let index = lot.firstIndex { $0.id == source.id }
-        Button {
-            procheDe = nil
-        } label: {
-            Label("Revenir aux familles", systemImage: "arrow.left.circle.fill")
-                .font(.subheadline)
-        }
-        // Espace supplémentaire en bas de ligne : plus d'écart avant
-        // « Point de départ » que le simple padding par défaut d'une ligne.
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 20, trailing: 16))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-
         if let index, let matrices {
             let proches = Regroupement.proches(de: index, parmi: lot,
                                                matrices: matrices,
@@ -328,14 +327,14 @@ struct VueAffinitesiOS: View {
     /// dans l'app. Ce mécanisme existe surtout pour offrir la bascule des
     /// favoris depuis l'aperçu ; sans intérêt ici.
     ///
-    /// **L'appui prolongé n'utilise PLUS `.contextMenu`.** Chaque famille
-    /// loge sa grille de vignettes dans une SEULE ligne de `List` (voir
-    /// `sectionFamille`/`section`) : un `.contextMenu` par vignette, une
-    /// fois nichées ainsi, se voit attribuer par UIKit l'aperçu de TOUTE la
-    /// ligne — toutes les vignettes de la famille apparaissaient alors
-    /// fusionnées en une seule image au moment de l'appui (constaté à
-    /// l'écran). Remplacé par un `.onLongPressGesture` direct : sans menu ni
-    /// aperçu système, rien à mal attribuer.
+    /// **`.contextMenu(menuItems:preview:)`, PAS la forme simple
+    /// `.contextMenu(menuItems:)`.** Chaque famille loge sa grille de
+    /// vignettes dans une SEULE ligne de `List` (voir `sectionFamille`/
+    /// `section`) : la forme simple laisse UIKit fabriquer l'aperçu à partir
+    /// du rendu ambiant, qui capturait alors TOUTE la ligne — toutes les
+    /// vignettes de la famille apparaissaient fusionnées en une seule image
+    /// au moment de l'appui (constaté à l'écran). En fournissant nous-mêmes
+    /// l'aperçu (juste cette vignette), UIKit n'a plus rien à mal attribuer.
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
             ZStack {
@@ -370,9 +369,11 @@ struct VueAffinitesiOS: View {
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o) }
-        .onLongPressGesture {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            procheDe = o
+        .contextMenu {
+            Button("Œuvres proches") { procheDe = o }
+        } preview: {
+            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
+                .frame(width: 320, height: 420)
         }
     }
 
