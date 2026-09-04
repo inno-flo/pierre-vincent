@@ -125,7 +125,13 @@ struct VueAffinitesiOS: View {
                + "photo par photo. Rien n'est perdu — ni les œuvres, ni les "
                + "photos —, mais l'opération reprend depuis le début.")
         }
-        .overlay { visionneuse }
+        // Plein écran, barres système comprises : `.fullScreenCover`
+        // et non `.overlay`, qui laissait la barre de navigation (bouton
+        // retour, menu Analyser) visible ET tapable derrière la photo, et
+        // rendait le glissement de fermeture saccadé — même piège que
+        // documenté pour `VueiOS.fullScreenCover` (une `.sheet` aurait
+        // laissé la photo en carte à coins arrondis).
+        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
         // « Œuvres proches » est un ENFANT poussé de cette vue, pas un
         // simple changement de contenu piloté par un `@State` local : le
         // bouton de retour natif de la barre de navigation ramène ainsi
@@ -176,7 +182,13 @@ struct VueAffinitesiOS: View {
         }
         .background(Color.cremeFond)
         .navigationTitle("Œuvres proches")
-        .overlay { visionneuse }
+        // Plein écran, barres système comprises : `.fullScreenCover`
+        // et non `.overlay`, qui laissait la barre de navigation (bouton
+        // retour, menu Analyser) visible ET tapable derrière la photo, et
+        // rendait le glissement de fermeture saccadé — même piège que
+        // documenté pour `VueiOS.fullScreenCover` (une `.sheet` aurait
+        // laissé la photo en carte à coins arrondis).
+        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
     }
 
     // MARK: Les familles
@@ -355,14 +367,19 @@ struct VueAffinitesiOS: View {
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o, dans: liste) }
         .contextMenu {
-            // Déclencher la navigation DIRECTEMENT depuis l'action d'un
-            // `.contextMenu` est peu fiable sur iOS : le changement d'état
-            // entre en conflit avec l'animation de fermeture du menu, et le
-            // `.navigationDestination` ne se déclenche pas (tap sans effet,
-            // constaté à l'écran). Reporter d'un tour de boucle laisse le
-            // menu se refermer avant que `procheDe` ne change.
+            // Déclencher un `.navigationDestination` DIRECTEMENT depuis
+            // l'action d'un `.contextMenu` est peu fiable sur iOS : la
+            // poussée entre en conflit avec l'animation de FERMETURE du
+            // menu, encore en cours, et ne se déclenche pas (tap sans
+            // effet, constaté à l'écran) — un simple report d'un tour de
+            // boucle (`DispatchQueue.main.async`) ne suffit pas, cette
+            // animation dure plus qu'un tick. Le délai ci-dessous lui
+            // laisse le temps de se terminer avant de pousser l'écran.
             Button("Œuvres proches") {
-                DispatchQueue.main.async { procheDe = o }
+                let cible = o
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    procheDe = cible
+                }
             }
         } preview: {
             VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
@@ -568,6 +585,13 @@ struct VueAffinitesiOS: View {
     private func ouvrirVisionneuse(sur o: Oeuvre, dans liste: [Oeuvre]) {
         oeuvresVisionneuse = liste
         indexVisionneuse = liste.firstIndex { $0.id == o.id }
+    }
+
+    /// Présentation de la visionneuse, adossée à `indexVisionneuse` — même
+    /// patron que `VueiOS.visionneuseOuverte`.
+    private var visionneuseOuverte: Binding<Bool> {
+        Binding(get: { indexVisionneuse != nil },
+                set: { if !$0 { indexVisionneuse = nil } })
     }
 
     @ViewBuilder

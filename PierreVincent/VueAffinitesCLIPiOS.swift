@@ -98,7 +98,9 @@ struct VueAffinitesCLIPiOS: View {
             Text("Les signatures CLIP déjà calculées seront effacées et refaites. "
                + "Celles d'« Affinités » ne sont pas concernées.")
         }
-        .overlay { visionneuse }
+        // Plein écran, barres système comprises : `.fullScreenCover`,
+        // pas `.overlay` — voir `VueAffinitesiOS.body`.
+        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
         // « Œuvres proches (CLIP) » est un ENFANT poussé de cette vue — voir
         // `VueAffinitesiOS.body`, même raison : le bouton de retour natif
         // ramène ainsi dans « Affinités CLIP », pas dans la sidebar.
@@ -138,7 +140,9 @@ struct VueAffinitesCLIPiOS: View {
         }
         .background(Color.cremeFond)
         .navigationTitle("Œuvres proches (CLIP)")
-        .overlay { visionneuse }
+        // Plein écran, barres système comprises : `.fullScreenCover`,
+        // pas `.overlay` — voir `VueAffinitesiOS.body`.
+        .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
     }
 
     // MARK: Les familles
@@ -281,12 +285,14 @@ struct VueAffinitesCLIPiOS: View {
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o, dans: liste) }
         .contextMenu {
-            // Voir `VueAffinitesiOS.carte` : déclencher la navigation
-            // directement depuis un `.contextMenu` est peu fiable sur iOS,
-            // reporter d'un tour de boucle laisse le menu se refermer
-            // avant que `procheDe` ne change.
+            // Voir `VueAffinitesiOS.carte` : un simple report d'un tour de
+            // boucle ne suffisait pas, il faut laisser l'animation de
+            // fermeture du menu se terminer complètement.
             Button("Œuvres proches (CLIP)") {
-                DispatchQueue.main.async { procheDe = o }
+                let cible = o
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    procheDe = cible
+                }
             }
         } preview: {
             VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
@@ -483,6 +489,13 @@ struct VueAffinitesCLIPiOS: View {
     private func ouvrirVisionneuse(sur o: Oeuvre, dans liste: [Oeuvre]) {
         oeuvresVisionneuse = liste
         indexVisionneuse = liste.firstIndex { $0.id == o.id }
+    }
+
+    /// Présentation de la visionneuse, adossée à `indexVisionneuse` — voir
+    /// `VueAffinitesiOS.visionneuseOuverte`.
+    private var visionneuseOuverte: Binding<Bool> {
+        Binding(get: { indexVisionneuse != nil },
+                set: { if !$0 { indexVisionneuse = nil } })
     }
 
     @ViewBuilder
