@@ -278,7 +278,7 @@ struct VueAffinites: View {
         .onTapGesture(count: 2) { ouvrirVisionneuse(sur: o) }
         .onTapGesture { selection = [o.id] }
         .contextMenu {
-            Button("Œuvres proches…") {
+            Button("Œuvres proches") {
                 selection = [o.id]
                 procheDe = o
             }
