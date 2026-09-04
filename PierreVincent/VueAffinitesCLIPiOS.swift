@@ -37,6 +37,8 @@ struct VueAffinitesCLIPiOS: View {
     /// Œuvre affichée par « Œuvres proches (CLIP) », `nil` sur
     /// « Affinités CLIP ».
     @State private var procheDe: Oeuvre?
+    /// Voir `VueAffinitesiOS.dernierProcheDeID`.
+    @State private var dernierProcheDeID: UUID?
     @State private var boutonHautVisible = false
     private let ancreHaut = "ancre-haut-affinites-clip"
 
@@ -142,6 +144,12 @@ struct VueAffinitesCLIPiOS: View {
             }
             .retourEnHaut(visible: $boutonHautVisible) {
                 withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
+            }
+            // Voir `VueAffinitesiOS.contenuDefilant` : revient sur l'œuvre
+            // tapée à la fermeture d'« Œuvres proches (CLIP) ».
+            .onChange(of: procheDe) { ancienne, nouvelle in
+                guard ancienne != nil, nouvelle == nil, let id = dernierProcheDeID else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
         }
     }
@@ -308,7 +316,10 @@ struct VueAffinitesCLIPiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { procheDe = o }
+        .onTapGesture {
+            dernierProcheDeID = o.id
+            procheDe = o
+        }
         if avecFavori {
             base.contextMenu {
                 Button {

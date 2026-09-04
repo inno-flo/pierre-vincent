@@ -80,6 +80,10 @@ struct VueAffinitesiOS: View {
     @State private var dernierCleLotTraite: String?
     /// Œuvre affichée par « Œuvres proches », `nil` sur « Affinités ».
     @State private var procheDe: Oeuvre?
+    /// Dernière œuvre tapée — `procheDe` repasse à `nil` à la fermeture de
+    /// la feuille, donc trop tôt pour s'en servir comme cible de défilement ;
+    /// celle-ci survit à la fermeture, le temps d'y revenir.
+    @State private var dernierProcheDeID: UUID?
     /// Bouton flottant « Retour en haut », même mécanisme que toutes les
     /// vues Galerie/Liste de l'app (voir `BoutonRetourHaut.swift`).
     @State private var boutonHautVisible = false
@@ -201,6 +205,14 @@ struct VueAffinitesiOS: View {
             }
             .retourEnHaut(visible: $boutonHautVisible) {
                 withAnimation { proxy.scrollTo(ancreHaut, anchor: .top) }
+            }
+            // À la fermeture d'« Œuvres proches » (`procheDe` repasse à
+            // `nil`), revient sur l'œuvre tapée plutôt que de laisser le
+            // défilement où il était — `ForEach(oeuvres) { o in carte(o) }`
+            // tague déjà chaque carte de `o.id`, aucun `.id()` à ajouter.
+            .onChange(of: procheDe) { ancienne, nouvelle in
+                guard ancienne != nil, nouvelle == nil, let id = dernierProcheDeID else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
         }
     }
@@ -416,7 +428,10 @@ struct VueAffinitesiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture { procheDe = o }
+        .onTapGesture {
+            dernierProcheDeID = o.id
+            procheDe = o
+        }
         if avecFavori {
             base.contextMenu {
                 // Libellé et icône recalculés à chaque ouverture du menu —
