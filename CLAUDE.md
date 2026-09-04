@@ -685,6 +685,33 @@ s'afficherait à la place.
 
 ## Pièges déjà rencontrés (à ne pas refaire)
 
+- **Vues Affinités iOS sur `List(.insetGrouped)` : ESSAYÉ, ABANDONNÉ.**
+  Le but était de faire hériter les en-têtes de réglage (« Correspondances »,
+  « Familles ») de la police EXACTE des grands en-têtes de bloc de la sidebar
+  (« Réserve », « Labo »), en les rendant comme de vrais `Section(titre)` de
+  `List` — le même composant système, plus une police approchée à la main.
+  **Régression découverte à l'usage, plus grave que prévue** : une grille de
+  vignettes (`LazyVGrid`) nichée dans une seule ligne de `List` se voit
+  attribuer par UIKit un SEUL aperçu partagé lors d'un appui prolongé — un
+  premier diagnostic croyait le dégât limité à une famille (la grille de sa
+  propre ligne), la réalité touchait toute la vue (chaque ligne de `List`,
+  famille ou non, partage le même souci). Un correctif intermédiaire
+  (`.contextMenu(menuItems:preview:)` avec aperçu explicite au lieu de la
+  forme simple) atténuait le symptôme sans lever la cause structurelle.
+  **Décision : revert complet vers `ScrollView` + `VStack`**, la structure de
+  `VueGalerie` (Catalogue) qui n'a jamais eu ce problème — les blocs de
+  réglages sont ajoutés en tête du contenu défilant, comme `BandeauTypes`
+  l'est pour les pastilles de tri, plutôt qu'en `Section` de `List`.
+  `.contextMenu(menuItems:preview:)` est conservé malgré le revert (garde-fou
+  supplémentaire, sans coût), mais la police des en-têtes de réglage reste
+  une **approximation** (`.footnote`, gris) de celle de la sidebar plutôt
+  qu'une identité garantie par le code — ce compromis est accepté tant qu'une
+  autre solution ne permet pas les deux à la fois.
+  Ne pas retenter `List` pour ces vues sans avoir d'abord réglé ce problème
+  d'aperçu — poser chaque vignette dans sa PROPRE ligne de `List` (au lieu
+  d'une grille par ligne) est une piste non explorée, mais renoncerait à la
+  grille à deux colonnes en l'état.
+
 - **Préchauffage des vignettes au lancement : ESSAYÉ, ABANDONNÉ.** Un cache de
   vignettes sur disque (dossier « Vignettes », 640 px en HEIC) préparé en tâche
   de fond dès l'ouverture, avec compteur et temps restant en pied de barre
