@@ -230,12 +230,16 @@ struct VueAffinitesCLIPiOS: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 2) {
+                // Même polices que la légende des vignettes de Catalogue
+                // (`VueGalerie.carte`) : `.headline` sans sa graisse pour le
+                // genre, `.subheadline` pour le rangement.
                 Text(afficher(o.theme))
-                    .font(.caption)
+                    .font(.headline)
+                    .fontWeight(.regular)
                     .foregroundStyle(Color.texteLegende)
                     .lineLimit(1)
                 Text(rangementVignette(o).valeur)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(Color.texteLegende.opacity(0.6))
                     .lineLimit(1)
             }
@@ -273,16 +277,19 @@ struct VueAffinitesCLIPiOS: View {
 
     /// Taille de texte alignée sur celle des vignettes de Catalogue
     /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS).
+    /// **Une ligne par élément** : le titre, puis le curseur seul (pleine
+    /// largeur, sans les libellés d'extrémité collés dessus — trop à l'étroit
+    /// une fois ce texte agrandi), puis les deux extrémités sur une troisième
+    /// ligne, alignées à gauche et à droite.
     private func curseur(titre: String, finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(titre).font(.subheadline).foregroundStyle(.secondary)
-            Slider(value: valeur, in: plage) {
-                EmptyView()
-            } minimumValueLabel: {
+            Slider(value: valeur, in: plage)
+            HStack {
                 Text(finGauche).font(.subheadline).foregroundStyle(.secondary)
-            } maximumValueLabel: {
+                Spacer()
                 Text(finDroite).font(.subheadline).foregroundStyle(.secondary)
             }
         }
