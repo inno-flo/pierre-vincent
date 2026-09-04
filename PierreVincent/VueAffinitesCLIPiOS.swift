@@ -29,7 +29,15 @@ struct VueAffinitesCLIPiOS: View {
     /// CHAQUE ouverture de la vue, le temps que le lot se charge.
     @State private var chargementInitial = true
 
+    /// `cleLot` déjà traité — voir `VueAffinitesiOS.dernierCleLotTraite`.
+    @State private var dernierCleLotTraite: String?
     @State private var procheDe: Oeuvre?
+    /// Présentation d'« Œuvres proches (CLIP) » — voir
+    /// `VueAffinitesiOS.procheDePresente`.
+    private var procheDePresente: Binding<Bool> {
+        Binding(get: { procheDe != nil },
+                set: { if !$0 { procheDe = nil } })
+    }
     @State private var indexVisionneuse: Int?
     /// Voir `VueAffinitesiOS.oeuvresVisionneuse` : la liste dans laquelle
     /// circulent les flèches Précédent/Suivant, pas `lot` en entier.
@@ -47,10 +55,6 @@ struct VueAffinitesCLIPiOS: View {
     private let nbProches = 24
 
     var body: some View {
-        // `NavigationStack` explicite — voir `VueAffinitesiOS.body`, même
-        // raison : sans lui, `.navigationDestination` ne poussait pas de
-        // façon fiable depuis le menu contextuel.
-        NavigationStack {
         Group {
             // Priorité absolue — voir `VueAffinitesiOS`, même règle : tant
             // qu'une analyse tourne, l'écran ne montre QUE sa progression.
@@ -105,12 +109,11 @@ struct VueAffinitesCLIPiOS: View {
         // Plein écran, barres système comprises : `.fullScreenCover`,
         // pas `.overlay` — voir `VueAffinitesiOS.body`.
         .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
-        // « Œuvres proches (CLIP) » est un ENFANT poussé de cette vue — voir
-        // `VueAffinitesiOS.body`, même raison : le bouton de retour natif
-        // ramène ainsi dans « Affinités CLIP », pas dans la sidebar.
-        .navigationDestination(item: $procheDe) { source in
-            vueOeuvresProches(de: source)
-        }
+        // « Œuvres proches (CLIP) » est un ENFANT poussé de cette vue —
+        // `isPresented:` + `Binding<Bool>`, pas `.navigationDestination(item:)`
+        // — voir `VueAffinitesiOS.body` pour le pourquoi.
+        .navigationDestination(isPresented: procheDePresente) {
+            if let source = procheDe { vueOeuvresProches(de: source) }
         }
     }
 
@@ -192,7 +195,7 @@ struct VueAffinitesCLIPiOS: View {
                                                    matrice: matrice,
                                                    combien: nbProches)
             VStack(alignment: .leading, spacing: 14) {
-                section(titre: "Point de départ", sousTitre: nil, oeuvres: [source])
+                section(titre: "Référence", sousTitre: nil, oeuvres: [source])
                 section(titre: "Les plus proches (CLIP)",
                         sousTitre: "\(proches.count) œuvres, de la plus "
                                  + "ressemblante à la moins",
@@ -300,8 +303,12 @@ struct VueAffinitesCLIPiOS: View {
                 }
             }
         } preview: {
-            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
-                .frame(width: 320, height: 420)
+            // Aperçu réduit : iOS élargit le menu contextuel jusqu'à la
+            // largeur de cet aperçu (constaté à l'écran — un menu à un seul
+            // item bien plus large que son texte). Toujours plus large que
+            // « Œuvres proches » à cette taille, mais moins excessif.
+            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 240, preserverRatio: true)
+                .frame(width: 220, height: 293)
         }
     }
 
@@ -445,6 +452,11 @@ struct VueAffinitesCLIPiOS: View {
 
     @MainActor
     private func preparerLot() async {
+        // Déjà traité — voir `VueAffinitesiOS.preparerLot` : sans ce
+        // garde-fou, revenir d'« Œuvres proches (CLIP) » par le bouton natif
+        // relance `.task(id:)` (la vue réapparaît) même si `cleLot` n'a pas
+        // changé, et tout est refait depuis zéro.
+        guard dernierCleLotTraite != cleLot else { return }
         defer { chargementInitial = false }
         // Voir `VueAffinitesiOS.preparerLot` : laisse d'abord le fil
         // principal terminer la transition d'entrée (bascule de barre
@@ -472,6 +484,7 @@ struct VueAffinitesCLIPiOS: View {
         genres = retenues.map { Set(themesDeOeuvre($0).map { $0.lowercased() }) }
         matrice = nil
         procheDe = nil
+        dernierCleLotTraite = cleLot
 
         guard sigs.count > 1 else { return }
         preparation = true

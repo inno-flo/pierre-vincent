@@ -54,7 +54,26 @@ struct VueAffinitesiOS: View {
     @State private var preparation = false
     @State private var bilan: AnalyseAffinites.Bilan?
 
+    /// `lot` vaut `[]` avant même que `preparerLot()` ait tourné une seule
+    /// fois — sans ce drapeau, l'état « Aucune œuvre à rapprocher » (pensé
+    /// pour une Réserve réellement vide) s'affichait à CHAQUE ouverture,
+    /// le temps du chargement (capture du 4 sept. 2026).
+    @State private var chargementInitial = true
+    /// `cleLot` déjà traité par `preparerLot()` — sans ce garde-fou, revenir
+    /// d'« Œuvres proches » par le bouton natif fait RÉAPPARAÎTRE cette vue,
+    /// ce qui relance `.task(id:)` MÊME SI `cleLot` n'a pas changé (un
+    /// cycle apparition/disparition suffit, pas seulement un changement
+    /// d'id) — et donc tout `preparerLot()` depuis zéro : l'écran de
+    /// comparaison des signatures réapparaissait au lieu de retrouver
+    /// directement les familles déjà calculées (constaté à l'écran).
+    @State private var dernierCleLotTraite: String?
     @State private var procheDe: Oeuvre?
+    /// Présentation d'« Œuvres proches », adossée à `procheDe` — même
+    /// patron que `visionneuseOuverte`.
+    private var procheDePresente: Binding<Bool> {
+        Binding(get: { procheDe != nil },
+                set: { if !$0 { procheDe = nil } })
+    }
     @State private var indexVisionneuse: Int?
     /// La liste dans laquelle circulent les flèches Précédent/Suivant —
     /// celle affichée à l'écran quand on ouvre la vignette (une famille, la
@@ -77,15 +96,6 @@ struct VueAffinitesiOS: View {
     private let nbProches = 24
 
     var body: some View {
-        // `NavigationStack` EXPLICITE, imbriqué dans la colonne « detail »
-        // du `NavigationSplitView` de `ContentView` : première utilisation
-        // de `.navigationDestination` dans ce projet, et posé directement
-        // sur le contenu de cette colonne (sans lui), la poussée vers
-        // « Œuvres proches » ne se déclenchait pas de façon fiable (tap sans
-        // effet sur le menu contextuel, constaté à l'écran, y compris avec
-        // un délai avant la mutation d'état). Un `NavigationStack` propre à
-        // cette vue lui donne un contexte de navigation sans ambiguïté.
-        NavigationStack {
         Group {
             // **Priorité absolue** : tant qu'une analyse tourne, on ne montre
             // QUE sa progression — jamais la grille ni un état vide en même
@@ -95,6 +105,14 @@ struct VueAffinitesiOS: View {
             // faire, cas où aucune boucle ne démarre réellement).
             if ProgressionImport.partagee.enCours {
                 progressionEnCours
+            } else if chargementInitial {
+                // `lot` vaut `[]` avant même que `preparerLot()` ait tourné
+                // une seule fois — sans ce drapeau, l'état « Aucune œuvre à
+                // rapprocher » (pensé pour une Réserve réellement vide)
+                // s'affichait à CHAQUE ouverture le temps du chargement,
+                // un écran qui ne disait rien d'utile (capture fournie).
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if lot.isEmpty {
                 etatVide(symbole: "photo.artframe",
                          titre: "Aucune œuvre à rapprocher",
@@ -141,15 +159,19 @@ struct VueAffinitesiOS: View {
         // documenté pour `VueiOS.fullScreenCover` (une `.sheet` aurait
         // laissé la photo en carte à coins arrondis).
         .fullScreenCover(isPresented: visionneuseOuverte) { visionneuse }
-        // « Œuvres proches » est un ENFANT poussé de cette vue, pas un
-        // simple changement de contenu piloté par un `@State` local : le
-        // bouton de retour natif de la barre de navigation ramène ainsi
-        // dans « Affinités », et non dans la sidebar — ce que le va-et-vient
-        // interne d'avant ne pouvait pas offrir (le bouton natif ignorait
-        // `procheDe`, il quittait toujours Affinités entièrement).
-        .navigationDestination(item: $procheDe) { source in
-            vueOeuvresProches(de: source)
-        }
+        // « Œuvres proches » est un ENFANT poussé de cette vue : le bouton
+        // de retour natif ramène ainsi dans « Affinités », et non dans la
+        // sidebar. `isPresented:` + un `Binding<Bool>` dérivé de `procheDe`
+        // — PAS `.navigationDestination(item:)` — même mécanisme déjà
+        // éprouvé que `visionneuseOuverte` juste au-dessus : un essai avec
+        // `item:`, seul ou enveloppé dans un `NavigationStack` propre à
+        // cette vue, soit ne poussait pas depuis le menu contextuel, soit
+        // faisait perdre la barre d'outils (les boutons Importer/Prix de la
+        // sidebar restaient affichés à la place du menu Analyser — capture
+        // fournie). Ce mécanisme-ci est déjà utilisé sans souci ailleurs
+        // dans cette même vue.
+        .navigationDestination(isPresented: procheDePresente) {
+            if let source = procheDe { vueOeuvresProches(de: source) }
         }
     }
 
@@ -248,7 +270,7 @@ struct VueAffinitesiOS: View {
                                                poidsCouleur: Float(poidsCouleur),
                                                combien: nbProches)
             VStack(alignment: .leading, spacing: 14) {
-                section(titre: "Point de départ",
+                section(titre: "Référence",
                         sousTitre: Regroupement.caractere(de: signatures[index]),
                         palette: signatures[index].palette,
                         oeuvres: [source])
@@ -392,8 +414,12 @@ struct VueAffinitesiOS: View {
                 }
             }
         } preview: {
-            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 320, preserverRatio: true)
-                .frame(width: 320, height: 420)
+            // Aperçu réduit : iOS élargit le menu contextuel jusqu'à la
+            // largeur de cet aperçu (constaté à l'écran — un menu à un seul
+            // item bien plus large que son texte). Toujours plus large que
+            // « Œuvres proches » à cette taille, mais moins excessif.
+            VignetteCacheeFlexible(nom: o.photoNom, coteSource: 240, preserverRatio: true)
+                .frame(width: 220, height: 293)
         }
     }
 
@@ -548,6 +574,11 @@ struct VueAffinitesiOS: View {
 
     @MainActor
     private func preparerLot() async {
+        // Déjà traité (retour d'« Œuvres proches » par le bouton natif, qui
+        // fait réapparaître cette vue et relance `.task(id:)` sans que
+        // `cleLot` ait changé) : rien à refaire.
+        guard dernierCleLotTraite != cleLot else { return }
+        defer { chargementInitial = false }
         // Laisse d'abord le fil principal terminer l'affichage de l'écran
         // (la bascule de barre d'outils sidebar -> Affinités, notamment) :
         // sans ce point de reprise, le chargement du disque qui suit
@@ -576,6 +607,7 @@ struct VueAffinitesiOS: View {
         genres = retenues.map { Set(themesDeOeuvre($0).map { $0.lowercased() }) }
         matrices = nil
         procheDe = nil
+        dernierCleLotTraite = cleLot
 
         guard sigs.count > 1 else { return }
         preparation = true
