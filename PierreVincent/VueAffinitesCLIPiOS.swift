@@ -323,9 +323,9 @@ struct VueAffinitesCLIPiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // .footnote -> .subheadline -> .body, gras — voir
-            // `VueAffinitesiOS.blocReglage`.
-            Text(titre).font(.body.weight(.bold)).foregroundStyle(.secondary)
+            // .footnote -> .subheadline -> .body, sans graisse imposée —
+            // voir `VueAffinitesiOS.blocReglage`.
+            Text(titre).font(.body).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))

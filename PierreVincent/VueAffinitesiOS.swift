@@ -408,8 +408,8 @@ struct VueAffinitesiOS: View {
             // .footnote (13) -> .subheadline (15) -> .body (17) : deux
             // paliers de +2 pt au barème iOS, en passant par le style
             // sémantique suivant à chaque fois plutôt qu'une taille figée,
-            // pour rester compatible Dynamic Type. Gras à la demande.
-            Text(titre).font(.body.weight(.bold)).foregroundStyle(.secondary)
+            // pour rester compatible Dynamic Type. Sans graisse imposée.
+            Text(titre).font(.body).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
