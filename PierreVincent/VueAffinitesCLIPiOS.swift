@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Pendant iPhone de `VueAffinitesCLIP` (macOS) — mêmes raisons d'un fichier
 /// séparé que `VueAffinitesiOS`/`VueAffinites` : voir l'en-tête de ce dernier.
@@ -269,7 +270,10 @@ struct VueAffinitesCLIPiOS: View {
     }
 
     // MARK: Une vignette — même choix que la version « Affinités » : tap
-    // simple pour ouvrir, appui prolongé pour « Œuvres proches ».
+    // simple pour ouvrir, appui prolongé pour « Œuvres proches ». PAS de
+    // `.contextMenu` : nichées plusieurs par ligne de `List` (grille dans
+    // une seule ligne), UIKit attribuait l'aperçu de TOUTE la ligne à
+    // chaque vignette — voir `VueAffinitesiOS.carte`.
 
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
@@ -304,8 +308,9 @@ struct VueAffinitesCLIPiOS: View {
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o) }
-        .contextMenu {
-            Button("Voir les œuvres proches (CLIP)") { procheDe = o }
+        .onLongPressGesture {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            procheDe = o
         }
     }
 

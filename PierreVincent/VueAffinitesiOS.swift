@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Pendant iPhone de `VueAffinites` (macOS) : même moteur
 /// (`SignatureOeuvre`, `Affinites.swift`), présentation adaptée à l'écran et
@@ -325,9 +326,16 @@ struct VueAffinitesiOS: View {
     /// **Ouverture par simple tap**, pas par le menu contextuel à aperçu
     /// (`InteractionApercu`) qu'utilisent les vignettes de Galerie ailleurs
     /// dans l'app. Ce mécanisme existe surtout pour offrir la bascule des
-    /// favoris depuis l'aperçu ; sans intérêt ici. L'appui prolongé garde un
-    /// rôle utile — « Voir les œuvres proches » — via un `.contextMenu`
-    /// natif, plus simple qu'une vue UIKit dédiée.
+    /// favoris depuis l'aperçu ; sans intérêt ici.
+    ///
+    /// **L'appui prolongé n'utilise PLUS `.contextMenu`.** Chaque famille
+    /// loge sa grille de vignettes dans une SEULE ligne de `List` (voir
+    /// `sectionFamille`/`section`) : un `.contextMenu` par vignette, une
+    /// fois nichées ainsi, se voit attribuer par UIKit l'aperçu de TOUTE la
+    /// ligne — toutes les vignettes de la famille apparaissaient alors
+    /// fusionnées en une seule image au moment de l'appui (constaté à
+    /// l'écran). Remplacé par un `.onLongPressGesture` direct : sans menu ni
+    /// aperçu système, rien à mal attribuer.
     private func carte(_ o: Oeuvre) -> some View {
         VStack(spacing: 0) {
             ZStack {
@@ -362,8 +370,9 @@ struct VueAffinitesiOS: View {
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture { ouvrirVisionneuse(sur: o) }
-        .contextMenu {
-            Button("Voir les œuvres proches") { procheDe = o }
+        .onLongPressGesture {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            procheDe = o
         }
     }
 
