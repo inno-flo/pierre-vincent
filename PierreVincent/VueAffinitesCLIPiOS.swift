@@ -84,29 +84,12 @@ struct VueAffinitesCLIPiOS: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // Même « Œuvres proches (CLIP) » que « Œuvres proches » —
-                // voir `VueAffinitesiOS.body` pour le pourquoi de ce
-                // `ZStack` glissé plutôt qu'une présentation séparée.
-                ZStack {
-                    if let source = procheDe {
-                        vueOeuvresProches(de: source)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .trailing),
-                                removal: .move(edge: .leading)))
-                    } else {
-                        contenuDefilant
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading),
-                                removal: .move(edge: .trailing)))
-                    }
-                }
+                contenuDefilant
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle(procheDe == nil ? "Affinités CLIP" : "Œuvres proches (CLIP)")
-        // Le menu « Analyser » n'a de sens que sur « Affinités CLIP » ;
-        // « Œuvres proches (CLIP) » a son bouton de retour à la place.
-        .toolbar { if procheDe == nil { contenuBarreOutils } else { boutonRetour } }
+        .navigationTitle("Affinités CLIP")
+        .toolbar { contenuBarreOutils }
         // Pendant le chargement initial ou une analyse, la barre de
         // navigation masque TOUT — voir `VueAffinitesiOS.body`.
         .toolbar((chargementInitial || ProgressionImport.partagee.enCours)
@@ -124,6 +107,10 @@ struct VueAffinitesCLIPiOS: View {
             Text("Les signatures CLIP déjà calculées seront effacées et refaites. "
                + "Celles d'« Affinités » ne sont pas concernées.")
         }
+        // « Œuvres proches (CLIP) » — feuille modale, comme `DetailiOS` —
+        // voir `VueAffinitesiOS.body` pour le détail des deux mécanismes
+        // essayés avant celui-ci et abandonnés.
+        .sheet(item: $procheDe) { source in vueOeuvresProches(de: source) }
     }
 
     // MARK: Contenu défilant
@@ -145,15 +132,25 @@ struct VueAffinitesCLIPiOS: View {
         }
     }
 
-    // MARK: « Œuvres proches (CLIP) »
+    // MARK: « Œuvres proches (CLIP) » — feuille modale
 
     /// Aucun réglage : CLIP n'a qu'une seule distance, sans curseur à
     /// ajuster une fois qu'on regarde les œuvres proches d'une seule
-    /// œuvre. Le retour se fait par `boutonRetour`, posé par le `body`.
+    /// œuvre. `NavigationStack` propre — voir `VueAffinitesiOS.vueOeuvresProches`.
     private func vueOeuvresProches(de source: Oeuvre) -> some View {
-        ScrollView {
-            sectionProches(de: source)
-                .padding(16)
+        NavigationStack {
+            ScrollView {
+                sectionProches(de: source)
+                    .padding(16)
+            }
+            .background(Color.cremeFond)
+            .navigationTitle("Œuvres proches (CLIP)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fermer") { procheDe = nil }
+                }
+            }
         }
     }
 
@@ -294,9 +291,7 @@ struct VueAffinitesCLIPiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.25)) { procheDe = o }
-        }
+        .onTapGesture { procheDe = o }
     }
 
     // MARK: Réglages — un seul curseur : CLIP n'a qu'une distance
@@ -406,17 +401,6 @@ struct VueAffinitesCLIPiOS: View {
 
     // MARK: Barre d'outils
 
-    /// Retour à « Affinités CLIP » — voir `VueAffinitesiOS.boutonRetour`.
-    @ToolbarContentBuilder
-    private var boutonRetour: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.25)) { procheDe = nil }
-            } label: {
-                Label("Affinités CLIP", systemImage: "chevron.left")
-            }
-        }
-    }
 
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {

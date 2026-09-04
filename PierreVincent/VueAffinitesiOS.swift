@@ -133,37 +133,12 @@ struct VueAffinitesiOS: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // « Œuvres proches » n'est PAS une présentation séparée
-                // (`.navigationDestination` a échoué sous trois formes sans
-                // jamais pouvoir être vérifié sur un appareil réel ;
-                // `.fullScreenCover` marchait mais imposait le glissement
-                // vertical du système, pas le glissement latéral demandé).
-                // Même écran, même `body` : un `ZStack` bascule entre les
-                // deux contenus avec une transition glissée — exactement le
-                // procédé déjà utilisé par `DetailiOS` pour changer d'œuvre.
-                // Le `ZStack` est INDISPENSABLE : sans lui, SwiftUI ne
-                // superpose pas l'ancien et le nouveau contenu pendant
-                // l'animation, et `.move(edge:)` ne se voit pas.
-                ZStack {
-                    if let source = procheDe {
-                        vueOeuvresProches(de: source)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .trailing),
-                                removal: .move(edge: .leading)))
-                    } else {
-                        contenuDefilant
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading),
-                                removal: .move(edge: .trailing)))
-                    }
-                }
+                contenuDefilant
             }
         }
         .background(Color.cremeFond)
-        .navigationTitle(procheDe == nil ? "Affinités" : "Œuvres proches")
-        // Le menu « Analyser » n'a de sens que sur « Affinités » ; « Œuvres
-        // proches » a son bouton de retour à la place.
-        .toolbar { if procheDe == nil { contenuBarreOutils } else { boutonRetour } }
+        .navigationTitle("Affinités")
+        .toolbar { contenuBarreOutils }
         // Pendant le chargement initial ou une analyse, la barre de
         // navigation masque TOUT — y compris les boutons Importer/Prix de
         // la sidebar qui restent affichés ET tapables le temps que cette
@@ -186,6 +161,17 @@ struct VueAffinitesiOS: View {
                + "photo par photo. Rien n'est perdu — ni les œuvres, ni les "
                + "photos —, mais l'opération reprend depuis le début.")
         }
+        // « Œuvres proches » — une vraie feuille modale, comme `DetailiOS`
+        // (`.sheet(item:)`, montée du bas, fermeture par glissement vertical
+        // natif OU bouton « Fermer »). Deux mécanismes essayés avant celui-
+        // ci ont échoué : `.navigationDestination` ne poussait pas de façon
+        // fiable, et un `ZStack` glissé à l'intérieur de CETTE MÊME vue
+        // affichait DEUX boutons de retour l'un à côté de l'autre — le
+        // bouton personnalisé posé dans la toolbar, ET le vrai chevron
+        // natif de retour vers la sidebar (cette vue restant, pour le
+        // split view, la même rubrique de premier niveau). Une feuille
+        // modale est une présentation à PART, sans rapport avec ce chevron.
+        .sheet(item: $procheDe) { source in vueOeuvresProches(de: source) }
     }
 
     // MARK: Contenu défilant — réglages, bandeaux, familles
@@ -207,24 +193,34 @@ struct VueAffinitesiOS: View {
         }
     }
 
-    // MARK: « Œuvres proches » — contenu présenté en `.fullScreenCover`
+    // MARK: « Œuvres proches » — feuille modale
 
     /// Reprend uniquement « Correspondances » (le curseur influence le
     /// classement de `Regroupement.proches`) — ni « Familles » ni « Genre »,
     /// sans objet une fois qu'on regarde les œuvres proches d'une seule
-    /// œuvre. Le retour se fait par le bouton « Affinités » posé par le
-    /// `body` sur le `NavigationStack` de la couverture, plus besoin d'un
-    /// bouton « Familles » posé dans le contenu.
+    /// œuvre. `NavigationStack` propre, comme `DetailiOS` : cette feuille
+    /// est une présentation autonome, pas un contenu poussé dans la colonne
+    /// « detail » du `NavigationSplitView` parent.
     private func vueOeuvresProches(de source: Oeuvre) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                blocReglage(titre: "Correspondances") {
-                    curseur(finGauche: "Couleurs", finDroite: "Style",
-                            valeur: $poidsCouleur, plage: 0...1)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    blocReglage(titre: "Correspondances") {
+                        curseur(finGauche: "Couleurs", finDroite: "Style",
+                                valeur: $poidsCouleur, plage: 0...1)
+                    }
+                    sectionProches(de: source)
                 }
-                sectionProches(de: source)
+                .padding(16)
             }
-            .padding(16)
+            .background(Color.cremeFond)
+            .navigationTitle("Œuvres proches")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fermer") { procheDe = nil }
+                }
+            }
         }
     }
 
@@ -400,9 +396,7 @@ struct VueAffinitesiOS: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.filetVignette, lineWidth: 1))
         .shadow(color: .black.opacity(0.10), radius: 5, x: 0, y: 2)
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.25)) { procheDe = o }
-        }
+        .onTapGesture { procheDe = o }
     }
 
     // MARK: Réglages
@@ -522,20 +516,6 @@ struct VueAffinitesiOS: View {
 
     // MARK: Barre d'outils
 
-    /// Retour à « Affinités » depuis « Œuvres proches » — la vue est un
-    /// simple `ZStack` glissé, pas un écran séparé, donc pas de bouton de
-    /// retour natif : celui-ci en tient lieu, avec la même animation que
-    /// l'ouverture.
-    @ToolbarContentBuilder
-    private var boutonRetour: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.25)) { procheDe = nil }
-            } label: {
-                Label("Affinités", systemImage: "chevron.left")
-            }
-        }
-    }
 
     @ToolbarContentBuilder
     private var contenuBarreOutils: some ToolbarContent {
