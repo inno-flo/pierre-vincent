@@ -287,7 +287,9 @@ struct VueAffinitesCLIPiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(titre).font(.subheadline).foregroundStyle(.secondary)
+            // Style natif d'un en-tête de section iOS (footnote, gris) —
+            // voir `VueAffinitesiOS.blocReglage`.
+            Text(titre).font(.footnote).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
