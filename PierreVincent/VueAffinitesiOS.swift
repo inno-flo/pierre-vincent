@@ -287,17 +287,12 @@ struct VueAffinitesiOS: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 2) {
-                // Même polices que la légende des vignettes de Catalogue
-                // (`VueGalerie.carte`) : `.headline` sans sa graisse pour le
-                // genre, `.subheadline` pour le rangement.
-                Text(afficher(o.theme))
-                    .font(.headline)
-                    .fontWeight(.regular)
-                    .foregroundStyle(Color.texteLegende)
-                    .lineLimit(1)
+                // Seul l'emplacement de stockage — pas le genre, qui n'a
+                // rien à faire sous une vignette de rapprochement par style
+                // et couleurs. Police alignée sur la légende du Catalogue.
                 Text(rangementVignette(o).valeur)
                     .font(.subheadline)
-                    .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    .foregroundStyle(Color.texteLegende)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -351,10 +346,14 @@ struct VueAffinitesiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Même style que les grands en-têtes de bloc de la sidebar
-            // (« Réserve », « Labo », `boutonEnTeteBloc`) : AUCUNE police ni
-            // graisse imposée, seulement `.foregroundStyle(.secondary)`.
-            Text(titre).foregroundStyle(.secondary)
+            // Même RENDU que les grands en-têtes de bloc de la sidebar
+            // (« Réserve », « Labo »). Leur code (`boutonEnTeteBloc`) n'impose
+            // ni police ni graisse — mais posé dans le `header:` d'une
+            // `List(.insetGrouped)`, il hérite du style système propre à un
+            // en-tête de section (plus petit, semi-gras), que ce `Text`-ci,
+            // hors de tout `List`, ne reçoit pas automatiquement. Il faut
+            // donc le reproduire à la main.
+            Text(titre).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -370,10 +369,12 @@ struct VueAffinitesiOS: View {
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Slider(value: valeur, in: plage)
+            // En noir, comme le libellé de la bascule « Genre » — pas en
+            // gris comme l'en-tête du bloc.
             HStack {
-                Text(finGauche).font(.subheadline).foregroundStyle(.secondary)
+                Text(finGauche).font(.subheadline)
                 Spacer()
-                Text(finDroite).font(.subheadline).foregroundStyle(.secondary)
+                Text(finDroite).font(.subheadline)
             }
         }
     }

@@ -20,6 +20,11 @@ struct VueAffinitesCLIPiOS: View {
     @State private var preparation = false
     @State private var bilan: AnalyseAffinitesCLIP.Bilan?
     @State private var modeleDisponible = true
+    /// `lot` vaut `[]` avant même que `preparerLot()` ait tourné une seule
+    /// fois — sans ce drapeau, l'état « Aucune œuvre à rapprocher » (pensé
+    /// pour une Réserve réellement vide) s'affichait un bref instant à
+    /// CHAQUE ouverture de la vue, le temps que le lot se charge.
+    @State private var chargementInitial = true
 
     @State private var procheDe: Oeuvre?
     @State private var indexVisionneuse: Int?
@@ -41,6 +46,9 @@ struct VueAffinitesCLIPiOS: View {
             // qu'une analyse tourne, l'écran ne montre QUE sa progression.
             if ProgressionImport.partagee.enCours {
                 progressionEnCours
+            } else if chargementInitial {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !modeleDisponible {
                 etatVide(symbole: "exclamationmark.triangle",
                          titre: "Modèle CLIP non installé",
@@ -232,17 +240,12 @@ struct VueAffinitesCLIPiOS: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 2) {
-                // Même polices que la légende des vignettes de Catalogue
-                // (`VueGalerie.carte`) : `.headline` sans sa graisse pour le
-                // genre, `.subheadline` pour le rangement.
-                Text(afficher(o.theme))
-                    .font(.headline)
-                    .fontWeight(.regular)
-                    .foregroundStyle(Color.texteLegende)
-                    .lineLimit(1)
+                // Seul l'emplacement de stockage — pas le genre, qui n'a
+                // rien à faire sous une vignette de rapprochement par style
+                // et couleurs. Police alignée sur la légende du Catalogue.
                 Text(rangementVignette(o).valeur)
                     .font(.subheadline)
-                    .foregroundStyle(Color.texteLegende.opacity(0.6))
+                    .foregroundStyle(Color.texteLegende)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -289,9 +292,9 @@ struct VueAffinitesCLIPiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Même style que les grands en-têtes de bloc de la sidebar —
+            // Même rendu que les grands en-têtes de bloc de la sidebar —
             // voir `VueAffinitesiOS.blocReglage`.
-            Text(titre).foregroundStyle(.secondary)
+            Text(titre).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
@@ -306,10 +309,12 @@ struct VueAffinitesCLIPiOS: View {
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Slider(value: valeur, in: plage)
+            // En noir, comme le libellé de la bascule « Genre » — pas en
+            // gris comme l'en-tête du bloc.
             HStack {
-                Text(finGauche).font(.subheadline).foregroundStyle(.secondary)
+                Text(finGauche).font(.subheadline)
                 Spacer()
-                Text(finDroite).font(.subheadline).foregroundStyle(.secondary)
+                Text(finDroite).font(.subheadline)
             }
         }
     }
@@ -398,6 +403,7 @@ struct VueAffinitesCLIPiOS: View {
 
     @MainActor
     private func preparerLot() async {
+        defer { chargementInitial = false }
         modeleDisponible = await MoteurCLIP.shared.disponible()
         guard modeleDisponible else { return }
 
