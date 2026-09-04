@@ -54,6 +54,9 @@ struct VueAffinitesiOS: View {
     @State private var analyseEnCours = false
     @State private var messageAnalyse: String?
     @State private var confirmerToutRecalculer = false
+    /// Familles repliées par leur `id` (`GroupeAffinite.id`, ou `-1` pour
+    /// « À part ») — repliées à la demande, ouvertes par défaut.
+    @State private var famillesFermees: Set<Int> = []
 
     private let nbProches = 24
 
@@ -148,19 +151,18 @@ struct VueAffinitesiOS: View {
     private var sectionsFamilles: some View {
         if let r = resultat {
             if r.groupes.isEmpty {
-                Text("Aucune famille à ce réglage. Élargissez le curseur "
-                   + "« taille des familles ».")
+                Text("Aucune famille à ce réglage. Élargissez le curseur « Familles ».")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             ForEach(Array(r.groupes.enumerated()), id: \.element.id) { rang, groupe in
-                section(titre: "Famille \(rang + 1)",
+                sectionFamille(id: groupe.id, titre: "Famille \(rang + 1)",
                         sousTitre: "\(groupe.oeuvres.count) œuvres · \(groupe.caractere)",
                         palette: groupe.palette,
                         oeuvres: groupe.oeuvres)
             }
             if !r.isolees.isEmpty {
-                section(titre: "À part",
+                sectionFamille(id: -1, titre: "À part",
                         sousTitre: "\(r.isolees.count) œuvres qui ne rejoignent "
                                  + "aucune famille à ce réglage",
                         palette: [],
@@ -178,9 +180,10 @@ struct VueAffinitesiOS: View {
             Button {
                 procheDe = nil
             } label: {
-                Label("Revenir aux familles", systemImage: "chevron.left")
+                Label("Revenir aux familles", systemImage: "arrow.left.circle.fill")
                     .font(.subheadline)
             }
+            .padding(.bottom, 10)
 
             if let index, let matrices {
                 let proches = Regroupement.proches(de: index, parmi: lot,
@@ -217,6 +220,34 @@ struct VueAffinitesiOS: View {
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 12) {
                 ForEach(oeuvres) { o in carte(o) }
+            }
+        }
+    }
+
+    /// Variante COLLAPSABLE de `section`, réservée au classement par
+    /// famille (« Famille N » et « À part ») — pas à « Point de départ »/
+    /// « Les plus proches », qui n'en sont pas un.
+    private func sectionFamille(id: Int, titre: String, sousTitre: String,
+                                palette: [TeinteDominante], oeuvres: [Oeuvre]) -> some View {
+        DisclosureGroup(isExpanded: Binding(
+            get: { !famillesFermees.contains(id) },
+            set: { ouvert in
+                if ouvert { famillesFermees.remove(id) } else { famillesFermees.insert(id) }
+            })) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)],
+                      spacing: 12) {
+                ForEach(oeuvres) { o in carte(o) }
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(titre).font(.headline)
+                    Text(sousTitre).font(.footnote).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if !palette.isEmpty { rubanPalette(palette) }
             }
         }
     }
@@ -282,29 +313,36 @@ struct VueAffinitesiOS: View {
 
     private var reglages: some View {
         VStack(alignment: .leading, spacing: 14) {
-            curseur(titre: "Couleur ↔ Style", finGauche: "Couleur", finDroite: "Style",
+            curseur(titre: "Correspondance", finGauche: "Couleur", finDroite: "Style",
                     valeur: $poidsCouleur, plage: 0...1)
-            curseur(titre: "Taille des familles", finGauche: "larges", finDroite: "serrées",
-                    valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
-                    plage: 0...0.42)
-            Toggle("Même genre", isOn: $memeGenre)
-                .font(.footnote)
+            // « Familles » et « Même genre » n'ont de sens que pour le
+            // classement par famille — sans objet une fois qu'on regarde
+            // les œuvres proches d'une seule œuvre.
+            if procheDe == nil {
+                curseur(titre: "Familles", finGauche: "Larges", finDroite: "Serrées",
+                        valeur: Binding(get: { 0.55 - seuil }, set: { seuil = 0.55 - $0 }),
+                        plage: 0...0.42)
+                Toggle("Même genre", isOn: $memeGenre)
+                    .font(.subheadline)
+            }
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
     }
 
+    /// Taille de texte alignée sur celle des vignettes de Catalogue
+    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS).
     private func curseur(titre: String, finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(titre).font(.caption).foregroundStyle(.secondary)
+            Text(titre).font(.subheadline).foregroundStyle(.secondary)
             Slider(value: valeur, in: plage) {
                 EmptyView()
             } minimumValueLabel: {
-                Text(finGauche).font(.caption2).foregroundStyle(.secondary)
+                Text(finGauche).font(.subheadline).foregroundStyle(.secondary)
             } maximumValueLabel: {
-                Text(finDroite).font(.caption2).foregroundStyle(.secondary)
+                Text(finDroite).font(.subheadline).foregroundStyle(.secondary)
             }
         }
     }

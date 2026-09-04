@@ -29,6 +29,9 @@ struct VueAffinitesCLIPiOS: View {
     @State private var analyseEnCours = false
     @State private var messageAnalyse: String?
     @State private var confirmerToutRecalculer = false
+    /// Familles repliées par leur `id` (`GroupeAffiniteCLIP.id`, ou `-1`
+    /// pour « À part ») — repliées à la demande, ouvertes par défaut.
+    @State private var famillesFermees: Set<Int> = []
 
     private let nbProches = 24
 
@@ -91,7 +94,11 @@ struct VueAffinitesCLIPiOS: View {
             ScrollView {
                 Color.clear.frame(height: 0).id(ancreHaut)
                 VStack(alignment: .leading, spacing: 20) {
-                    reglages
+                    // Aucun réglage n'a de sens pour « Oeuvres proches
+                    // (CLIP) » : CLIP n'a qu'une seule distance, sans
+                    // curseur à ajuster une fois qu'on regarde les
+                    // œuvres proches d'une seule œuvre.
+                    if procheDe == nil { reglages }
                     if let b = bilan, b.aCalculer > 0 { bandeauAAnalyser(b) }
                     if let source = procheDe {
                         sectionProches(de: source)
@@ -120,19 +127,18 @@ struct VueAffinitesCLIPiOS: View {
     private var sectionsFamilles: some View {
         if let r = resultat {
             if r.groupes.isEmpty {
-                Text("Aucune famille à ce réglage. Élargissez le curseur "
-                   + "« taille des familles ».")
+                Text("Aucune famille à ce réglage. Élargissez le curseur « Familles ».")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             ForEach(Array(r.groupes.enumerated()), id: \.element.id) { rang, groupe in
-                section(titre: "Famille \(rang + 1)",
+                sectionFamille(id: groupe.id, titre: "Famille \(rang + 1)",
                         sousTitre: "\(groupe.oeuvres.count) œuvres · cohésion "
                                  + String(format: "%.3f", groupe.cohesion),
                         oeuvres: groupe.oeuvres)
             }
             if !r.isolees.isEmpty {
-                section(titre: "À part",
+                sectionFamille(id: -1, titre: "À part",
                         sousTitre: "\(r.isolees.count) œuvres qui ne rejoignent "
                                  + "aucune famille à ce réglage",
                         oeuvres: r.isolees)
@@ -149,9 +155,10 @@ struct VueAffinitesCLIPiOS: View {
             Button {
                 procheDe = nil
             } label: {
-                Label("Revenir aux familles", systemImage: "chevron.left")
+                Label("Revenir aux familles", systemImage: "arrow.left.circle.fill")
                     .font(.subheadline)
             }
+            .padding(.bottom, 10)
 
             if let index, let matrice {
                 let proches = RegroupementCLIP.proches(de: index, parmi: lot,
@@ -180,6 +187,30 @@ struct VueAffinitesCLIPiOS: View {
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 12) {
                 ForEach(oeuvres) { o in carte(o) }
+            }
+        }
+    }
+
+    /// Variante COLLAPSABLE de `section`, réservée au classement par
+    /// famille (« Famille N » et « À part ») — pas à « Point de départ »/
+    /// « Les plus proches », qui n'en sont pas un.
+    private func sectionFamille(id: Int, titre: String, sousTitre: String,
+                                oeuvres: [Oeuvre]) -> some View {
+        DisclosureGroup(isExpanded: Binding(
+            get: { !famillesFermees.contains(id) },
+            set: { ouvert in
+                if ouvert { famillesFermees.remove(id) } else { famillesFermees.insert(id) }
+            })) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)],
+                      spacing: 12) {
+                ForEach(oeuvres) { o in carte(o) }
+            }
+            .padding(.top, 8)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(titre).font(.headline)
+                Text(sousTitre).font(.footnote).foregroundStyle(.secondary)
             }
         }
     }
@@ -227,11 +258,11 @@ struct VueAffinitesCLIPiOS: View {
 
     private var reglages: some View {
         VStack(alignment: .leading, spacing: 14) {
-            curseur(titre: "Taille des familles", finGauche: "larges", finDroite: "serrées",
+            curseur(titre: "Familles", finGauche: "Larges", finDroite: "Serrées",
                     valeur: Binding(get: { 0.4 - seuil }, set: { seuil = 0.4 - $0 }),
                     plage: 0...0.35)
             Toggle("Même genre", isOn: $memeGenre)
-                .font(.footnote)
+                .font(.subheadline)
             Text("Moteur : MobileCLIP-S0 (Apple, Core ML)")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -240,17 +271,19 @@ struct VueAffinitesCLIPiOS: View {
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
     }
 
+    /// Taille de texte alignée sur celle des vignettes de Catalogue
+    /// (`.subheadline`, voir `VueGalerie.policeLegende` sur iOS).
     private func curseur(titre: String, finGauche: String, finDroite: String,
                          valeur: Binding<Double>, plage: ClosedRange<Double>)
         -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(titre).font(.caption).foregroundStyle(.secondary)
+            Text(titre).font(.subheadline).foregroundStyle(.secondary)
             Slider(value: valeur, in: plage) {
                 EmptyView()
             } minimumValueLabel: {
-                Text(finGauche).font(.caption2).foregroundStyle(.secondary)
+                Text(finGauche).font(.subheadline).foregroundStyle(.secondary)
             } maximumValueLabel: {
-                Text(finDroite).font(.caption2).foregroundStyle(.secondary)
+                Text(finDroite).font(.subheadline).foregroundStyle(.secondary)
             }
         }
     }
