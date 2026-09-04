@@ -351,10 +351,10 @@ struct VueAffinitesiOS: View {
     private func blocReglage<Contenu: View>(titre: String,
                                             @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Style du grand en-tête descriptif des Réglages système iOS
-            // (ex. « Données cellulaires ») — pas le petit en-tête gris de
-            // section qu'utilise la sidebar, jugé trop discret ici.
-            Text(titre).font(.title2).fontWeight(.semibold).foregroundStyle(.secondary)
+            // Même style que les grands en-têtes de bloc de la sidebar
+            // (« Réserve », « Labo », `boutonEnTeteBloc`) : AUCUNE police ni
+            // graisse imposée, seulement `.foregroundStyle(.secondary)`.
+            Text(titre).foregroundStyle(.secondary)
             contenu()
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.fondLegende))
