@@ -192,6 +192,8 @@ struct VueAffinitesCLIPiOS: View {
                 Text("Aucune famille à ce réglage. Élargissez le curseur « Familles ».")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            } else {
+                boutonToutDeplierReplier(idsAffiches(r))
             }
             ForEach(Array(r.groupes.enumerated()), id: \.element.id) { rang, groupe in
                 sectionFamille(id: groupe.id, titre: "Famille \(rang + 1)",
@@ -205,6 +207,25 @@ struct VueAffinitesCLIPiOS: View {
                                  + "aucune famille à ce réglage",
                         oeuvres: r.isolees)
             }
+        }
+    }
+
+    /// Voir `VueAffinitesiOS.idsAffiches`.
+    private func idsAffiches(_ r: RegroupementCLIP.Resultat) -> [Int] {
+        r.groupes.map(\.id) + (r.isolees.isEmpty ? [] : [-1])
+    }
+
+    /// Voir `VueAffinitesiOS.boutonToutDeplierReplier`.
+    private func boutonToutDeplierReplier(_ ids: [Int]) -> some View {
+        let toutFerme = Set(ids).isSubset(of: famillesFermees)
+        return HStack {
+            Spacer()
+            Button(toutFerme ? "Tout déplier" : "Tout replier") {
+                withAnimation {
+                    famillesFermees = toutFerme ? [] : Set(ids)
+                }
+            }
+            .font(.footnote)
         }
     }
 
@@ -260,7 +281,9 @@ struct VueAffinitesCLIPiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                // `avecFavori` : même pression longue → menu « Ajouter/
+                // Retirer des favoris » que dans « Œuvres proches (CLIP) ».
+                ForEach(oeuvres) { o in carte(o, avecFavori: true) }
             }
             .padding(.top, 8)
         } label: {

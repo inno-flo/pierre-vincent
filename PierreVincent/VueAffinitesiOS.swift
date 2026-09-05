@@ -267,6 +267,8 @@ struct VueAffinitesiOS: View {
                 Text("Aucune famille à ce réglage. Élargissez le curseur « Familles ».")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            } else {
+                boutonToutDeplierReplier(idsAffiches(r))
             }
             ForEach(Array(r.groupes.enumerated()), id: \.element.id) { rang, groupe in
                 sectionFamille(id: groupe.id, titre: "Famille \(rang + 1)",
@@ -281,6 +283,29 @@ struct VueAffinitesiOS: View {
                         palette: [],
                         oeuvres: r.isolees)
             }
+        }
+    }
+
+    /// Les `id` de tous les groupes affichables (familles + « À part » s'il y
+    /// en a un) — sert à tout replier/déplier d'un coup.
+    private func idsAffiches(_ r: Regroupement.Resultat) -> [Int] {
+        r.groupes.map(\.id) + (r.isolees.isEmpty ? [] : [-1])
+    }
+
+    /// Bouton unique, au-dessus de « Famille 1 » : replie ou déplie TOUTES
+    /// les familles d'un coup. Le libellé dit l'action qu'IL va faire, pas
+    /// l'état actuel — « Tout replier » tant qu'au moins une famille est
+    /// ouverte, « Tout déplier » une fois qu'elles le sont toutes.
+    private func boutonToutDeplierReplier(_ ids: [Int]) -> some View {
+        let toutFerme = Set(ids).isSubset(of: famillesFermees)
+        return HStack {
+            Spacer()
+            Button(toutFerme ? "Tout déplier" : "Tout replier") {
+                withAnimation {
+                    famillesFermees = toutFerme ? [] : Set(ids)
+                }
+            }
+            .font(.footnote)
         }
     }
 
@@ -345,7 +370,9 @@ struct VueAffinitesiOS: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)],
                       spacing: 16) {
-                ForEach(oeuvres) { o in carte(o) }
+                // `avecFavori` : même pression longue → menu « Ajouter/
+                // Retirer des favoris » que dans « Œuvres proches ».
+                ForEach(oeuvres) { o in carte(o, avecFavori: true) }
             }
             .padding(.top, 8)
         } label: {
