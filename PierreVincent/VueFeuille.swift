@@ -1778,11 +1778,6 @@ struct VueFeuille: View {
         return p.runModal() == .OK ? p.url : nil
     }
 
-    /// Ouvre le dossier unique des données (base + photos) dans le Finder.
-    private func ouvrirDossierDonnees() {
-        NSWorkspace.shared.activateFileViewerSelecting([PhotoStore.dossierRacine])
-    }
-
     /// Importe soit un fichier CSV seul (sans images), soit un dossier de
     /// migration (import.csv + sous-dossier Photos, avec les images).
     /// Import d'œuvres depuis des fichiers image (mots-clés IPTC + photo

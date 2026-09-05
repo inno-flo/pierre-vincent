@@ -12,6 +12,13 @@ struct PierreVincentApp: App {
     @AppStorage("modeAffichage") private var modeAffichage: String = "icone"
     @AppStorage("inspecteurVisible") private var inspecteurVisible = false
     @AppStorage("prixMasques") private var prixMasques = false
+    // Reflètent l'état réel de la sidebar et de la toolbar, pour que leur
+    // libellé de menu bascule « Masquer… » / « Afficher… » comme celui des
+    // prix. Ne sont mis à jour QUE par ces deux commandes : rien ne remonte
+    // ici un changement fait autrement (glisser le séparateur de la sidebar,
+    // par exemple), ce défaut n'a pas été jugé gênant à ce stade.
+    @AppStorage("sidebarVisible") private var sidebarVisible = true
+    @AppStorage("toolbarVisible") private var toolbarVisible = true
     // Signaux pour piloter l'éditeur depuis le menu « Édition » (on incrémente
     // pour déclencher l'action côté vue, qui observe le changement).
     @AppStorage("signalOuvrirEditeur") private var signalOuvrirEditeur = 0
@@ -202,7 +209,10 @@ struct PierreVincentApp: App {
             }
 
             // Retire les commandes de barre latérale ET de barre d'onglets du
-            // menu « Présentation » standard (inutiles pour cette app).
+            // menu « Présentation » standard : les onglets sont inutiles pour
+            // cette app, et la bascule de la barre latérale est reconstruite
+            // plus bas, dans le groupe `.toolbar`, pour l'ordonner avec les
+            // autres commandes de présentation (voir ce groupe).
             CommandGroup(replacing: .sidebar) {}
 
             // « Tout sélectionner » et « Supprimer », dans le menu « Édition ».
@@ -300,17 +310,6 @@ struct PierreVincentApp: App {
 
                 Divider()
 
-                // Afficher / Masquer l'inspecteur, seulement en mode galerie.
-                if modeAffichage == "icone" {
-                    Button(inspecteurVisible ? "Masquer l'inspecteur"
-                                             : "Afficher l'inspecteur") {
-                        inspecteurVisible.toggle()
-                    }
-                    .keyboardShortcut("i", modifiers: [.command, .option])
-
-                    Divider()
-                }
-
                 // Masquer / afficher les prix partout dans l'application.
                 // Grisé dans les Dons et la Réserve : ces œuvres n'ont pas de
                 // prix, et le bouton correspondant est absent de la toolbar.
@@ -322,6 +321,51 @@ struct PierreVincentApp: App {
                     Button("Masquer les prix") { prixMasques = true }
                         .keyboardShortcut("p", modifiers: [.command, .shift])
                         .disabled(rubriqueSansPrix)
+                }
+
+                Divider()
+
+                // Bascule de la barre latérale : commande standard normalement
+                // fournie par le groupe système `.sidebar`, reconstruite ici
+                // pour l'ordonner avec les autres commandes de présentation
+                // (voir `CommandGroup(replacing: .sidebar)` juste au-dessus,
+                // laissé vide). `NSSplitViewController.toggleSidebar(_:)` est
+                // l'action AppKit standard qui pilote la sidebar d'un
+                // `NavigationSplitView` — envoyée à `nil`, elle suit la chaîne
+                // de répondants jusqu'au split view controller qui
+                // l'implémente, sans qu'on ait besoin d'y accéder directement.
+                // Le libellé bascule Masquer/Afficher comme celui des prix,
+                // via `sidebarVisible` (mis à jour ICI, seule commande à le
+                // faire — voir sa déclaration).
+                Button(sidebarVisible ? "Masquer la barre latérale" : "Afficher la barre latérale") {
+                    NSApp.sendAction(
+                        #selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
+                    sidebarVisible.toggle()
+                }
+                .keyboardShortcut("s", modifiers: [.command, .control])
+
+                // Bascule de la barre d'outils : commande standard qui vivait
+                // dans ce même groupe système (`.toolbar`) avant qu'on le
+                // remplace entièrement pour y poser Galerie/Liste/etc. — donc
+                // perdue au passage, et recréée ici. `toggleToolbarShown(_:)`
+                // est une méthode publique de `NSWindow`, pas besoin de passer
+                // par un sélecteur construit à la main comme pour
+                // Annuler/Rétablir. Même bascule de libellé que la sidebar,
+                // via `toolbarVisible`.
+                Button(toolbarVisible ? "Masquer la barre d'outils" : "Afficher la barre d'outils") {
+                    NSApp.keyWindow?.toggleToolbarShown(nil)
+                    toolbarVisible.toggle()
+                }
+                .keyboardShortcut("t", modifiers: [.command, .option])
+
+                // Afficher / Masquer l'inspecteur, seulement en mode galerie
+                // (la Liste, un `Table`, n'a pas d'inspecteur).
+                if modeAffichage == "icone" {
+                    Button(inspecteurVisible ? "Masquer l'inspecteur"
+                                             : "Afficher l'inspecteur") {
+                        inspecteurVisible.toggle()
+                    }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
                 }
             }
         }

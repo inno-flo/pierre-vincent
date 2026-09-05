@@ -27,20 +27,6 @@ struct FloutagePrix: ViewModifier {
     }
 }
 
-/// Variante qui ne floute que si `actif` est vrai (sinon ne fait rien).
-/// Utile quand une même fonction d'affichage sert pour des prix et non-prix.
-struct FloutageConditionnel: ViewModifier {
-    let actif: Bool
-    @AppStorage(MasquagePrix.cle) private var prixMasques = false
-
-    func body(content: Content) -> some View {
-        content
-            .blur(radius: (actif && prixMasques) ? 6 : 0)
-            .accessibilityHidden(actif && prixMasques)
-            .animation(.easeInOut(duration: 0.2), value: prixMasques)
-    }
-}
-
 extension View {
     /// Floute cette vue (un prix) quand le masquage des prix est actif.
     func flouteSiPrixMasques() -> some View {

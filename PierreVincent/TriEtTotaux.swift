@@ -275,11 +275,6 @@ func formaterEuros(_ montant: Double) -> String {
     formatteurEuros.string(from: NSNumber(value: montant)) ?? "\(Int(montant)) €"
 }
 
-/// Calcule la somme totale de la colonne Prix pour une liste d'œuvres.
-func totalPrix(_ oeuvres: [Oeuvre]) -> Double {
-    oeuvres.reduce(0) { $0 + $1.prix }
-}
-
 /// Calcule la SURFACE d'une œuvre à partir de son champ « Dimensions ».
 ///
 /// Le champ est du texte libre, écrit de façons variées : « 73 × 92 cm »,

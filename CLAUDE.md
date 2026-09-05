@@ -1048,6 +1048,27 @@ s'afficherait à la place.
   les fiches iOS. Fix : un seul formatter statique partagé (`private let
   formatteurEuros: NumberFormatter = { … }()`) réutilisé à chaque appel.
 
+- **Code mort supprimé (audit de code, 5 septembre 2026)** : cinq éléments
+  déclarés mais sans plus aucun appelant nulle part dans le code.
+  - **`LargeursColonnes.swift` — fichier entier.** Classe prévue pour
+    mémoriser largeurs de colonnes et hauteurs de rangées du tableau macOS
+    (`Table`), jamais instanciée.
+  - **`DesactiveSurbrillanceSidebar`** (`ContentView.swift`) : plus aucun
+    appelant depuis que la sélection de sidebar est repassée au bleu natif
+    (voir « Couleurs standard de l'interface », plus bas) — c'est
+    `ActiveSidebarSelection`, dans le même fichier, qui gère désormais la
+    sélection de la sidebar. Les mentions de `DesactiveSurbrillanceSidebar`
+    restant plus haut dans ce document (pièges déjà rencontrés) sont de
+    l'historique de débogage, pas la description d'un mécanisme actif.
+  - **`FloutageConditionnel`** (`MasquagePrix.swift`) : variante de
+    `FloutagePrix` prévue « pour une même fonction d'affichage servant à des
+    prix et non-prix », jamais adoptée — seule `FloutagePrix` (via
+    `.flouteSiPrixMasques()`) est utilisée.
+  - **`totalPrix(_:)`** (`TriEtTotaux.swift`) : jamais appelée.
+  - **`VueFeuille.ouvrirDossierDonnees()`** : jamais appelée — le bouton de
+    menu « Ouvrir le dossier des données » (`PierreVincentApp.swift`)
+    réimplémente le même appel en double, sans passer par cette fonction.
+
 ## Icône macOS (en cours)
 
 - Cible : format **`.icon`** via **Icon Composer** (livré avec Xcode 26), pour le
@@ -1948,10 +1969,12 @@ JavaScript, inexploitables par extraction) :
   supprimés, ainsi que le typealias `RVBPublic` qui n'existait que pour cette
   signature.
   **`.tint()` n'a aucun effet** sur la surbrillance d'une `List` en style
-  sidebar (essayé, sans résultat). La méthode qui marche : désactiver la
-  surbrillance système avec `selectionHighlightStyle = .none` sur le
-  `NSOutlineView` (helper `DesactiveSurbrillanceSidebar`), puis peindre le
-  fond soi-même via `.listRowBackground` (rectangle arrondi, rayon 6,
+  sidebar (essayé, sans résultat). La méthode qui marchait alors : désactiver
+  la surbrillance système avec `selectionHighlightStyle = .none` sur le
+  `NSOutlineView` (helper `DesactiveSurbrillanceSidebar`, **supprimé depuis**
+  — voir plus bas « Couleurs standard de l'interface » : la sidebar est
+  repassée à la sélection bleue native, ce mécanisme n'a plus d'objet), puis
+  peindre le fond soi-même via `.listRowBackground` (rectangle arrondi, rayon 6,
   marges latérales 4 px).
 - **macOS — toolbar de la vue principale** (`VueFeuille.swift`) : tous les
   `ToolbarItem` et `ToolbarSpacer` sont sans `placement:` explicite pour
@@ -1986,6 +2009,41 @@ JavaScript, inexploitables par extraction) :
     Présentation reste seule voie de bascule, elle pilote le MÊME
     `prixMasques` et n'était pas concernée par le drapeau
     `afficherBoutonPrixToolbar`, supprimé avec son `if`.
+  - **« Masquer/Afficher la barre latérale » et « Masquer/Afficher la barre
+    d'outils »**, ajoutés au menu Présentation (`PierreVincentApp.swift`) —
+    deux commandes système normalement fournies par défaut, mais absentes
+    ici parce que l'app remplace entièrement les deux groupes système où
+    elles vivent (`CommandGroup(replacing: .sidebar)`, laissé VIDE, et
+    `CommandGroup(replacing: .toolbar)`, où elles sont recréées avec les
+    autres commandes de présentation — voir l'ordre ci-dessous). Les
+    recréer n'a pas demandé de nouvel état côté ACTION : ce sont des actions
+    AppKit natives, envoyées telles quelles.
+    - Sidebar : `NSApp.sendAction(#selector(NSSplitViewController
+      .toggleSidebar(_:)), to: nil, from: nil)` — l'action standard d'un
+      `NavigationSplitView` sur macOS, réellement déclarée sur
+      `NSSplitViewController` (contrairement à `undo:`/`redo:`, qui ont
+      demandé un `Selector` construit à la main faute d'être exposées côté
+      Swift). Raccourci ⌃⌘S, celui du système.
+    - Barre d'outils : `NSApp.keyWindow?.toggleToolbarShown(nil)` — méthode
+      publique de `NSWindow`, pas de sélecteur à construire. Raccourci
+      ⌥⌘T, celui du système.
+    - **Libellé BASCULE, comme « Masquer/Afficher les prix »** : deux
+      `@AppStorage` dédiés, `sidebarVisible` et `toolbarVisible`, inversés
+      dans l'action même du bouton, juste après l'appel AppKit. **Ne
+      reflètent que l'usage DE CE MENU** — contrairement à `prixMasques`, qui
+      EST l'état réel (rien d'autre ne masque les prix), un changement fait
+      autrement (glisser le séparateur de la sidebar pour la refermer, par
+      exemple) ne remonte pas ici : le libellé peut alors se retrouver à
+      l'envers de l'état réel. Non corrigé à ce stade, faute d'un moyen
+      simple d'observer l'état réel de ces deux éléments AppKit depuis une
+      commande SwiftUI.
+    - **Ordre du menu Présentation, RÉORGANISÉ à la demande** : Galerie,
+      Liste, — Masquer/Afficher les prix, — Masquer/Afficher la barre
+      latérale, Masquer/Afficher la barre d'outils, Masquer/Afficher
+      l'inspecteur (ce dernier toujours réservé au mode Galerie, la Liste —
+      un `Table` — n'ayant pas d'inspecteur). Le item système « Activer le
+      mode plein écran », en queue de menu, n'est pas du code de l'app : macOS
+      l'ajoute lui-même à toute fenêtre qui supporte le plein écran.
   - **Bouton « Ajouter » piloté par `Categorie.feuilleAjout`, distinct de
     `feuille`.** `feuille` filtre les données ; `feuilleAjout` dit dans
     quelle feuille créer une œuvre, et vaut `nil` = pas de bouton. Une
