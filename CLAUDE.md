@@ -2076,21 +2076,34 @@ JavaScript, inexploitables par extraction) :
 - **Filets de sélection orange : 3 px** dans toutes les vues (galerie
   macOS, listes iOS). En galerie macOS le filet non sélectionné reste à
   1 px (`lineWidth: selection.contains(o.id) ? 3 : 1`).
-- **Sidebar — DÉROGATION assumée : aucune mémoire entre les sessions.**
-  Une sidebar système mémorise ses blocs repliés ; celle-ci non. Les sept
-  états d'ouverture (`blocVentesOuvert`, `blocStockOuvert`, `blocLaboOuvert`
-  et les quatre sous-groupes) sont de simples `@State` dans `ContentView`,
-  avec pour défaut les DEUX GRANDS blocs dépliés (Ventes et dons, Réserve)
-  et TOUT LE RESTE replié — les quatre sous-groupes (les deux « Catégories »,
-  « Modes de vente », « Thèmes ») ET le bloc « Labo », qui partage donc la
-  convention des sous-groupes plutôt que celle des deux grands blocs, malgré
-  son statut de bloc de premier niveau (demande explicite). L'ouverture
-  montre ainsi les seules vues d'ensemble, six rubriques au lieu d'une
-  vingtaine. Un `@State` n'a pas de mémoire d'une session à l'autre par
-  construction : les replis faits à la main ne valent donc que pour la
-  session, sans rien à écrire nulle part. Vrai sur les DEUX plateformes.
+- **Sidebar — DÉROGATION assumée : aucune mémoire entre les sessions,
+  SAUF « Labo ».** Une sidebar système mémorise ses blocs repliés ; celle-ci
+  non — à une exception près. Six états d'ouverture (`blocVentesOuvert`,
+  `blocStockOuvert` et les quatre sous-groupes) restent de simples `@State`
+  dans `ContentView`, avec pour défaut les DEUX GRANDS blocs dépliés (Ventes
+  et dons, Réserve) et les quatre sous-groupes repliés (les deux
+  « Catégories », « Modes de vente », « Thèmes »). L'ouverture montre ainsi
+  les seules vues d'ensemble. Un `@State` n'a pas de mémoire d'une session à
+  l'autre par construction : les replis faits à la main ne valent donc que
+  pour la session, sans rien à écrire nulle part. Vrai sur les DEUX
+  plateformes.
   - **Ce n'est pas un oubli, ne pas « réparer »** en remettant la
     mémorisation. Décision prise le 22 août 2026.
+  - **`blocLaboOuvert` fait EXCEPTION depuis (demande explicite du
+    5 septembre 2026)** : il est passé en `@AppStorage("blocLaboOuvert")`,
+    par défaut `true` — Labo est donc désormais DÉPLIÉ par défaut, comme les
+    deux grands blocs (et non plus replié comme un sous-groupe), et son état
+    survit au relancement de l'app, sur les deux plateformes. Avant ce
+    changement, Labo partageait le sort des sous-groupes (replié par défaut,
+    sans mémoire) malgré son statut de bloc de premier niveau — ce n'est
+    plus le cas, c'est désormais le SEUL bloc mémorisé.
+    **Risque à surveiller sur macOS** : voir le point suivant,
+    `@AppStorage` avait déjà cassé l'animation de `Section(isExpanded:)`
+    par le passé pour cette raison précise. Si l'ouverture/fermeture de
+    « Labo » perd son animation sur Mac (mais pas sur iOS, où
+    `boutonEnTeteBloc` anime via un `withAnimation` explicite dans l'action
+    du bouton, un mécanisme différent), la cause est ici — revenir à
+    `@State` (donc à un Labo replié et non mémorisé) serait le correctif.
   - **Étaient en `@AppStorage` au départ**, avec une réécriture des six clés
     à chaque lancement (`PierreVincentApp.arrangerSidebar()`, depuis
     supprimée) — un défaut de `@AppStorage` ne s'applique qu'à une clé

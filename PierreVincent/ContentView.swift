@@ -586,11 +586,19 @@ struct ContentView: View {
     #endif
     @State private var blocVentesOuvert = true
     @State private var blocStockOuvert = true
-    // Replié par défaut au lancement, comme les sous-groupes Modes de vente
-    // et Genres (demande explicite) — malgré son statut de bloc de premier
-    // niveau, il en partage la convention plutôt que celle des deux grands
-    // blocs, dépliés eux.
-    @State private var blocLaboOuvert = false
+    // EXCEPTION explicite à la dérogation ci-dessus (demande explicite) :
+    // « Labo » est le SEUL bloc à mémoriser son état d'une session à l'autre
+    // — `@AppStorage`, pas `@State` — et à s'ouvrir par défaut, comme les
+    // deux grands blocs. Il a d'abord partagé le sort des sous-groupes
+    // (replié par défaut, sans mémoire) ; ce n'est plus le cas.
+    // Risque connu, à surveiller sur macOS : `@AppStorage` avait déjà causé
+    // une perte d'animation sur `Section(isExpanded:)` par le passé (la
+    // notification `UserDefaults` n'arrivant pas toujours dans la même
+    // transaction qu'un `withAnimation`) — c'est justement pour ça que
+    // `blocVentesOuvert`/`blocStockOuvert` sont restés en `@State`. Si
+    // l'ouverture/fermeture de « Labo » perd son animation sur Mac, la
+    // cause est ici.
+    @AppStorage("blocLaboOuvert") private var blocLaboOuvert = true
     @State private var sousBlocModesVenteOuvert = false
     @State private var sousBlocReserveCategoriesOuvert = false
     @State private var sousBlocReserveThemesOuvert = false
