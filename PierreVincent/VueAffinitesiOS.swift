@@ -305,7 +305,9 @@ struct VueAffinitesiOS: View {
                     famillesFermees = toutFerme ? [] : Set(ids)
                 }
             }
-            .font(.footnote)
+            // Même taille que les libellés d'extrémité des curseurs
+            // (« Couleurs »/« Style », « Larges »/« Serrées »).
+            .font(.subheadline)
         }
     }
 

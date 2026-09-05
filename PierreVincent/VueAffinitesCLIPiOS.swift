@@ -225,7 +225,9 @@ struct VueAffinitesCLIPiOS: View {
                     famillesFermees = toutFerme ? [] : Set(ids)
                 }
             }
-            .font(.footnote)
+            // Même taille que les libellés d'extrémité des curseurs
+            // (« Larges »/« Serrées »).
+            .font(.subheadline)
         }
     }
 
