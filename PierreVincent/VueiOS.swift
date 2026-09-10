@@ -531,8 +531,10 @@ struct VueiOS: View {
                                             .font(.subheadline)
                                             .foregroundStyle(accent)
                                         if !o.modeVente.isEmpty {
+                                            // Même corps que PrixText juste
+                                            // au-dessus (.subheadline).
                                             Text(o.modeVente)
-                                                .font(.body).foregroundStyle(.secondary)
+                                                .font(.subheadline).foregroundStyle(.secondary)
                                                 .lineLimit(1)
                                         }
                                     } else if o.feuille == .reserve {
@@ -556,8 +558,13 @@ struct VueiOS: View {
                                     // Le type n'est PAS affiché ici : ces vues ne
                                     // contiennent qu'un seul type d'œuvre.
                                     if !o.dimensions.isEmpty {
+                                        // Même corps que le mode Galerie et
+                                        // que les autres listes iOS (Dons,
+                                        // Catalogue/Ventes) : la donnée ne
+                                        // doit pas grossir en changeant de
+                                        // présentation.
                                         Text(o.dimensions)
-                                            .font(.body).foregroundStyle(.secondary)
+                                            .font(.subheadline).foregroundStyle(.secondary)
                                             .lineLimit(1)
                                     }
                                 }
@@ -654,14 +661,15 @@ struct DetailiOS: View {
     /// Désactive le bouton « Fermer » de la barre d'outils pendant la
     /// visionneuse plein écran, et un court instant après sa fermeture.
     ///
-    /// **Sans quoi** : le bouton « Fermer » de CETTE fiche occupe le même
-    /// coin (haut-droit, `.confirmationAction`) que la croix de la
-    /// visionneuse. Si le doigt reste posé au moment où celle-ci se referme,
-    /// il retombe exactement sur ce bouton-ci — encore sous contact — qui
-    /// affiche alors son état « pressé » (un tremblement), sans pour autant
-    /// se déclencher : le geste n'est pas un appui reconnu depuis le début
-    /// PAR ce bouton. Le désactiver bloque ce résidu sans avoir à déplacer
-    /// la croix.
+    /// **Historique** : à l'origine, ce bouton et la croix de la visionneuse
+    /// occupaient le même coin (haut-droit, `.confirmationAction`) — un doigt
+    /// resté posé au moment où celle-ci se refermait retombait exactement
+    /// dessus, encore sous contact, et affichait son état « pressé » (un
+    /// tremblement) sans se déclencher pour autant. Le bouton « Fermer » vit
+    /// désormais en haut à GAUCHE (`.cancellationAction`, croix seule), donc
+    /// dans un coin différent de celui de la visionneuse (toujours en haut à
+    /// droite) : le résidu de contact ne peut plus tomber dessus. Le
+    /// désactiver reste conservé par précaution, sans effet indésirable connu.
     @State private var boutonFermerActif = true
 
     /// Œuvre réellement affichée (la courante, ou celle passée à l'ouverture).
@@ -748,9 +756,16 @@ struct DetailiOS: View {
                     }
                     .accessibilityLabel(oeuvreAffichee.favori ? "Retirer des favoris" : "Ajouter aux favoris")
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer") { dismiss() }
-                        .disabled(!boutonFermerActif)
+                // Croix seule, en haut à gauche (`.cancellationAction`),
+                // plutôt qu'un bouton texte « Fermer » à droite.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Fermer")
+                    .disabled(!boutonFermerActif)
                 }
             }
             .onAppear {

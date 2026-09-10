@@ -541,8 +541,12 @@ struct VueOeuvresStructuree: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                         .lineLimit(1)
                     if !o.dimensions.isEmpty {
+                        // Même corps que le mode Galerie (.subheadline) et
+                        // que les autres listes iOS (Dons, Réserve) : la
+                        // donnée ne doit pas rapetisser en changeant de
+                        // présentation.
                         Text(o.dimensions)
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.subheadline).foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                 }
