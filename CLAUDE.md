@@ -1958,6 +1958,26 @@ JavaScript, inexploitables par extraction) :
     héritaient de `.subheadline`, qui ne vaut que 11 pt sur macOS. Le fichier
     étant partagé, iOS conserve `.subheadline` (15 pt) : y écrire 13 pt
     rapetisserait le texte au lieu de l'agrandir.
+- **Inventaire complet mené le 10 septembre 2026, sur les deux
+  plateformes séparément (`.font(...)` de tous les fichiers de vue).**
+  - **iOS — une seule incohérence trouvée et corrigée** : la ligne
+    « dimensions » (sous-texte gris sous le nom, en mode Liste) portait
+    TROIS tailles différentes pour le même rôle — `.caption` dans
+    Catalogue/Ventes (`VueOeuvresStructuree`), `.body` dans Réserve/Favoris
+    (`VueiOS`), `.subheadline` dans Dons (`VueDonsStructuree`, la seule déjà
+    juste). Le mode de vente de `VueiOS` (juste au-dessus de la même ligne)
+    était touché par le même défaut. Référence : `VueGalerie.policeLegende`
+    vaut `.subheadline` sur iOS pour ce même rôle en mode Galerie — les
+    trois vues sont désormais alignées dessus.
+  - **macOS — aucune incohérence trouvée.** Presque tout le fichier y est
+    déjà en tailles fixes (13/11/10 pt) et non en styles sémantiques, et
+    chaque reprise d'un rôle déjà défini ailleurs (prix, pastilles de
+    filtre, libellés) porte un commentaire disant explicitement la valeur
+    à retenir et pourquoi. Les trois `Table` (Ventes, Dons, Réserve)
+    n'imposent aucune police en dur, donc ne peuvent pas diverger entre
+    elles. `VueAffinites.swift` et `VueAffinitesCLIP.swift`, les deux
+    moteurs comparés côte à côte, ont des tailles identiques ligne à
+    ligne.
 - **macOS — sidebar, couleur de sélection** (`ContentView.swift`,
   `Couleurs.swift`) : `Color.fondSelectionSidebarMac`, marron
   **(142, 134, 127)** en mode clair et (89, 67, 47) en mode sombre, au lieu du
