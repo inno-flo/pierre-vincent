@@ -1106,9 +1106,15 @@ Xcode), fabriquées par `faire-icone.py`.
   `Design/AppIcon/variante-vectorielle/` : plus simple de dessin, en deux
   calques (fruit et calice), écartée au profit de l'illustration d'origine,
   jugée plus réaliste.
-- **L'ancien `AppIcon.appiconset` est resté en place**, orphelin : plus rien ne
-  pointe dessus, mais il continue d'être compilé pour rien. Le supprimer est
-  sans risque une fois la nouvelle icône validée à l'usage.
+- **L'ancien `AppIcon.appiconset` a été SUPPRIMÉ** — il portait la version
+  photo de l'icône, et plus rien ne pointait dessus. `Assets.xcassets` ne
+  contient donc plus que `AccentColor.colorset`.
+  Mesure au passage, qui corrige une idée reçue : sa suppression n'a **pas
+  changé d'un octet** le `Assets.car` compilé (2 228 312 o avant comme après).
+  `actool` ne compile QUE l'icône désignée par
+  `ASSETCATALOG_COMPILER_APPICON_NAME` ; un appiconset orphelin est ignoré, pas
+  embarqué. Il n'alourdissait donc rien — c'est la clarté du catalogue qui
+  justifiait de le retirer, pas le poids du binaire.
 
 ## Mentions des bibliothèques tierces et nom de l'app
 

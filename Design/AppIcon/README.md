@@ -124,12 +124,18 @@ Vérifié par un build réel sur les deux plateformes :
 L'icône extraite de l'app compilée montre bien le kaki, avec le masque squircle
 et le reflet spéculaire posés par le système.
 
-### L'ancien `AppIcon.appiconset` est resté en place
+### L'ancien `AppIcon.appiconset` a été supprimé
 
-Il n'est plus utilisé — plus rien ne pointe dessus — mais il n'a pas été
-supprimé : ses images sont l'ancienne icône, et le retirer est une décision à
-prendre à part. Il continue d'être compilé dans `Assets.car` pour rien. Le
-supprimer est sans risque une fois la nouvelle icône validée à l'usage.
+Il portait la version photo de l'icône et plus rien ne pointait dessus.
+`Assets.xcassets` ne contient donc plus que `AccentColor.colorset`. Les deux
+plateformes recompilent sans erreur après son retrait, icône intacte.
+
+Mesure au passage, qui corrige ce que disait cette note auparavant : sa
+suppression n'a **pas changé d'un octet** le `Assets.car` compilé
+(2 228 312 o avant comme après). `actool` ne compile QUE l'icône désignée par
+`ASSETCATALOG_COMPILER_APPICON_NAME` ; un appiconset orphelin est ignoré, pas
+embarqué. Il n'alourdissait donc rien — c'est la clarté du catalogue qui
+justifiait de le retirer, pas le poids du binaire.
 
 ## Conformité Liquid Glass
 
