@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="feuille" gradientUnits="userSpaceOnUse"
+                    x1="512" y1="200" x2="512" y2="400">
+      <stop offset="0" stop-color="#63955A"/>
+      <stop offset="1" stop-color="#456F41"/>
+    </linearGradient>
+  </defs>
+  <path d="M 512.0 292.0 C 557.5 243.1 641.7 242.9 726.5 307.0 C 633.6 358.6 550.3 346.8 512.0 292.0 Z" fill="url(#feuille)"/>
+  <path d="M 512.0 292.0 C 473.7 346.8 390.4 358.6 297.5 307.0 C 382.3 242.9 466.5 243.1 512.0 292.0 Z" fill="url(#feuille)"/>
+  <path d="M 512.0 292.0 C 465.8 266.9 463.3 222.9 519.8 180.5 C 569.8 230.4 561.2 273.6 512.0 292.0 Z" fill="url(#feuille)"/>
+  <path d="M 512.0 292.0 C 566.0 310.1 570.3 339.0 506.9 364.9 C 447.7 330.4 456.0 302.4 512.0 292.0 Z" fill="url(#feuille)"/>
+  <path d="M 490 300 C 490 274 490 256 494 246 C 502 232 522 232 530 246 C 534 256 534 274 534 300 Z" fill="#3C6140"/>
+</svg>

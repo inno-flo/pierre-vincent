@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="chair" gradientUnits="userSpaceOnUse"
+                    x1="512" y1="272" x2="512" y2="830">
+      <stop offset="0" stop-color="#EE9524"/>
+      <stop offset="1" stop-color="#C9530F"/>
+    </linearGradient>
+    <clipPath id="contour">
+      <path d="M 512 272 C 340 272 188 332 188 472 C 188 654 336 830 512 830 C 688 830 836 654 836 472 C 836 332 684 272 512 272 Z"/>
+    </clipPath>
+  </defs>
+  <path d="M 512 272 C 340 272 188 332 188 472 C 188 654 336 830 512 830 C 688 830 836 654 836 472 C 836 332 684 272 512 272 Z" fill="url(#chair)"/>
+  <ellipse cx="306" cy="438" rx="214" ry="288"
+           fill="#FFFFFF" fill-opacity="0.05" clip-path="url(#contour)"/>
+</svg>
