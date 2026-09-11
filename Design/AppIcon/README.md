@@ -102,6 +102,35 @@ apparence sombre tout seul au lieu d'utiliser le fond noir demandé. **Ouvrir
 *Dark* montre le fond noir, la clé est la bonne. Sinon, la corriger dans
 l'interface — le fichier est de toute façon fait pour être ouvert là.
 
+## Installation dans la cible Xcode
+
+Le paquet est déposé dans `PierreVincent/Kaki.icon` et la cible pointe dessus
+par `ASSETCATALOG_COMPILER_APPICON_NAME = Kaki` (Debug et Release).
+
+**Aucune déclaration à écrire dans `project.pbxproj`** : le projet est en
+`objectVersion = 77` avec un `PBXFileSystemSynchronizedRootGroup` sur le
+dossier `PierreVincent/`. Tout fichier déposé là est inclus automatiquement —
+seul le nom de l'icône a dû être changé dans les réglages de la cible.
+
+Vérifié par un build réel sur les deux plateformes :
+
+| | macOS | iOS |
+|---|---|---|
+| Build | succès | succès |
+| Produit | `Kaki.icns` | `Kaki60x60@2x.png`, `Kaki76x76@2x~ipad.png` |
+| `CFBundleIconName` | `Kaki` | `Kaki` |
+| Apparences compilées | Aqua, **DarkAqua**, Tintable | Light, **Dark**, Tintable |
+
+L'icône extraite de l'app compilée montre bien le kaki, avec le masque squircle
+et le reflet spéculaire posés par le système.
+
+### L'ancien `AppIcon.appiconset` est resté en place
+
+Il n'est plus utilisé — plus rien ne pointe dessus — mais il n'a pas été
+supprimé : ses images sont l'ancienne icône, et le retirer est une décision à
+prendre à part. Il continue d'être compilé dans `Assets.car` pour rien. Le
+supprimer est sans risque une fois la nouvelle icône validée à l'usage.
+
 ## Conformité Liquid Glass
 
 Vérifié contre « App icons » (HIG, révision du 8 juin 2026, *Refined guidance

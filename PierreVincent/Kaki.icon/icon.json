@@ -1,0 +1,34 @@
+{
+  "fill": {
+    "automatic-gradient": "extended-srgb:0.18431,0.41569,0.59216,1.00000"
+  },
+  "fill-specializations": {
+    "dark-color": {
+      "automatic-gradient": "extended-srgb:0.00000,0.00000,0.00000,1.00000"
+    }
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "kaki-fruit.png",
+          "name": "kaki-fruit"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.15
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}

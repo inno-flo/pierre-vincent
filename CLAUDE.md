@@ -1069,11 +1069,46 @@ s'afficherait à la place.
     menu « Ouvrir le dossier des données » (`PierreVincentApp.swift`)
     réimplémente le même appel en double, sans passer par cette fonction.
 
-## Icône macOS (en cours)
+## Icône d'app (en place, macOS et iOS)
 
-- Cible : format **`.icon`** via **Icon Composer** (livré avec Xcode 26), pour le
-  rendu « Liquid Glass » multi-couches. L'ancien AppIcon PNG seul ne suffit pas.
-- Illustration source : un kaki (persimmon), détouré sur fond transparent, 1024×1024.
+Sources et documentation détaillée dans **`Design/AppIcon/`** (hors cible
+Xcode), fabriquées par `faire-icone.py`.
+
+- **Format `.icon`** (Icon Composer, Xcode 26), installé en
+  `PierreVincent/Kaki.icon`, la cible pointant dessus par
+  `ASSETCATALOG_COMPILER_APPICON_NAME = Kaki`.
+  **Rien à déclarer dans `project.pbxproj`** : le projet est en
+  `objectVersion = 77` avec un `PBXFileSystemSynchronizedRootGroup` sur le
+  dossier `PierreVincent/`, donc tout fichier déposé là est inclus seul.
+- **Un `appiconset` NE PEUT PAS porter d'icône sombre pour macOS.** Mesuré, pas
+  supposé : `actool` accepte la déclaration sans le moindre avertissement puis
+  l'ignore — le catalogue compilé est identique À L'OCTET PRÈS avec et sans la
+  variante, là où la même déclaration côté iOS le double (contrôle positif).
+  `"platform": "macos"` avec `"idiom": "universal"` ne compile même rien du
+  tout. **C'est la raison d'être du passage au `.icon`** : ne pas revenir en
+  arrière en croyant simplifier.
+- **Deux apparences, deux plateformes, un seul calque** : fond bleu profond
+  `#2F6A97` en clair, noir en sombre ; le fruit ne change pas.
+  `"supported-platforms": {"squares": "shared"}` — les icônes macOS 26 sont à
+  pleine toile et masquées en squircle comme sur iOS, il n'y a plus de jeu à
+  part à tenir.
+- **L'apparence sombre passe par `fill-specializations` / `dark-color`.**
+  `actool` ne valide pas les clés inconnues : une clé mal orthographiée serait
+  ignorée en silence et macOS dériverait son sombre tout seul. À confirmer en
+  ouvrant le fichier dans Icon Composer.
+- **Illustration source** : le kaki détouré de
+  `Ressources App Pierre-Vincent/Icône app/…/kaki_detoure_couleur.png`, repris
+  tel quel — ni recoloré ni redessiné. Deux traitements seulement : un
+  **miroir horizontal**, pour que la lumière vienne d'en haut à gauche (le
+  modelé est déjà peint dans l'image, repeindre les aplats aurait sali les
+  bords du détourage), et un **recentrage** sur la toile.
+- Une variante entièrement **vectorielle** dort dans
+  `Design/AppIcon/variante-vectorielle/` : plus simple de dessin, en deux
+  calques (fruit et calice), écartée au profit de l'illustration d'origine,
+  jugée plus réaliste.
+- **L'ancien `AppIcon.appiconset` est resté en place**, orphelin : plus rien ne
+  pointe dessus, mais il continue d'être compilé pour rien. Le supprimer est
+  sans risque une fois la nouvelle icône validée à l'usage.
 
 ## Mentions des bibliothèques tierces et nom de l'app
 
