@@ -241,8 +241,15 @@ struct VueAffinitesiOS: View {
             .navigationTitle("Œuvres proches")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer") { procheDe = nil }
+                // Croix seule, en haut à gauche (`.cancellationAction`),
+                // plutôt qu'un bouton texte « Fermer » à droite.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        procheDe = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Fermer")
                 }
             }
         }

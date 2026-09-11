@@ -169,8 +169,15 @@ struct VueAffinitesCLIPiOS: View {
             .navigationTitle("Œuvres proches (CLIP)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer") { procheDe = nil }
+                // Croix seule, en haut à gauche (`.cancellationAction`),
+                // plutôt qu'un bouton texte « Fermer » à droite.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        procheDe = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Fermer")
                 }
             }
         }
@@ -640,8 +647,15 @@ struct FeuilleOeuvresProchesCLIP: View {
             .navigationTitle("Œuvres proches (CLIP)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer") { dismiss() }
+                // Croix seule, en haut à gauche (`.cancellationAction`),
+                // plutôt qu'un bouton texte « Fermer » à droite.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Fermer")
                 }
             }
         }
