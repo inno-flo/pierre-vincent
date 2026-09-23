@@ -17,6 +17,7 @@ struct EditeurEntree: View {
     @Environment(\.accentRubrique) private var accent
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
 
     let feuille: Feuille
     @Bindable var oeuvre: Oeuvre
@@ -43,6 +44,11 @@ struct EditeurEntree: View {
     // Confirmation avant de quitter une œuvre modifiée pendant la navigation.
     @State private var confirmationNavigation = false
     @State private var navigationEnAttente = 0   // +1 suivant, -1 précédent
+
+    /// Œuvre réellement éditée (la courante, ou celle passée à l'ouverture) —
+    /// même patron que `DetailiOS.oeuvreAffichee` (`VueiOS.swift`), pour que
+    /// le bouton favori suive la navigation Précédent/Suivant.
+    private var oeuvreAffichee: Oeuvre { courante ?? oeuvre }
 
     private var estVente: Bool { feuille != .oeuvresDonnees && feuille != .reserve }
 
@@ -86,9 +92,22 @@ struct EditeurEntree: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Éditeur")
-                .font(.headline)
-                .padding()
+            HStack {
+                Text("Éditeur")
+                    .font(.headline)
+                Spacer()
+                // Bouton favori, aligné à droite de la barre de titre — même
+                // point de passage que partout ailleurs (`basculerFavori`).
+                Button {
+                    basculerFavori(oeuvreAffichee, contexte: context)
+                } label: {
+                    Image(systemName: oeuvreAffichee.favori ? "star.fill" : "star")
+                        .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+                .help(oeuvreAffichee.favori ? "Retirer des favoris" : "Ajouter aux favoris")
+            }
+            .padding()
 
             Divider()
 
