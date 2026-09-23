@@ -624,15 +624,15 @@ struct ContentView: View {
                     // posé explicitement : le `.foregroundStyle(Color
                     // .textePrincipal)` appliqué à toute la hiérarchie de
                     // `ContentView` écraserait sinon ce gris.
-                    Section(isExpanded: $blocVentesOuvert) {
-                        contenuVentesEtDons
-                    } header: {
-                        Text("Ventes et dons").foregroundStyle(.secondary)
-                    }
                     Section(isExpanded: $blocStockOuvert) {
                         contenuStock
                     } header: {
                         Text("Réserve").foregroundStyle(.secondary)
+                    }
+                    Section(isExpanded: $blocVentesOuvert) {
+                        contenuVentesEtDons
+                    } header: {
+                        Text("Ventes et dons").foregroundStyle(.secondary)
                     }
                     // Nouveau bloc, à part de la Réserve : rapprochement des
                     // œuvres par style et couleurs (voir `contenuLabo`).
@@ -656,20 +656,20 @@ struct ContentView: View {
                     // ci teste si la seconde suffisait à elle seule à casser
                     // l'animation, ou si elle n'y était pour rien.
                     Section {
-                        if blocVentesOuvert {
-                            contenuVentesEtDons
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
-                    } header: {
-                        boutonEnTeteBloc("Ventes et dons", ouvert: $blocVentesOuvert)
-                    }
-                    Section {
                         if blocStockOuvert {
                             contenuStock
                                 .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     } header: {
                         boutonEnTeteBloc("Réserve", ouvert: $blocStockOuvert)
+                    }
+                    Section {
+                        if blocVentesOuvert {
+                            contenuVentesEtDons
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    } header: {
+                        boutonEnTeteBloc("Ventes et dons", ouvert: $blocVentesOuvert)
                     }
                     // Nouveau bloc, à part de la Réserve — voir `contenuLabo`.
                     Section {
@@ -1089,21 +1089,6 @@ struct ContentView: View {
     ///   mèneraient à une ligne invisible à l'écran.
     private var categoriesSidebar: [Categorie] {
         var liste: [Categorie] = []
-        if blocVentesOuvert {
-            // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
-            // rubrique dans un ordre qui ne correspond à rien de visible :
-            // Catalogue, Tableaux/Dessins/Tapis, Dons, Ventes, Modes de
-            // vente, Synthèse. Plus de sous-groupe « Supports » sur macOS,
-            // donc plus de repli à tester ici.
-            liste.append(.oeuvres)
-            liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
-            liste.append(.oeuvresDonnees)
-            liste.append(.ventesRealisees)
-            if sousBlocModesVenteOuvert {
-                liste += modesDeVentePresents.map { Categorie.modeVente($0) }
-            }
-            liste.append(.synthese)
-        }
         if blocStockOuvert {
             liste.append(.reserveInventaire)
             liste.append(.reserveCollection)
@@ -1121,6 +1106,21 @@ struct ContentView: View {
             if sousBlocReserveThemesOuvert {
                 liste += themesPresents.map { Categorie.reserveTheme($0) }
             }
+        }
+        if blocVentesOuvert {
+            // MÊME ORDRE qu'à l'écran, sans quoi ↑↓ sauterait de rubrique en
+            // rubrique dans un ordre qui ne correspond à rien de visible :
+            // Catalogue, Tableaux/Dessins/Tapis, Dons, Ventes, Modes de
+            // vente, Synthèse. Plus de sous-groupe « Supports » sur macOS,
+            // donc plus de repli à tester ici.
+            liste.append(.oeuvres)
+            liste += [.tableauxVendus, .dessinsVendus, .tapisVendus]
+            liste.append(.oeuvresDonnees)
+            liste.append(.ventesRealisees)
+            if sousBlocModesVenteOuvert {
+                liste += modesDeVentePresents.map { Categorie.modeVente($0) }
+            }
+            liste.append(.synthese)
         }
         // Bloc « Labo » : les deux rubriques de rapprochement, à part de la
         // Réserve désormais — leur propre en-tête, leur propre accent.
