@@ -661,15 +661,14 @@ struct DetailiOS: View {
     /// Désactive le bouton « Fermer » de la barre d'outils pendant la
     /// visionneuse plein écran, et un court instant après sa fermeture.
     ///
-    /// **Historique** : à l'origine, ce bouton et la croix de la visionneuse
-    /// occupaient le même coin (haut-droit, `.confirmationAction`) — un doigt
-    /// resté posé au moment où celle-ci se refermait retombait exactement
-    /// dessus, encore sous contact, et affichait son état « pressé » (un
-    /// tremblement) sans se déclencher pour autant. Le bouton « Fermer » vit
-    /// désormais en haut à GAUCHE (`.cancellationAction`, croix seule), donc
-    /// dans un coin différent de celui de la visionneuse (toujours en haut à
-    /// droite) : le résidu de contact ne peut plus tomber dessus. Le
-    /// désactiver reste conservé par précaution, sans effet indésirable connu.
+    /// **Sans quoi** : le bouton « Fermer » de CETTE fiche occupe le même
+    /// coin (haut-droit, `.confirmationAction`) que la croix de la
+    /// visionneuse. Si le doigt reste posé au moment où celle-ci se referme,
+    /// il retombe exactement sur ce bouton-ci — encore sous contact — qui
+    /// affiche alors son état « pressé » (un tremblement), sans pour autant
+    /// se déclencher : le geste n'est pas un appui reconnu depuis le début
+    /// PAR ce bouton. Le désactiver bloque ce résidu sans avoir à déplacer
+    /// la croix.
     @State private var boutonFermerActif = true
 
     /// Œuvre réellement affichée (la courante, ou celle passée à l'ouverture).
@@ -756,9 +755,11 @@ struct DetailiOS: View {
                     }
                     .accessibilityLabel(oeuvreAffichee.favori ? "Retirer des favoris" : "Ajouter aux favoris")
                 }
-                // Croix seule, en haut à gauche (`.cancellationAction`),
-                // plutôt qu'un bouton texte « Fermer » à droite.
-                ToolbarItem(placement: .cancellationAction) {
+                // Séparé du bouton favori — en haut à DROITE
+                // (`.confirmationAction`), et non plus à côté de lui à
+                // gauche : les deux boutons ne doivent pas se lire comme un
+                // seul groupe. Croix seule, sans texte.
+                ToolbarItem(placement: .confirmationAction) {
                     Button {
                         dismiss()
                     } label: {
