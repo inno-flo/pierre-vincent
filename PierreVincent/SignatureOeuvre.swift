@@ -26,7 +26,11 @@ import Accelerate
 ///
 /// Tout est calculé **en local**, avec les seuls frameworks Apple (Vision,
 /// ImageIO, Accelerate). Aucune bibliothèque tierce, aucun accès réseau.
-struct SignatureOeuvre: Codable, Sendable {
+///
+/// `nonisolated` : comme `SignatureCLIP`, la structure est lue hors du fil
+/// principal (calcul des distances en tâche détachée), ce que le réglage du
+/// projet (`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`) interdirait sinon.
+nonisolated struct SignatureOeuvre: Codable, Sendable {
 
     /// Version du descripteur. Toute modification de la façon de calculer
     /// l'un des champs ci-dessous doit l'incrémenter : les signatures d'une
@@ -522,7 +526,10 @@ enum CalculSignature {
 /// éloignées que possible). C'est cette borne commune qui permet de les
 /// combiner par une simple moyenne pondérée : sans elle, la composante à la
 /// plus grande amplitude déciderait seule du résultat.
-enum DistanceSignature {
+///
+/// `nonisolated` : les distances se calculent dans une tâche détachée
+/// (`MatricesAffinites.preparer`), hors du fil principal.
+nonisolated enum DistanceSignature {
 
     /// Écart de GAMME CHROMATIQUE, par la distance de Hellinger entre les deux
     /// histogrammes.

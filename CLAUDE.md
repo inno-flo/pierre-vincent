@@ -685,6 +685,20 @@ s'afficherait à la place.
 
 ## Pièges déjà rencontrés (à ne pas refaire)
 
+- **Isolation `MainActor` par défaut : tout type lu depuis une tâche détachée
+  ou un acteur doit être `nonisolated`.** Le projet fixe
+  `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` : sans cette annotation, un
+  `struct`/`enum` du projet a ses membres et sa conformité `Codable` isolés au
+  fil principal, et Xcode avertit (« this is an error in the Swift 6 language
+  mode ») dès qu'un `Task.detached` ou un `actor` y touche. Le message n'est
+  qu'un avertissement en Swift 5, mais deviendrait une erreur en Swift 6.
+  **`nonisolated` posé sur le TYPE**, pas membre par membre : sur un membre
+  seul, l'avertissement se déplace au suivant (constaté sur `SignatureCLIP` :
+  `versionCourante`, puis `vecteur`). Types concernés à ce jour :
+  `PhotoStore`, `EchangeBase.OeuvreExport`/`Fichier`, `SignatureOeuvre`,
+  `SignatureCLIP`, `DistanceSignature`, `MatricesAffinites` ; plus
+  `MatriceCLIP.preparer` et `DistanceCLIP.cosinus`. Tout nouveau type touché
+  par une tâche détachée doit suivre.
 - **Vues Affinités iOS sur `List(.insetGrouped)` : ESSAYÉ, ABANDONNÉ.**
   Le but était de faire hériter les en-têtes de réglage (« Correspondances »,
   « Familles ») de la police EXACTE des grands en-têtes de bloc de la sidebar

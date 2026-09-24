@@ -18,7 +18,13 @@ typealias ImagePlateforme = UIImage
 ///
 /// Ce fichier fonctionne sur Mac ET iPhone : le type d'image (NSImage/UIImage)
 /// et les conversions sont adaptés à chaque plateforme via `#if os(macOS)`.
-enum PhotoStore {
+///
+/// **`nonisolated`** : le réglage du projet (`SWIFT_DEFAULT_ACTOR_ISOLATION =
+/// MainActor`) isolerait sinon tout ce qui suit au fil principal. Or l'export
+/// et l'import `.pvbase`, l'import de photos et la recompression appellent
+/// tous ces fonctions depuis des tâches détachées — c'est justement là que se
+/// fait le gros du travail (lecture disque, décodage, compression).
+nonisolated enum PhotoStore {
 
     /// Dossier racine des données de l'app dans Application Support.
     static var dossierRacine: URL {

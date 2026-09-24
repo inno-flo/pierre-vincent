@@ -265,7 +265,7 @@ struct PierreVincentApp: App {
                 // SANS champ focalisé : rien de sensé à sélectionner alors.
                 Button("Tout sélectionner") {
                     if champTexteFocalise {
-                        NSApp.sendAction(Selector(("selectAll:")), to: nil, from: nil)
+                        NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
                     } else {
                         signalToutSelectionner += 1
                     }

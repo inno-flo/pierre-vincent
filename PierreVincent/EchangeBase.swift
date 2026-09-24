@@ -22,7 +22,11 @@ enum EchangeBase {
     // MARK: Modèle de transport (une œuvre sérialisable en JSON)
 
     /// Copie « plate » d'une œuvre, avec son image encodée en base64.
-    struct OeuvreExport: Codable, Sendable {
+    ///
+    /// `nonisolated` (ici et sur `Fichier`) : encodés et décodés dans des
+    /// tâches détachées, leur conformité `Codable` ne doit pas être isolée
+    /// au fil principal par le réglage du projet.
+    nonisolated struct OeuvreExport: Codable, Sendable {
         var feuille: String
         var type: String
         var dimensions: String
@@ -54,7 +58,7 @@ enum EchangeBase {
     }
 
     /// Enveloppe du fichier : version + liste des œuvres.
-    struct Fichier: Codable, Sendable {
+    nonisolated struct Fichier: Codable, Sendable {
         var version: Int
         var oeuvres: [OeuvreExport]
     }

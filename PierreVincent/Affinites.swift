@@ -247,7 +247,10 @@ enum AnalyseAffinites {
 /// composantes, elles, ne
 /// dépendent PAS du curseur : seule leur pondération en dépend. Préparées une
 /// fois, les recombiner ne coûte plus que trois multiplications par paire.
-struct MatricesAffinites: Sendable {
+///
+/// `nonisolated` : `preparer` tourne dans une tâche détachée, hors du fil
+/// principal (voir `VueAffinites`), avec `DistanceSignature`.
+nonisolated struct MatricesAffinites: Sendable {
 
     /// Nombre d'œuvres du lot.
     let nombre: Int
