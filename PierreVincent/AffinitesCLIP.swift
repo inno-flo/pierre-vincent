@@ -18,7 +18,12 @@ import Accelerate
 ///
 /// Voir `PierreVincent/ModeleCLIP/README.md` pour la licence du modèle
 /// (recherche seulement) avant tout usage au-delà de cet essai.
-struct SignatureCLIP: Codable, Sendable {
+///
+/// `nonisolated` : le réglage du projet (`SWIFT_DEFAULT_ACTOR_ISOLATION =
+/// MainActor`) isolerait sinon la constante et `vecteur` au fil principal, et
+/// ni l'acteur `MoteurCLIP` ni le calcul des distances (tâche détachée) ne
+/// pourraient les lire.
+nonisolated struct SignatureCLIP: Codable, Sendable {
     /// Incrémenter en cas de changement de modèle ou de prétraitement : les
     /// signatures d'une version antérieure sont alors ignorées au chargement.
     static let versionCourante = 1
@@ -122,7 +127,7 @@ actor MoteurCLIP {
 /// Distance entre deux signatures CLIP : cosinus, ramenée à 0…1 comme les
 /// distances de `DistanceSignature` — 0 = identiques, 1 = opposées.
 enum DistanceCLIP {
-    static func cosinus(_ a: SignatureCLIP, _ b: SignatureCLIP) -> Float {
+    nonisolated static func cosinus(_ a: SignatureCLIP, _ b: SignatureCLIP) -> Float {
         let va = a.vecteur, vb = b.vecteur
         guard va.count == vb.count, !va.isEmpty else { return 1 }
         let produit = vDSP.dot(va, vb)
@@ -316,7 +321,9 @@ struct MatriceCLIP: Sendable {
         return i < j ? d[index(i, j)] : d[index(j, i)]
     }
 
-    static func preparer(signatures: [SignatureCLIP]) -> MatriceCLIP {
+    /// `nonisolated` : appelée depuis une tâche détachée (voir
+    /// `VueAffinitesCLIP`), donc hors du fil principal.
+    nonisolated static func preparer(signatures: [SignatureCLIP]) -> MatriceCLIP {
         let n = signatures.count
         let paires = n * (n - 1) / 2
         var dd = [Float](repeating: 0, count: max(paires, 0))
