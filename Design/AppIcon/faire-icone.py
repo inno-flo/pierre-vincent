@@ -8,6 +8,7 @@
 # quelle. Seul le FOND change d'une apparence à l'autre — le fruit est le même
 # en clair et en sombre, comme dans la version précédente de l'icône.
 
+import colorsys
 import json
 import os
 import shutil
@@ -33,6 +34,17 @@ CALQUE = "kaki-fruit.png"
 # aurait sali les bords adoucis du détourage pour le même résultat.
 MIROIR = True
 
+# Avivement de l'orange. Le dessin d'origine est pastel : sur le bleu profond
+# du fond, il manquait de present. La SATURATION est le bon levier — monter la
+# luminosite seule delave au lieu d'aviver (essaye : +14 % de valeur donnait un
+# fruit plus pale, pas plus lumineux).
+SATURATION = 1.45
+LUMINOSITE = 1.05
+
+# Le vert du calice ne doit PAS bouger : seuls les pixels de teinte orange sont
+# touches. La teinte suffit a les distinguer, il n'y a aucun masque a dessiner.
+TEINTE_MAX_ORANGE = 0.14
+
 # ----------------------------------------------------------------- palettes
 FOND_CLAIR = "#2F6A97"   # bleu profond, complémentaire de l'orange du fruit
 FOND_SOMBRE = "#000000"
@@ -43,6 +55,29 @@ def rvb(hexa):
 
 
 # ----------------------------------------------------------------- calque
+def aviver_orange(im):
+    """Sature l'orange du fruit, sans toucher au vert du calice."""
+    if SATURATION == 1.0 and LUMINOSITE == 1.0:
+        return im
+    lu = im.load()
+    sortie = im.copy()
+    ls = sortie.load()
+    for y in range(im.height):
+        for x in range(im.width):
+            r, v, b, a = lu[x, y]
+            if a == 0:
+                continue
+            t, s, l = colorsys.rgb_to_hsv(r / 255, v / 255, b / 255)
+            if t > TEINTE_MAX_ORANGE:      # au-dela : le vert du calice
+                continue
+            s = min(1.0, s * SATURATION)
+            l = min(1.0, l * LUMINOSITE)
+            rr, vv, bb = colorsys.hsv_to_rgb(t, s, l)
+            ls[x, y] = (round(rr * 255), round(vv * 255), round(bb * 255), a)
+    return sortie
+
+
+
 def preparer_calque():
     """Recentre le dessin sur la toile et l'écrit comme calque d'avant-plan.
 
@@ -57,6 +92,8 @@ def preparer_calque():
         raise SystemExit(f"dessin source attendu en {COTE}×{COTE}, reçu {src.size}")
     if MIROIR:
         src = src.transpose(Image.FLIP_LEFT_RIGHT)
+
+    src = aviver_orange(src)
 
     x0, y0, x1, y1 = src.getchannel("A").getbbox()
     dx = round(COTE / 2 - (x0 + x1) / 2)

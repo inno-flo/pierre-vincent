@@ -1098,10 +1098,16 @@ Xcode), fabriquées par `faire-icone.py`.
   ouvrant le fichier dans Icon Composer.
 - **Illustration source** : le kaki détouré de
   `Ressources App Pierre-Vincent/Icône app/…/kaki_detoure_couleur.png`, repris
-  tel quel — ni recoloré ni redessiné. Deux traitements seulement : un
-  **miroir horizontal**, pour que la lumière vienne d'en haut à gauche (le
-  modelé est déjà peint dans l'image, repeindre les aplats aurait sali les
-  bords du détourage), et un **recentrage** sur la toile.
+  repris sans le redessiner. **Trois** traitements, tous dans
+  `faire-icone.py` : un **miroir horizontal**, pour que la lumière vienne d'en
+  haut à gauche (le modelé est déjà peint dans l'image, repeindre les aplats
+  aurait sali les bords du détourage) ; un **recentrage** sur la toile ; et un
+  **avivement de l'orange** (saturation ×1,45, luminosité ×1,05).
+  - **La saturation est le bon levier, pas la luminosité** : monter la valeur
+    seule DÉLAVE au lieu d'aviver — essayé, +14 % donnait un fruit plus pâle.
+  - **Seuls les pixels de teinte orange sont touchés** (`TEINTE_MAX_ORANGE`) :
+    le vert du calice ne bouge pas. La teinte suffit à les séparer, aucun
+    masque à dessiner. Les trois constantes à `1.0` rendent l'original.
 - Une variante entièrement **vectorielle** dort dans
   `Design/AppIcon/variante-vectorielle/` : plus simple de dessin, en deux
   calques (fruit et calice), écartée au profit de l'illustration d'origine,

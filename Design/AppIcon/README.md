@@ -39,6 +39,15 @@ couleurs du fruit. Deux traitements seulement, tous deux dans
   que demandent les HIG (« Keep primary content centered ») : marges de 186 à
   187 px en horizontal, 179 à 180 px en vertical.
 
+- **Avivement de l'orange** (`SATURATION = 1.45`, `LUMINOSITE = 1.05`). Le
+  dessin d'origine est pastel : sur le bleu profond du fond, il manquait de
+  présence. C'est la **saturation** qui fait le « lumineux » recherché —
+  monter la luminosité seule délave au lieu d'aviver (essayé : +14 % de valeur
+  donnait un fruit plus pâle, pas plus vif). Seuls les pixels de teinte orange
+  sont touchés (`TEINTE_MAX_ORANGE`) : **le vert du calice ne bouge pas**, sa
+  teinte suffit à le distinguer, il n'y a aucun masque à dessiner. Ramener les
+  deux facteurs à `1.0` rend les couleurs d'origine.
+
 Le fruit est **identique en clair et en sombre** — seul le fond change, comme
 dans la version précédente de l'icône. Le creux du calice laisse voir le fond :
 bleu en apparence claire, noir en sombre, où il se lit très bien comme un
