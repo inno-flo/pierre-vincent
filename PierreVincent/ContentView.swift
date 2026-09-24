@@ -614,32 +614,23 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 List(selection: $categorie) {
                     #if os(macOS)
-                    // `Section(isExpanded:)` : mécanisme standard des sidebars
-                    // macOS (le triangle d'affichage de Finder ou Mail).
-                    //
-                    // En-têtes SANS police ni graisse imposées : le style
-                    // standard Apple d'un en-tête de sidebar (petit corps,
-                    // gris, graisse normale) vient de `listStyle(.sidebar)`
-                    // lui-même. `.foregroundStyle(.secondary)` doit rester
-                    // posé explicitement : le `.foregroundStyle(Color
-                    // .textePrincipal)` appliqué à toute la hiérarchie de
-                    // `ContentView` écraserait sinon ce gris.
-                    Section(isExpanded: $blocStockOuvert) {
-                        contenuStock
-                    } header: {
-                        Text("Réserve").foregroundStyle(.secondary)
+                    // En-têtes de bloc MAISON plutôt que `Section(isExpanded:)`
+                    // : le chevron natif ne se laisse pas positionner, alors que
+                    // le nôtre se cale sur le dernier chiffre des compteurs
+                    // (voir `enTeteBlocMac`).
+                    Section {
+                        enTeteBlocMac("Réserve", ouvert: $blocStockOuvert)
+                        if blocStockOuvert { contenuStock }
                     }
-                    Section(isExpanded: $blocVentesOuvert) {
-                        contenuVentesEtDons
-                    } header: {
-                        Text("Ventes et dons").foregroundStyle(.secondary)
+                    Section {
+                        enTeteBlocMac("Ventes et dons", ouvert: $blocVentesOuvert)
+                        if blocVentesOuvert { contenuVentesEtDons }
                     }
                     // Nouveau bloc, à part de la Réserve : rapprochement des
                     // œuvres par style et couleurs (voir `contenuLabo`).
-                    Section(isExpanded: $blocLaboOuvert) {
-                        contenuLabo
-                    } header: {
-                        Text("Labo").foregroundStyle(.secondary)
+                    Section {
+                        enTeteBlocMac("Labo", ouvert: $blocLaboOuvert)
+                        if blocLaboOuvert { contenuLabo }
                     }
                     #endif
                     #if os(iOS)
@@ -1359,6 +1350,36 @@ struct ContentView: View {
     //   1. grand intitulé   gris, sans gras (Ventes et dons, Réserve)
     //   2. sous-groupe      gris, sans gras (Catégories, Modes de vente…)
     //   3. libellé          corps normal, en couleur (Tableaux, Dessins…)
+
+    #if os(macOS)
+    /// En-tête d'un grand bloc de la sidebar macOS : titre + chevron, posés
+    /// dans une LIGNE de la section (même méthode que la sidebar d'Ouvivre).
+    ///
+    /// Le chevron partage la colonne de droite des compteurs de `lien()` : les
+    /// lignes ont les mêmes marges intérieures. Mesuré à l'écran (accessibilité) :
+    /// le dernier chiffre d'un compteur finit à 7 pt du bord de la ligne (6 pt de
+    /// `padding` de la pastille + ≈ 1 pt), et un chiffre de 13 pt fait ≈ 7,3 pt de
+    /// large — son centre tombe donc à ≈ 10,65 pt du bord. Le chevron, dans un
+    /// cadre de 12 pt (centre à 6 pt de son bord), reçoit 4,65 pt de marge droite
+    /// pour s'y centrer.
+        private func enTeteBlocMac(_ titre: String, ouvert: Binding<Bool>) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) { ouvert.wrappedValue.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                Text(titre).font(.system(size: 11, weight: .semibold))
+                Spacer(minLength: 0)
+                Image(systemName: ouvert.wrappedValue ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .frame(width: 12)
+                    .padding(.trailing, 4.65)
+            }
+            .foregroundStyle(.secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
 
     #if os(iOS)
     /// En-tête d'un grand bloc de la sidebar, posé dans le `header:` d'une
