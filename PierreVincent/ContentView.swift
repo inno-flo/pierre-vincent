@@ -498,9 +498,9 @@ struct ContentView: View {
 
     // Catégorie sélectionnée au lancement :
     // - iPhone : aucune (nil) pour afficher d'abord la barre latérale ;
-    // - Mac : « Œuvres » pré-sélectionnée (les deux colonnes sont visibles).
+    // - Mac : Catalogue de la Réserve pré-sélectionné (les deux colonnes sont visibles).
     #if os(macOS)
-    @State private var categorie: Categorie? = .oeuvres
+    @State private var categorie: Categorie? = .reserveInventaire
     #else
     @State private var categorie: Categorie? = nil
     #endif

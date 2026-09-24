@@ -65,6 +65,10 @@ struct PierreVincentApp: App {
         // Désactive les onglets de fenêtre : retire du menu « Présentation »
         // les commandes « Afficher la barre d'onglets / tous les onglets ».
         NSWindow.allowsAutomaticWindowTabbing = false
+        // L'inspecteur démarre TOUJOURS fermé : `@AppStorage` mémorise son
+        // dernier état d'une session à l'autre, on le remet donc à zéro avant
+        // que la moindre vue ne le lise.
+        UserDefaults.standard.set(false, forKey: "inspecteurVisible")
         #endif
         // L'arrangement de la sidebar au lancement (blocs dépliés, sous-groupes
         // repliés) n'est plus écrit ici : c'est désormais la valeur par défaut
